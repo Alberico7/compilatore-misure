@@ -84,3 +84,6 @@ Componenti di terze parti (restano sotto le loro licenze):
   vosk-model-small-it-0.22 (Alpha Cephei), licenza Apache 2.0. Il modello non è nel
   repository: il browser lo scarica alla prima dettatura.
 - fflate 0.8.3 (Arjun Barrett), licenza MIT.
+- Firmware della chiavetta (chiavetta.uf2): contiene pico-sdk (BSD-3-Clause), TinyUSB (MIT),
+  BTstack (licenza Raspberry Pi per Pico 2 W) e cyw43-driver (solo con chip Raspberry Pi).
+  Testi completi in chiavetta/LICENZE-TERZE-PARTI.txt.

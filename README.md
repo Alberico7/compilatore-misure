@@ -12,6 +12,7 @@ Strumento d'officina: le coppie **Angolo / Altezza** da inserire nella maschera 
 - Uscita: un **Code 128 per valore** (lettore 1D), anche "uno alla volta" a tutto schermo per leggerli dal telefono, oppure **QR a blocchi** di N coppie separate da INVIO (lettore 2D).
 - **Prova del lettore**: confronta quello che il lettore digita con i valori attesi (layout di tastiera, INVIO doppi, valori attaccati).
 - **Dettatura** con Vosk, solo dal sito: "duecentoquattordici virgola nove quattro" → `214,94`. Un valore tenendo premuto 🎤, oppure più valori di seguito con un tocco. Il riconoscimento avviene nel dispositivo: l'audio non esce. La prima volta scarica il modello italiano (circa 50 MB).
+- **Chiavetta-tastiera** (Raspberry Pi Pico 2 W) per quando lettore e codici non bastano. Si carica dal sito via Bluetooth o con il cavo; in macchina è una tastiera USB e scrive i valori quando premi il suo pulsante. Vedi [chiavetta/LEGGIMI.md](chiavetta/LEGGIMI.md).
 - Tema scuro (predefinito) e chiaro, usabile da smartphone, salvataggio automatico nel browser.
 
 **Sicurezza:** lo strumento compila solo i campi, non avvia cicli. Prima di avviare la tastatura controllare sempre i valori sullo schermo della macchina.
@@ -24,17 +25,20 @@ Scaricare `compilatore-misure.html` e aprirlo con il browser: funziona tutto tra
 
 ```
 npm install
-npm test           # compila e prova: codici decodificati con zxing, telefono, dettatura simulata
+npm test           # compila e prova: codici decodificati con zxing, telefono, dettatura simulata,
+                   # chiavetta (parte pura in C e sito collegato al Pico simulato: serve gcc,
+                   # oppure CC_CHIAVETTA="python -m ziglang cc"; senza compilatore quei test si saltano)
 npm run test:vosk  # solo Windows: vero Vosk con la voce sintetica di Windows al posto del microfono
 npm run build      # crea compilatore-misure.html e sito/
 ```
 
-- Sorgenti in `src/`: `template.html`, `logica.js` (conversione, validazione, Code 128, QR, prova lettore), `dettato.js` (parole → valori), `voce.js` (Vosk), `app.js` (pagina).
+- Sorgenti in `src/`: `template.html`, `logica.js` (conversione, validazione, Code 128, QR, prova lettore), `dettato.js` (parole → valori), `voce.js` (Vosk), `chiavetta.js` (protocollo, Web Bluetooth, WebUSB), `app.js` (pagina).
+- Firmware della chiavetta in `chiavetta/` (C, pico-sdk 2.3.1).
 - Documenti di progetto in `docs/`.
-- A ogni push su `main`, GitHub Actions esegue i test e pubblica `sito/` su GitHub Pages.
+- A ogni push su `main`, GitHub Actions compila il firmware, esegue i test e pubblica `sito/` (con `chiavetta.uf2`) su GitHub Pages.
 
 ## Licenza
 
 © 2026 Andrea Carletti. **PolyForm Noncommercial 1.0.0**: si può usare, studiare, modificare e condividere gratis, ma **solo per scopi non commerciali** (niente vendita né uso in attività a scopo di lucro senza il permesso dell’autore). Vedi `LICENSE`.
 
-Componenti di terze parti sotto le loro licenze: QR Code Generator for JavaScript (MIT), vosk-browser e modello Vosk italiano (Apache 2.0), fflate (MIT).
+Componenti di terze parti sotto le loro licenze: QR Code Generator for JavaScript (MIT), vosk-browser e modello Vosk italiano (Apache 2.0), fflate (MIT); nel firmware della chiavetta pico-sdk, TinyUSB, BTstack e cyw43-driver (vedi `chiavetta/LICENZE-TERZE-PARTI.txt`).

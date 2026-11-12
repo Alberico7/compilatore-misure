@@ -15,17 +15,47 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  firmware:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - name: Strumenti per il Pico
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-arm-none-eabi libnewlib-arm-none-eabi cmake ninja-build libusb-1.0-0-dev pkg-config
+      - name: pico-sdk 2.3.1
+        run: |
+          git clone --depth 1 --branch 2.3.1 https://github.com/raspberrypi/pico-sdk.git "$RUNNER_TEMP/pico-sdk"
+          git -C "$RUNNER_TEMP/pico-sdk" submodule update --init --depth 1
+      - name: Compila il firmware della chiavetta
+        run: |
+          export PICO_SDK_PATH="$RUNNER_TEMP/pico-sdk"
+          cmake -S chiavetta -B chiavetta/build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build chiavetta/build
+          ls -l chiavetta/build/chiavetta.uf2
+      - uses: actions/upload-artifact@v7
+        with:
+          name: firmware
+          path: chiavetta/build/chiavetta.uf2
+          retention-days: 7
+
+  build:
+    needs: firmware
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v7
+        with:
+          name: firmware
+          path: chiavetta/build
       - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      # compila e prova: codici decodificati con zxing, telefono, dettatura con riconoscitore simulato
+      # compila e prova: codici decodificati con zxing, telefono, dettatura con riconoscitore simulato,
+      # parte pura del firmware in C (gcc) e scheda Chiavetta collegata al Pico simulato
       - run: npm test
       - uses: actions/upload-artifact@v7
         if: failure()

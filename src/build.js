@@ -17,6 +17,7 @@ const parti = {
   '/*LOGICA*/': leggi('logica.js'),
   '/*DETTATO*/': leggi('dettato.js'),
   '/*VOCE*/': leggi('voce.js'),
+  '/*CHIAVETTA*/': leggi('chiavetta.js'),
   '/*APP*/': leggi('app.js'),
 };
 for (const [segnaposto, codice] of Object.entries(parti)) {
@@ -42,3 +43,9 @@ const moduli = path.join(radice, 'node_modules');
 scrivi(path.join(sito, 'voce', 'vosk.js'), fs.readFileSync(path.join(moduli, 'vosk-browser', 'dist', 'vosk.js')));
 scrivi(path.join(sito, 'voce', 'fflate.js'), fs.readFileSync(path.join(moduli, 'fflate', 'umd', 'index.js')));
 fs.writeFileSync(path.join(sito, '.nojekyll'), '');
+
+// Firmware della chiavetta, se compilato (in GitHub Actions: CHIAVETTA_UF2)
+const uf2 = process.env.CHIAVETTA_UF2 || path.join(radice, 'chiavetta', 'build', 'chiavetta.uf2');
+if (fs.existsSync(uf2)) scrivi(path.join(sito, 'chiavetta.uf2'), fs.readFileSync(uf2));
+else console.log('Firmware della chiavetta non trovato (' + path.relative(radice, uf2) + '): il sito non lo includerà');
+scrivi(path.join(sito, 'chiavetta-licenze.txt'), fs.readFileSync(path.join(radice, 'chiavetta', 'LICENZE-TERZE-PARTI.txt')));

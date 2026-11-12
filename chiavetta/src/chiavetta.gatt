@@ -1,0 +1,13 @@
+PRIMARY_SERVICE, GAP_SERVICE
+CHARACTERISTIC, GAP_DEVICE_NAME, READ, "Chiavetta misure"
+
+PRIMARY_SERVICE, GATT_SERVICE
+CHARACTERISTIC, GATT_DATABASE_HASH, READ,
+
+// Servizio della chiavetta: si scrive e si legge solo con un collegamento
+// abbinato con codice (LE Secure Connections, autenticato, chiave a 16 byte).
+PRIMARY_SERVICE, 0f600001-7d5c-4ab1-a5aa-df4e1c99d7c0
+// Comandi: pacchetti 'I', 'D', 'F', 'S' (vedi dati.h)
+CHARACTERISTIC, 0f600002-7d5c-4ab1-a5aa-df4e1c99d7c0, WRITE | DYNAMIC | WRITE_AUTHENTICATED_SC | ENCRYPTION_KEY_SIZE_16,
+// Risposte: "OK ...", "ERRORE ...", "STATO ..."
+CHARACTERISTIC, 0f600003-7d5c-4ab1-a5aa-df4e1c99d7c0, READ | NOTIFY | DYNAMIC | READ_AUTHENTICATED_SC | WRITE_AUTHENTICATED_SC | ENCRYPTION_KEY_SIZE_16,

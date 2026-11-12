@@ -354,6 +354,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     <div class="schede" role="tablist">
       <button type="button" role="tab" id="tab-barre" data-scheda="barre">Codici a barre (1D)</button>
       <button type="button" role="tab" id="tab-qr" data-scheda="qr">QR a blocchi (2D)</button>
+      <button type="button" role="tab" id="tab-chiavetta" data-scheda="chiavetta">Chiavetta</button>
     </div>
 
     <div id="pannello-barre" role="tabpanel">
@@ -377,6 +378,36 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
       </div>
       <p class="nota">Lascia <b>disattivato</b> "INVIO finale" se il lettore aggiunge già l'INVIO dopo ogni lettura: altrimenti l'INVIO è doppio e in macchina si salta un campo.</p>
       <div id="uscita-qr"></div>
+    </div>
+
+    <div id="pannello-chiavetta" role="tabpanel" hidden>
+      <p class="nota">La <b>chiavetta</b> (Raspberry Pi Pico 2 W) si collega alla macchina come una tastiera e scrive da sola i valori, ciascuno seguito da INVIO, quando premi il suo pulsante. Qui le carichi i valori: via Bluetooth dal telefono, oppure con il cavo.</p>
+      <div class="impostazioni">
+        <label class="campo"><span>Pausa tra i tasti (ms)</span><input type="number" class="piccolo" id="ch-rit-car" min="1" max="1000" step="1" inputmode="numeric"></label>
+        <label class="campo"><span>Pausa dopo INVIO (ms)</span><input type="number" class="piccolo" id="ch-rit-inv" min="0" max="5000" step="10" inputmode="numeric"></label>
+        <label class="campo"><span>Coppie per pressione (0 = tutte)</span><input type="number" class="piccolo" id="ch-coppie" min="0" max="500" step="1" inputmode="numeric"></label>
+      </div>
+      <div class="pulsanti">
+        <button type="button" class="primario" id="btn-ch-bt">Invia via Bluetooth</button>
+        <button type="button" id="btn-ch-usb">Invia con il cavo</button>
+      </div>
+      <p class="nota" id="ch-supporto"></p>
+      <div id="esito-chiavetta" aria-live="polite"></div>
+      <details class="ch-avanzate">
+        <summary>Codice Bluetooth e firmware</summary>
+        <p class="nota">Il codice di abbinamento (6 cifre) si imposta <b>solo con il cavo</b>: collega la chiavetta tenendo premuto il pulsante. Annotalo: il telefono lo chiede la prima volta. Cambiandolo si cancellano gli abbinamenti. Il sito non lo salva.</p>
+        <div class="impostazioni">
+          <label class="campo"><span>Codice (6 cifre)</span><input type="text" class="piccolo" id="ch-codice" inputmode="numeric" autocomplete="off" spellcheck="false"></label>
+          <div class="pulsanti">
+            <button type="button" id="btn-ch-genera">Genera</button>
+            <button type="button" id="btn-ch-codice">Imposta con il cavo</button>
+            <button type="button" class="pericolo" id="btn-ch-spegni">Spegni Bluetooth</button>
+          </div>
+        </div>
+        <p class="nota">Firmware per il Pico 2 W: <a href="https://alberico7.github.io/compilatore-misure/chiavetta.uf2" download>scarica chiavetta.uf2</a>.
+          Per installarlo tieni premuto <b>BOOTSEL</b> sul Pico, collegalo al PC e copia il file nell'unità <b>RP2350</b> che compare.
+          Collegamenti e istruzioni complete: <a href="https://github.com/Alberico7/compilatore-misure/blob/main/chiavetta/LEGGIMI.md" target="_blank" rel="noopener">LEGGIMI della chiavetta</a>. Il firmware contiene componenti di terze parti: <a href="https://alberico7.github.io/compilatore-misure/chiavetta-licenze.txt" target="_blank" rel="noopener">licenze</a>.</p>
+      </details>
     </div>
   </section>
 
@@ -432,6 +463,19 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
         <li>Con la pausa come fine del valore, non fermarti a metà numero: "duecento … quattordici" diventerebbero due valori. Controlla sempre "Capito: …" e l'anteprima sotto le caselle.</li>
         <li>Su Vanadium (GrapheneOS), se il riconoscimento è lento, attiva "JavaScript JIT" per questo sito nelle impostazioni del sito.</li>
       </ul>
+    </details>
+    <details>
+      <summary>Chiavetta</summary>
+      <ol>
+        <li>Nella scheda <b>Chiavetta</b> premi <b>Invia via Bluetooth</b> (Chrome su Android) oppure collega la chiavetta <b>tenendo premuto il pulsante</b> e premi <b>Invia con il cavo</b> (telefono con adattatore OTG, oppure PC).</li>
+        <li>Il sito confronta il <b>codice di controllo</b> della chiavetta con il suo: se coincidono, i valori sono arrivati identici.</li>
+        <li>In macchina collega la chiavetta <b>senza</b> premere il pulsante: è una tastiera e basta. Metti il cursore su <b>Angolo 1</b> e premi il pulsante: dopo 1 secondo scrive.</li>
+        <li>Una pressione mentre scrive la <b>ferma</b> dopo il valore in corso; una pressione breve <b>riprende</b>. Tenendo premuto da 2 a 5 secondi torna all'<b>inizio</b> (poi una pressione breve scrive). Finito tutto, la pressione breve non fa niente.</li>
+        <li>LED: fisso = pronta; lampeggio veloce = scrive; lento = fermata; un lampo ogni 2 s = finito; lampi lunghi = nessun valore.</li>
+        <li>Prima volta col Bluetooth: imposta il codice con il cavo, poi tieni premuto il pulsante <b>5 secondi</b> (doppio lampo) e invia dal telefono entro un minuto: il telefono chiede il codice. Si ricorda un solo telefono.</li>
+        <li>La chiavetta manda solo cifre, il "−" del tastierino numerico e INVIO: funziona con layout tedesco, italiano e inglese.</li>
+        <li><b>Controlla tutti i valori sullo schermo della macchina prima di avviare la tastatura.</b></li>
+      </ol>
     </details>
     <details>
       <summary>Configurazione del lettore</summary>
@@ -500,6 +544,9 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
 </script>
 <script>
 /*VOCE*/
+</script>
+<script>
+/*CHIAVETTA*/
 </script>
 <script>
 /*APP*/
