@@ -271,7 +271,9 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
   nav.indice { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   nav.indice::-webkit-scrollbar { display: none; }
   nav.indice a { white-space: nowrap; flex: none; }
-  .schede button { padding: 10px 12px; }
+  .schede { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .schede::-webkit-scrollbar { display: none; }
+  .schede button { padding: 10px 12px; flex: none; white-space: nowrap; }
   .griglia-barre { grid-template-columns: 1fr; }
   .cella-barra:nth-child(odd) { border-right: 0; }
   section.blocco { padding: 14px; border-radius: 8px; }

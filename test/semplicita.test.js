@@ -74,12 +74,19 @@ test('righe: INVIO e Avanti sull\'ultima Altezza aggiungono una riga; pagina mol
   await page.keyboard.press('Enter');
   await page.keyboard.press('Enter');
   assert.equal(await page.locator('#corpo-tabella tr').count(), 7, 'anche con INVIO');
-  // due coppie scritte: prima la pagina del telefono era lunga 5513 px (20 righe)
-  const p2 = await apri(390, { salvato: { righe: [['214,94', '26,94'], ['313,16', '82,38'], ['', ''], ['', ''], ['', '']], modo: 'separatore', decAng: 2, decAlt: 2 } });
-  const lunghezza = await p2.evaluate(() => document.documentElement.scrollHeight);
-  assert.ok(lunghezza < 4300, 'pagina lunga ' + lunghezza + ' px');
+  // due coppie scritte: con 5 righe la pagina è molto più corta che con le 20 di prima
+  // (confronto nello stesso browser: le misure assolute cambiano con i caratteri installati)
+  const due = [['214,94', '26,94'], ['313,16', '82,38']];
+  const lunghezza = async (n) => {
+    const righe = due.concat(Array.from({ length: n - 2 }, () => ['', '']));
+    const p = await apri(390, { salvato: { righe, modo: 'separatore', decAng: 2, decAlt: 2 } });
+    const h = await p.evaluate(() => document.documentElement.scrollHeight);
+    await p.context().close();
+    return h;
+  };
+  const con5 = await lunghezza(5), con20 = await lunghezza(20);
+  assert.ok(con5 < con20 * 0.8, `pagina con 5 righe ${con5} px, con 20 righe ${con20} px`);
   await page.context().close();
-  await p2.context().close();
 });
 
 test('indice e schede su una riga, senza scorrimento orizzontale della pagina', async () => {
