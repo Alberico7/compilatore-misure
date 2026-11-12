@@ -105,8 +105,9 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .radio label { border: 1px solid var(--bordo); border-radius: 8px; padding: 10px 12px; cursor: pointer; background: var(--campo); min-height: 44px; display: flex; align-items: center; gap: 6px; }
 .radio label:has(input:checked) { border-color: var(--accento); background: var(--accento-chiaro); font-weight: 600; }
 input[type=number].piccolo { width: 84px; }
+#ch-codice { width: 120px; font-family: var(--mono); font-size: 20px; letter-spacing: 2px; }
 input, select, textarea, button { font: inherit; color: var(--testo); }
-input[type=number], select { padding: 8px 10px; border: 1px solid var(--bordo); border-radius: 8px; background: var(--campo); min-height: 44px; }
+input[type=number], input[type=text], select { padding: 8px 10px; border: 1px solid var(--bordo); border-radius: 8px; background: var(--campo); min-height: 44px; }
 button { padding: 9px 16px; min-height: 44px; border-radius: 8px; border: 1px solid var(--bordo); background: var(--campo); cursor: pointer; font-weight: 600; }
 button:hover { border-color: var(--accento); }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--accento); outline-offset: 2px; }

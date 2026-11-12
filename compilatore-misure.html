@@ -104,8 +104,9 @@ fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
 .radio label { border: 1px solid var(--bordo); border-radius: 8px; padding: 10px 12px; cursor: pointer; background: var(--campo); min-height: 44px; display: flex; align-items: center; gap: 6px; }
 .radio label:has(input:checked) { border-color: var(--accento); background: var(--accento-chiaro); font-weight: 600; }
 input[type=number].piccolo { width: 84px; }
+#ch-codice { width: 120px; font-family: var(--mono); font-size: 20px; letter-spacing: 2px; }
 input, select, textarea, button { font: inherit; color: var(--testo); }
-input[type=number], select { padding: 8px 10px; border: 1px solid var(--bordo); border-radius: 8px; background: var(--campo); min-height: 44px; }
+input[type=number], input[type=text], select { padding: 8px 10px; border: 1px solid var(--bordo); border-radius: 8px; background: var(--campo); min-height: 44px; }
 button { padding: 9px 16px; min-height: 44px; border-radius: 8px; border: 1px solid var(--bordo); background: var(--campo); cursor: pointer; font-weight: 600; }
 button:hover { border-color: var(--accento); }
 button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--accento); outline-offset: 2px; }
@@ -3528,6 +3529,12 @@ var Chiavetta = (function () {
   var USB_VID = 0x1209, USB_PID_CARICAMENTO = 0x0006;
   var NESSUN_CODICE = 0xFFFFFFFF;
   var ATTESA_RISPOSTA_MS = 8000;
+  /* Stessi nomi e limiti della tabella IMPOSTAZIONI in chiavetta/src/dati.c (lo controlla un test). */
+  var IMPOSTAZIONI = [
+    { nome: 'ritardo_carattere_ms', campo: 'ritardoCarattere', min: 1, max: 1000, etichetta: 'Pausa tra i tasti (ms)' },
+    { nome: 'ritardo_invio_ms', campo: 'ritardoInvio', min: 0, max: 5000, etichetta: 'Pausa dopo INVIO (ms)' },
+    { nome: 'coppie_per_pressione', campo: 'coppiePerPressione', min: 0, max: 500, etichetta: 'Coppie per pressione' }
+  ];
 
   var TABELLA_CRC = (function () {
     var t = [];
@@ -3562,14 +3569,15 @@ var Chiavetta = (function () {
     if (valori.length % 2) return 'Il numero di valori è dispari.';
     if (valori.length > MAX_VALORI) return 'Troppi valori per la chiavetta: al massimo ' + MAX_VALORI / 2 + ' coppie.';
     for (var i = 0; i < valori.length; i++) {
-      if (!/^-?\d{1,9}$/.test(valori[i].cifre)) {
+      if (!new RegExp('^-?\\d{1,' + MAX_CIFRE + '}$').test(valori[i].cifre)) {
         return (valori[i].etichetta || 'Valore ' + (i + 1)) + ': troppe cifre per la chiavetta (al massimo ' + MAX_CIFRE + ').';
       }
     }
     if (imp) {
-      if (!(imp.ritardoCarattere >= 1 && imp.ritardoCarattere <= 1000)) return 'Ritardo tra i tasti: da 1 a 1000 ms.';
-      if (!(imp.ritardoInvio >= 0 && imp.ritardoInvio <= 5000)) return 'Ritardo dopo INVIO: da 0 a 5000 ms.';
-      if (!(imp.coppiePerPressione >= 0 && imp.coppiePerPressione <= 500)) return 'Coppie per pressione: da 0 a 500.';
+      for (var k = 0; k < IMPOSTAZIONI.length; k++) {
+        var x = IMPOSTAZIONI[k], v = imp[x.campo];
+        if (!(v >= x.min && v <= x.max)) return x.etichetta + ': da ' + x.min + ' a ' + x.max + '.';
+      }
     }
     return null;
   }
@@ -3581,11 +3589,9 @@ var Chiavetta = (function () {
     var quando = d.getFullYear() + '-' + due(d.getMonth() + 1) + '-' + due(d.getDate()) + ' ' + due(d.getHours()) + ':' + due(d.getMinutes());
     var righe = [
       '# Compilatore misure - valori per la chiavetta',
-      '# creato: ' + quando + ' - ' + valori.length / 2 + ' coppie - decimali angolo ' + imp.decAng + ', altezza ' + imp.decAlt,
-      'ritardo_carattere_ms = ' + imp.ritardoCarattere,
-      'ritardo_invio_ms = ' + imp.ritardoInvio,
-      'coppie_per_pressione = ' + imp.coppiePerPressione
+      '# creato: ' + quando + ' - ' + valori.length / 2 + ' coppie - decimali angolo ' + imp.decAng + ', altezza ' + imp.decAlt
     ];
+    IMPOSTAZIONI.forEach(function (x) { righe.push(x.nome + ' = ' + imp[x.campo]); });
     valori.forEach(function (v) { righe.push(v.cifre); });
     return righe.join('\n') + '\n';
   }
@@ -3754,7 +3760,9 @@ var Chiavetta = (function () {
   }
 
   return {
-    MAX_TESTO: MAX_TESTO, MAX_VALORI: MAX_VALORI, SERVIZIO: SERVIZIO, USB_VID: USB_VID, USB_PID_CARICAMENTO: USB_PID_CARICAMENTO,
+    MAX_TESTO: MAX_TESTO, MAX_VALORI: MAX_VALORI, MAX_CIFRE: MAX_CIFRE, IMPOSTAZIONI: IMPOSTAZIONI,
+    SERVIZIO: SERVIZIO, COMANDO: COMANDO, RISPOSTA: RISPOSTA, USB_VID: USB_VID, USB_PID_CARICAMENTO: USB_PID_CARICAMENTO,
+    ERRORI: ERRORI, STATI: STATI,
     crc32: crc32, esa: esa, codifica: codifica, controlla: controlla, testo: testo, pacchetti: pacchetti,
     pacchettoStato: pacchettoStato, pacchettoCodice: pacchettoCodice, telaio: telaio, risposta: risposta,
     bluetoothDisponibile: bluetoothDisponibile, usbDisponibile: usbDisponibile,

@@ -78,11 +78,22 @@ static void pacchetto_usb(const uint8_t *p, size_t n, void *ctx) {
     tud_vendor_write_flush();
 }
 
-static void ciclo_caricamento(void) {
+#define PAUSA_NUOVO_INVIO_MS 1000u   // il sito manda ogni invio tutto di seguito
+static uint32_t ultimo_dato_usb;
+static bool ricevuto_usb;
+
+static void ciclo_caricamento(uint32_t ora) {
     uint8_t buf[64];
     while (tud_vendor_available()) {
         uint32_t n = tud_vendor_read(buf, sizeof(buf));
         if (n == 0) break;
+        // un invio interrotto a meta' non deve rovinare quello dopo
+        if (ricevuto_usb && ora - ultimo_dato_usb > PAUSA_NUOVO_INVIO_MS) {
+            telaio_azzera(&telaio);
+            ric_azzera(&ric_usb);
+        }
+        ricevuto_usb = true;
+        ultimo_dato_usb = ora;
         if (!telaio_aggiungi(&telaio, buf, n, pacchetto_usb, NULL)) {
             const char *e = "ERRORE PACCHETTO 0\n";
             tud_vendor_write(e, (uint32_t)strlen(e));
@@ -139,9 +150,10 @@ int main(void) {
         uint32_t ora = ora_ms();
 
         if (caricamento) {
-            ciclo_caricamento();
-            // acceso 250 ms ogni secondo; fisso quando il sito e' collegato
-            imposta_led(tud_vendor_mounted() ? true : (ora % 1000) < 250);
+            ciclo_caricamento(ora);
+            // un lampo al secondo in attesa; acceso fisso mentre arrivano dati dal sito
+            bool riceve = ricevuto_usb && ora - ultimo_dato_usb < 3000u;
+            imposta_led(riceve || (ora % 1000) < 250);
             continue;
         }
 

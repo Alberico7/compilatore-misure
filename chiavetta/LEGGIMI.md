@@ -47,7 +47,7 @@ Per aggiornare il firmware si ripete la stessa cosa. I valori e il codice Blueto
 | Come la colleghi | Cosa fa |
 |---|---|
 | **Senza** premere il pulsante | Tastiera USB (solo cifre, "−" del tastierino numerico e INVIO), più il Bluetooth se hai impostato un codice. **È il modo per la macchina.** |
-| **Tenendo premuto** il pulsante | **Caricamento con il cavo** (WebUSB): niente tastiera e niente Bluetooth. Il LED fa un lampo al secondo, e resta fisso quando il sito è collegato. |
+| **Tenendo premuto** il pulsante | **Caricamento con il cavo** (WebUSB): niente tastiera e niente Bluetooth. Il LED fa un lampo al secondo, e resta acceso mentre arrivano i dati dal sito. |
 
 ## Primo uso: codice Bluetooth
 

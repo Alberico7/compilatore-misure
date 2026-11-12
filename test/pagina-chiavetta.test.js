@@ -8,10 +8,9 @@ const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
 const { avviaServer } = require('./server');
-const { trovaCompilatore, compila, avviaSimulatore, CHIAVETTA } = require('./chiavetta-sim');
+const { compilatoreOSalta, compila, avviaSimulatore, CHIAVETTA } = require('./chiavetta-sim');
 
-const cc = trovaCompilatore();
-const salta = cc ? false : 'nessun compilatore C (gcc, cc, clang o CC_CHIAVETTA)';
+const { cc, salta } = compilatoreOSalta();
 const CARTELLA_SCREENSHOT = path.join(__dirname, 'screenshot');
 
 let browser, server, eseguibile;

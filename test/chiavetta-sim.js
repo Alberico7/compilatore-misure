@@ -21,7 +21,16 @@ function trovaCompilatore() {
   return null;
 }
 
+/* Compilatore e motivo per saltare i test che lo usano. In CI non si salta mai:
+   un test saltato in silenzio nasconderebbe un firmware non provato. */
+function compilatoreOSalta() {
+  const cc = trovaCompilatore();
+  if (!cc && process.env.CI) throw new Error('In CI serve un compilatore C per i test della chiavetta (gcc).');
+  return { cc, salta: cc ? false : 'nessun compilatore C (gcc, cc, clang o CC_CHIAVETTA)' };
+}
+
 const cartella = fs.mkdtempSync(path.join(os.tmpdir(), 'chiavetta-'));
+process.on('exit', () => { try { fs.rmSync(cartella, { recursive: true, force: true }); } catch (e) { /* in uso */ } });
 const estensione = process.platform === 'win32' ? '.exe' : '';
 
 /* Compila; restituisce il percorso dell'eseguibile, oppure lancia un errore con l'output del compilatore. */
@@ -64,4 +73,4 @@ function avviaSimulatore(eseguibile) {
 
 const esa = (byte) => Buffer.from(byte).toString('hex');
 
-module.exports = { trovaCompilatore, compila, avviaSimulatore, esa, CHIAVETTA };
+module.exports = { compilatoreOSalta, compila, avviaSimulatore, esa, CHIAVETTA };

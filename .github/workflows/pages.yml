@@ -16,7 +16,8 @@ concurrency:
 
 jobs:
   firmware:
-    runs-on: ubuntu-latest
+    # versione fissa: il compilatore ARM viene da apt e non deve cambiare da solo
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - name: Strumenti per il Pico

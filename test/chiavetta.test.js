@@ -8,10 +8,9 @@ const path = require('path');
 const { spawnSync } = require('child_process');
 const Chiavetta = require('../src/chiavetta.js');
 const Logica = require('../src/logica.js');
-const { trovaCompilatore, compila, avviaSimulatore, esa, CHIAVETTA } = require('./chiavetta-sim');
+const { compilatoreOSalta, compila, avviaSimulatore, esa, CHIAVETTA } = require('./chiavetta-sim');
 
-const cc = trovaCompilatore();
-const senzaCompilatore = cc ? false : 'nessun compilatore C (gcc, cc, clang o CC_CHIAVETTA)';
+const { cc, salta: senzaCompilatore } = compilatoreOSalta();
 
 const IMP = { ritardoCarattere: 30, ritardoInvio: 200, coppiePerPressione: 0, decAng: 2, decAlt: 2 };
 
@@ -65,6 +64,40 @@ test('sito: CRC-32, testo, pacchetti e risposte', () => {
   assert.match(Chiavetta.controlla(valori.slice(0, 3), IMP), /dispari/);
   assert.match(Chiavetta.controlla(valoriDa([['1234567890', '1']]).slice(0, 2), IMP), /troppe cifre/);
   assert.match(Chiavetta.controlla(valori, Object.assign({}, IMP, { ritardoCarattere: 0 })), /tasti/);
+});
+
+test('sito e firmware usano le stesse costanti (UUID, USB, limiti, errori, stati)', () => {
+  const fs = require('fs');
+  const leggi = (f) => fs.readFileSync(path.join(CHIAVETTA, 'src', f), 'utf8');
+  const datiH = leggi('dati.h'), datiC = leggi('dati.c'), usbC = leggi('usb.c'), bleC = leggi('ble.c');
+  const gatt = leggi('chiavetta.gatt'), motoreC = leggi('motore.c');
+  const define = (testo, nome) => parseInt(new RegExp('#define\\s+' + nome + '\\s+(0x[0-9a-fA-F]+|\\d+)').exec(testo)[1]);
+
+  assert.equal(define(datiH, 'DATI_MAX_TESTO'), Chiavetta.MAX_TESTO);
+  assert.equal(define(datiH, 'DATI_MAX_VALORI'), Chiavetta.MAX_VALORI);
+  assert.equal(define(datiH, 'DATI_MAX_CIFRE'), Chiavetta.MAX_CIFRE);
+  assert.equal(define(usbC, 'USB_VID'), Chiavetta.USB_VID);
+  assert.equal(define(usbC, 'PID_CARICAMENTO'), Chiavetta.USB_PID_CARICAMENTO);
+
+  // UUID: servizio e caratteristiche nel GATT, nomi delle maniglie in ble.c, annuncio al contrario
+  const uuid = gatt.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g);
+  assert.deepEqual(uuid, [Chiavetta.SERVIZIO, Chiavetta.COMANDO, Chiavetta.RISPOSTA]);
+  assert.ok(bleC.includes('H_COMANDO      ATT_CHARACTERISTIC_' + Chiavetta.COMANDO.replace(/-/g, '_')));
+  assert.ok(bleC.includes('H_RISPOSTA     ATT_CHARACTERISTIC_' + Chiavetta.RISPOSTA.replace(/-/g, '_')));
+  const annuncio = /0x11, BLUETOOTH_DATA_TYPE_COMPLETE_LIST_OF_128_BIT_SERVICE_CLASS_UUIDS,[^\n]*\n[^\n]*\n\s*([^\n]*)/.exec(bleC)[1];
+  const byteAnnuncio = annuncio.match(/0x[0-9a-f]{2}/g).map((x) => x.slice(2)).reverse().join('');
+  assert.equal(byteAnnuncio, Chiavetta.SERVIZIO.replace(/-/g, ''));
+
+  // impostazioni: stessi nomi e limiti
+  const impC = [...datiC.matchAll(/\{ "(\w+)",\s*(\d+), (\d+),/g)].map((m) => ({ nome: m[1], min: +m[2], max: +m[3] }));
+  assert.deepEqual(impC, Chiavetta.IMPOSTAZIONI.map((x) => ({ nome: x.nome, min: x.min, max: x.max })));
+
+  // ogni errore e ogni stato del firmware ha la sua spiegazione nel sito
+  const erroriC = [...datiC.matchAll(/\[ERR_\w+\] = "(\w+)"/g)].map((m) => m[1]);
+  assert.ok(erroriC.length >= 12);
+  assert.deepEqual(erroriC.filter((e) => !Chiavetta.ERRORI[e]), []);
+  const statiC = [...motoreC.matchAll(/case ST_\w+: return "(\w+)";/g)].map((m) => m[1]).concat(['CARICAMENTO']);
+  assert.deepEqual(statiC.filter((s) => !Chiavetta.STATI[s]), []);
 });
 
 test('sito e firmware insieme: cavo, Bluetooth, tasti scritti ed errori', { skip: senzaCompilatore }, async () => {

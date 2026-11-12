@@ -41,7 +41,7 @@
 #define NVM_NUM_LINK_KEYS 4
 #define MAX_ATT_DB_SIZE 512
 
-#define ENABLE_PRINTF_HEXDUMP   // richiesto dal codice di debug di BTstack incluso dall SDK
+#define ENABLE_PRINTF_HEXDUMP   // richiesto dal codice di debug di BTstack incluso dall'SDK
 #define HAVE_EMBEDDED_TIME_MS
 #define HAVE_ASSERT
 #define HCI_RESET_RESEND_TIMEOUT_MS 1000
