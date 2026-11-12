@@ -106,6 +106,6 @@ bool telaio_aggiungi(telaio_t *t, const uint8_t *p, size_t n,
 size_t risposta_ok(char *out, size_t max, uint16_t n, uint32_t crc);
 size_t risposta_errore(char *out, size_t max, dati_errore_t e, uint32_t riga);
 size_t risposta_stato(char *out, size_t max, uint16_t n, uint16_t pos, uint32_t crc,
-                      bool bluetooth, const char *stato);
+                      bool bluetooth, const char *stato, const char *versione);
 
 #endif

@@ -3,7 +3,8 @@ cmake_minimum_required(VERSION 3.13)
 set(PICO_BOARD pico2_w CACHE STRING "Scheda")
 include(pico_sdk_import.cmake)
 
-project(chiavetta C CXX ASM)
+# La versione del firmware si cambia solo qui: arriva al firmware, a picotool e al sito.
+project(chiavetta VERSION 1.1.0 LANGUAGES C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 
 if (PICO_SDK_VERSION_STRING VERSION_LESS "2.1.0")
@@ -24,7 +25,7 @@ add_executable(chiavetta
 target_include_directories(chiavetta PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src)
 target_compile_options(chiavetta PRIVATE -Wall -Wextra)
 # Niente rete: il chip wireless serve solo per Bluetooth e LED
-target_compile_definitions(chiavetta PRIVATE CYW43_LWIP=0)
+target_compile_definitions(chiavetta PRIVATE CYW43_LWIP=0 FIRMWARE_VERSIONE="${PROJECT_VERSION}")
 target_link_libraries(chiavetta
     pico_stdlib
     pico_unique_id
@@ -39,6 +40,7 @@ pico_btstack_make_gatt_header(chiavetta PRIVATE "${CMAKE_CURRENT_LIST_DIR}/src/c
 
 pico_set_program_name(chiavetta "Chiavetta misure")
 pico_set_program_description(chiavetta "Tastiera USB che scrive i valori del Compilatore misure")
+pico_set_program_version(chiavetta "${PROJECT_VERSION}")
 pico_set_program_url(chiavetta "https://alberico7.github.io/compilatore-misure/")
 
 pico_enable_stdio_usb(chiavetta 0)

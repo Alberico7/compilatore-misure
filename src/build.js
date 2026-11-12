@@ -18,6 +18,7 @@ const parti = {
   '/*DETTATO*/': leggi('dettato.js'),
   '/*VOCE*/': leggi('voce.js'),
   '/*CHIAVETTA*/': leggi('chiavetta.js'),
+  '/*APP_CHIAVETTA*/': leggi('app-chiavetta.js'),
   '/*APP*/': leggi('app.js'),
 };
 for (const [segnaposto, codice] of Object.entries(parti)) {
@@ -27,6 +28,16 @@ for (const [segnaposto, codice] of Object.entries(parti)) {
 }
 // il template è diviso in due per un'eventuale pubblicazione senza scheletro: qui i segnaposto non servono
 html = html.replace('<!--INIZIO_CONTENUTO_HEAD-->\n', '').replace('<!--FINE_CONTENUTO_HEAD-->\n', '');
+
+// Chiavetta: tabelle "Pulsante" e "LED" dal LEGGIMI (fonte unica) e versione del firmware dal CMakeLists
+const { tabellaHtml, TABELLE } = require('./tabelle-md');
+const leggimi = fs.readFileSync(path.join(radice, 'chiavetta', 'LEGGIMI.md'), 'utf8');
+if (!html.includes('<!--TABELLE_CHIAVETTA-->')) throw new Error('Segnaposto mancante: TABELLE_CHIAVETTA');
+html = html.replace('<!--TABELLE_CHIAVETTA-->', TABELLE.map((t) => tabellaHtml(leggimi, t)).join('\n'));
+const versione = /project\(chiavetta VERSION (\d+\.\d+\.\d+)/.exec(fs.readFileSync(path.join(radice, 'chiavetta', 'CMakeLists.txt'), 'utf8'));
+if (!versione) throw new Error('Versione del firmware non trovata in chiavetta/CMakeLists.txt');
+if (html.split('__VERSIONE_FIRMWARE__').length !== 2) throw new Error('Segnaposto __VERSIONE_FIRMWARE__ assente o ripetuto');
+html = html.replace('__VERSIONE_FIRMWARE__', versione[1]);
 
 function scrivi(file, testo) {
   fs.mkdirSync(path.dirname(file), { recursive: true });

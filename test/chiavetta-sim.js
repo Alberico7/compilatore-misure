@@ -10,6 +10,13 @@ const readline = require('readline');
 const CHIAVETTA = path.join(__dirname, '..', 'chiavetta');
 const SORGENTI = ['src/dati.c', 'src/motore.c', 'src/protocollo.c'].map((f) => path.join(CHIAVETTA, f));
 
+/* Versione del firmware: l'unico posto in cui si scrive e' project(... VERSION x.y.z ...) in CMakeLists.txt */
+function versioneFirmware() {
+  const m = /project\(chiavetta VERSION (\d+\.\d+\.\d+)/.exec(fs.readFileSync(path.join(CHIAVETTA, 'CMakeLists.txt'), 'utf8'));
+  if (!m) throw new Error('Versione non trovata in chiavetta/CMakeLists.txt');
+  return m[1];
+}
+
 function trovaCompilatore() {
   const candidati = [];
   if (process.env.CC_CHIAVETTA) candidati.push(process.env.CC_CHIAVETTA.split(' '));
@@ -37,7 +44,7 @@ const estensione = process.platform === 'win32' ? '.exe' : '';
 function compila(cc, nome, principale) {
   const uscita = path.join(cartella, nome + estensione);
   const argomenti = cc.slice(1).concat(['-std=c11', '-O1', '-Wall', '-Wextra', '-Werror',
-    '-I' + path.join(CHIAVETTA, 'src'), principale].concat(SORGENTI, ['-o', uscita]));
+    '-I' + path.join(CHIAVETTA, 'src'), '-DFIRMWARE_VERSIONE="' + versioneFirmware() + '"', principale].concat(SORGENTI, ['-o', uscita]));
   const r = spawnSync(cc[0], argomenti, { encoding: 'utf8' });
   if (r.status !== 0) throw new Error('Compilazione di ' + nome + ' non riuscita:\n' + r.stdout + r.stderr);
   return uscita;
@@ -73,4 +80,4 @@ function avviaSimulatore(eseguibile) {
 
 const esa = (byte) => Buffer.from(byte).toString('hex');
 
-module.exports = { compilatoreOSalta, compila, avviaSimulatore, esa, CHIAVETTA };
+module.exports = { versioneFirmware, compilatoreOSalta, compila, avviaSimulatore, esa, CHIAVETTA };

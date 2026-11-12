@@ -12,6 +12,16 @@ var Chiavetta = (function () {
   var USB_VID = 0x1209, USB_PID_CARICAMENTO = 0x0006;
   var NESSUN_CODICE = 0xFFFFFFFF;
   var ATTESA_RISPOSTA_MS = 8000;
+  /* Versione del firmware pubblicato sul sito: build.js la prende da chiavetta/CMakeLists.txt. */
+  var VERSIONE_PUBBLICATA = '__VERSIONE_FIRMWARE__';
+  function versionePubblicata() { return /^\d+\.\d+\.\d+$/.test(VERSIONE_PUBBLICATA) ? VERSIONE_PUBBLICATA : null; }
+
+  /* < 0 se a è più vecchia di b, 0 se uguali, > 0 se più nuova ("1.10.0" > "1.9.3"). */
+  function confrontaVersioni(a, b) {
+    var x = a.split('.').map(Number), y = b.split('.').map(Number);
+    for (var i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] - y[i];
+    return 0;
+  }
   /* Stessi nomi e limiti della tabella IMPOSTAZIONI in chiavetta/src/dati.c (lo controlla un test). */
   var IMPOSTAZIONI = [
     { nome: 'ritardo_carattere_ms', campo: 'ritardoCarattere', min: 1, max: 1000, etichetta: 'Pausa tra i tasti (ms)' },
@@ -44,7 +54,6 @@ var Chiavetta = (function () {
     return out;
   }
 
-  function due(n) { return (n < 10 ? '0' : '') + n; }
 
   /* Controlla che i valori vadano bene per la chiavetta. Ritorna null o un messaggio. */
   function controlla(valori, imp) {
@@ -66,13 +75,13 @@ var Chiavetta = (function () {
   }
 
   /* Testo per la chiavetta (solo caratteri ASCII).
-     valori: [{cifre}], imp: {ritardoCarattere, ritardoInvio, coppiePerPressione, decAng, decAlt}, data: Date */
-  function testo(valori, imp, data) {
-    var d = data || new Date();
-    var quando = d.getFullYear() + '-' + due(d.getMonth() + 1) + '-' + due(d.getDate()) + ' ' + due(d.getHours()) + ':' + due(d.getMinutes());
+     valori: [{cifre}], imp: {ritardoCarattere, ritardoInvio, coppiePerPressione, decAng, decAlt}
+     Niente data né ora: stessi valori e impostazioni = stesso testo = stesso codice di controllo,
+     così "Controlla la chiavetta" può confrontarlo con la tabella. */
+  function testo(valori, imp) {
     var righe = [
       '# Compilatore misure - valori per la chiavetta',
-      '# creato: ' + quando + ' - ' + valori.length / 2 + ' coppie - decimali angolo ' + imp.decAng + ', altezza ' + imp.decAlt
+      '# ' + valori.length / 2 + ' coppie - decimali angolo ' + imp.decAng + ', altezza ' + imp.decAlt
     ];
     IMPOSTAZIONI.forEach(function (x) { righe.push(x.nome + ' = ' + imp[x.campo]); });
     valori.forEach(function (v) { righe.push(v.cifre); });
@@ -137,8 +146,9 @@ var Chiavetta = (function () {
       return { tipo: 'errore', codice: p[1], riga: riga,
         messaggio: 'La chiavetta ha rifiutato i dati: ' + (ERRORI[p[1]] || p[1]) + (riga ? ' (riga ' + riga + ')' : '') + '.' };
     }
-    if (p[0] === 'STATO' && p.length === 6) {
-      return { tipo: 'stato', n: +p[1], pos: +p[2], crc: p[3], bluetooth: p[4] === 'BT', stato: p[5], descrizione: STATI[p[5]] || p[5] };
+    if (p[0] === 'STATO' && (p.length === 6 || p.length === 7)) {   // 6 campi: firmware senza versione
+      return { tipo: 'stato', n: +p[1], pos: +p[2], crc: p[3], bluetooth: p[4] === 'BT', stato: p[5], descrizione: STATI[p[5]] || p[5],
+        versione: p.length === 7 && /^\d+\.\d+\.\d+$/.test(p[6]) ? p[6] : null };
     }
     if (p[0] === 'CODICE' && p.length === 2) return { tipo: 'codice', attivo: p[1] === 'OK' };
     return { tipo: 'sconosciuta', testo: String(s) };
@@ -245,7 +255,7 @@ var Chiavetta = (function () {
   return {
     MAX_TESTO: MAX_TESTO, MAX_VALORI: MAX_VALORI, MAX_CIFRE: MAX_CIFRE, IMPOSTAZIONI: IMPOSTAZIONI,
     SERVIZIO: SERVIZIO, COMANDO: COMANDO, RISPOSTA: RISPOSTA, USB_VID: USB_VID, USB_PID_CARICAMENTO: USB_PID_CARICAMENTO,
-    ERRORI: ERRORI, STATI: STATI,
+    ERRORI: ERRORI, STATI: STATI, versionePubblicata: versionePubblicata, confrontaVersioni: confrontaVersioni,
     crc32: crc32, esa: esa, codifica: codifica, controlla: controlla, testo: testo, pacchetti: pacchetti,
     pacchettoStato: pacchettoStato, pacchettoCodice: pacchettoCodice, telaio: telaio, risposta: risposta,
     bluetoothDisponibile: bluetoothDisponibile, usbDisponibile: usbDisponibile,

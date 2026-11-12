@@ -11,7 +11,7 @@
       modo: 'separatore', decAng: 2, decAlt: 2, righe: righe,
       coppieBlocco: 10, invioFinale: false, scheda: 'barre', blocco: 0, confronto: 'tutti',
       tema: 'scuro', lettura: 0, voceModo: 'premi', voceSeparatore: 'pausa',
-      chRitCar: 30, chRitInv: 200, chCoppie: 0
+      chRitCar: 30, chRitInv: 200, chCoppie: 0, chMezzo: 'bluetooth'
     };
   }
 
@@ -19,6 +19,11 @@
   var salvataggioOk = true;
   var analisi = null, blocchi = [];
   var avvisoIncolla = '';
+  /* scheda Chiavetta (app-chiavetta.js) */
+  var chiavetta = AppChiavetta.crea({
+    stato: function () { return stato; }, analisi: function () { return analisi; },
+    salva: salva, chiedi: chiedi, $: $, esc: esc, intero: intero
+  });
 
   /* ---------- salvataggio ---------- */
   function carica() {
@@ -183,8 +188,7 @@
     mostraRiepilogo(usate.length);
     mostraBarre();
     mostraQR();
-    chEsitoFisso = false;
-    mostraChiavetta();
+    chiavetta.aggiorna();
     aggiornaConfronto();
     if (!$('lettura').hidden) mostraLettura();
     salva();
@@ -284,128 +288,6 @@
       $('pannello-' + s).hidden = stato.scheda !== s;
     });
     mostraQR(); // la larghezza del QR dipende dal pannello visibile
-  }
-
-  /* ---------- chiavetta ---------- */
-  var chOccupata = false;
-  var chEsitoFisso = false;   // l'ultimo esito resta finché non cambia qualcosa
-
-  function impChiavetta() {
-    return { ritardoCarattere: stato.chRitCar, ritardoInvio: stato.chRitInv, coppiePerPressione: stato.chCoppie,
-      decAng: stato.decAng, decAlt: stato.decAlt };
-  }
-
-  /* Testo e byte da mandare, oppure { errore }. */
-  function datiChiavetta() {
-    if (!analisi.valido) return { errore: 'Correggi i valori nella sezione 1: si possono inviare solo quando tutti i valori sono corretti.' };
-    var errore = Chiavetta.controlla(analisi.valori, impChiavetta());
-    if (errore) return { errore: errore };
-    var byte = Chiavetta.codifica(Chiavetta.testo(analisi.valori, impChiavetta()));
-    if (byte.length > Chiavetta.MAX_TESTO) return { errore: 'Troppi dati per la chiavetta.' };
-    return { byte: byte, crc: Chiavetta.esa(Chiavetta.crc32(byte)), n: analisi.valori.length };
-  }
-
-  function esitoChiavetta(classe, html) {
-    $('esito-chiavetta').innerHTML = '<div class="messaggio ' + classe + '">' + html + '</div>';
-  }
-
-  function mostraChiavetta() {
-    var bt = Chiavetta.bluetoothDisponibile(), usb = Chiavetta.usbDisponibile();
-    $('btn-ch-bt').hidden = !bt;
-    $('btn-ch-usb').hidden = !usb;
-    $('btn-ch-codice').disabled = $('btn-ch-spegni').disabled = !usb || chOccupata;
-    var nota = [];
-    if (!bt) nota.push('Questo browser non può usare il Bluetooth dei siti: serve Chrome su Android, oppure Chrome o Edge sul PC.');
-    if (!usb) nota.push('Questo browser non può usare il cavo (WebUSB): serve un browser basato su Chromium (Chrome, Edge, Vanadium).');
-    $('ch-supporto').textContent = nota.join(' ');
-    $('ch-supporto').hidden = !nota.length;
-    var d = datiChiavetta();
-    $('btn-ch-bt').disabled = $('btn-ch-usb').disabled = !!d.errore || chOccupata;
-    if (chOccupata || chEsitoFisso) return;
-    if (d.errore) esitoChiavetta('avviso', esc(d.errore));
-    else {
-      $('esito-chiavetta').innerHTML = '<p class="nota">Pronti da inviare: ' + d.n / 2 + (d.n === 2 ? ' coppia' : ' coppie') +
-        ' (' + d.n + ' valori), codice di controllo <b class="vis">' + d.crc + '</b>.</p>';
-    }
-  }
-
-  /* Collega, esegue "lavoro(collegamento)" e chiude. tipo: 'bluetooth' | 'cavo' */
-  function conChiavetta(tipo, lavoro) {
-    if (chOccupata) return;
-    chOccupata = true;
-    chEsitoFisso = true;
-    mostraChiavetta();
-    esitoChiavetta('avviso', tipo === 'cavo' ? 'Collegamento con il cavo…' : 'Collegamento Bluetooth…');
-    var conn = null;
-    (tipo === 'cavo' ? Chiavetta.collegaUsb() : Chiavetta.collegaBluetooth()).then(function (c) {
-      conn = c;
-      esitoChiavetta('avviso', 'Invio in corso…');
-      return lavoro(c);
-    }).catch(function (e) {
-      var msg = Chiavetta.messaggioCollegamento(e, tipo);
-      if (tipo === 'bluetooth' && e && e.name === 'NetworkError') {
-        msg += ' Se è la prima volta con questo telefono: tieni premuto il pulsante della chiavetta per 5 secondi (doppio lampo) e riprova entro un minuto.';
-      }
-      esitoChiavetta('errore', esc(msg));
-    }).then(function () {
-      if (conn) conn.chiudi();
-      chOccupata = false;
-      mostraChiavetta();
-    });
-  }
-
-  function inviaChiavetta(tipo) {
-    var d = datiChiavetta();
-    if (d.errore) { chEsitoFisso = true; esitoChiavetta('errore', esc(d.errore)); return; }
-    conChiavetta(tipo, function (c) {
-      return c.invia(Chiavetta.pacchetti(d.byte, tipo === 'cavo' ? 1024 : 180)).then(function (r) {
-        if (r.tipo === 'ok' && r.crc === d.crc && r.n === d.n) {
-          esitoChiavetta('ok', 'Chiavetta: ' + r.n + ' valori caricati, codice di controllo <span class="vis">' + esc(r.crc) +
-            '</span> uguale a quello del sito.<br>In macchina: cursore su <b>Angolo 1</b>, poi premi il pulsante della chiavetta.' +
-            (tipo === 'cavo' ? ' Prima scollegala e ricollegala <b>senza</b> premere il pulsante.' : ''));
-        } else if (r.tipo === 'ok') {
-          esitoChiavetta('errore', 'La chiavetta ha ricevuto dati diversi (' + r.n + ' valori, controllo ' + esc(r.crc) + ' invece di ' +
-            d.n + ', ' + d.crc + '). Non usarla: rinvia i valori.');
-        } else if (r.tipo === 'errore') {
-          esitoChiavetta('errore', esc(r.messaggio));
-        } else {
-          esitoChiavetta('errore', 'Risposta inattesa dalla chiavetta: ' + esc(r.testo || r.tipo));
-        }
-      });
-    });
-  }
-
-  function impostaCodice(spegni) {
-    var valore = $('ch-codice').value.trim();
-    if (!spegni && !/^\d{6}$/.test(valore)) {
-      chEsitoFisso = true;
-      esitoChiavetta('errore', 'Il codice deve avere 6 cifre.');
-      return;
-    }
-    var domanda = spegni
-      ? chiedi('Spegnere il Bluetooth della chiavetta?\nGli abbinamenti vengono cancellati. Si riaccende impostando un nuovo codice.', 'Spegni')
-      : chiedi('Impostare il codice ' + valore + '?\nGli abbinamenti precedenti vengono cancellati. Annota il codice: il telefono lo chiede la prima volta.', 'Imposta');
-    domanda.then(function (si) {
-      if (!si) return;
-      conChiavetta('cavo', function (c) {
-        return c.invia([Chiavetta.pacchettoCodice(spegni ? null : parseInt(valore, 10))]).then(function (r) {
-          if (r.tipo === 'codice') {
-            esitoChiavetta('ok', r.attivo
-              ? 'Codice impostato. Scollega la chiavetta e ricollegala senza premere il pulsante; poi tieni premuto il pulsante 5 secondi e invia dal telefono: ti chiederà il codice.'
-              : 'Bluetooth spento.');
-          } else {
-            esitoChiavetta('errore', esc(r.messaggio || ('Risposta inattesa: ' + (r.testo || r.tipo))));
-          }
-        });
-      });
-    });
-  }
-
-  function generaCodice() {
-    var n = new Uint32Array(1);
-    var limite = Math.floor(0x100000000 / 1000000) * 1000000;   // niente sbilanciamenti
-    do { crypto.getRandomValues(n); } while (n[0] >= limite);
-    $('ch-codice').value = ('00000' + (n[0] % 1000000)).slice(-6);
   }
 
   /* ---------- lettura uno alla volta ---------- */
@@ -915,21 +797,7 @@
     if (location.protocol === 'file:') $('btn-stampa').hidden = false;
     $('btn-stampa').addEventListener('click', function () { window.print(); });
 
-    [['ch-rit-car', 'chRitCar', 1, 1000, 30], ['ch-rit-inv', 'chRitInv', 0, 5000, 200], ['ch-coppie', 'chCoppie', 0, 500, 0]].forEach(function (x) {
-      $(x[0]).addEventListener('change', function () {
-        stato[x[1]] = intero(this.value, x[2], x[3], x[4]);
-        this.value = stato[x[1]];
-        chEsitoFisso = false;
-        mostraChiavetta();
-        salva();
-      });
-    });
-    $('btn-ch-bt').addEventListener('click', function () { inviaChiavetta('bluetooth'); });
-    $('btn-ch-usb').addEventListener('click', function () { inviaChiavetta('cavo'); });
-    $('btn-ch-genera').addEventListener('click', generaCodice);
-    $('btn-ch-codice').addEventListener('click', function () { impostaCodice(false); });
-    $('btn-ch-spegni').addEventListener('click', function () { impostaCodice(true); });
-    $('ch-codice').addEventListener('input', function () { this.value = this.value.replace(/\D/g, '').slice(0, 6); });
+    chiavetta.collega();
 
     $('coppie-blocco').addEventListener('change', function () {
       var primaCoppia = blocchi[stato.blocco] ? blocchi[stato.blocco].primaCoppia : 1;
@@ -997,9 +865,7 @@
     }
     sel.value = String(stato.coppieBlocco);
     $('invio-finale').checked = !!stato.invioFinale;
-    $('ch-rit-car').value = stato.chRitCar;
-    $('ch-rit-inv').value = stato.chRitInv;
-    $('ch-coppie').value = stato.chCoppie;
+    chiavetta.applicaImpostazioni();
     applicaTema();
   }
 

@@ -309,10 +309,10 @@ static void test_risposte(void) {
     UGUALI_S(s, "OK 40 3F2A1B9C");
     risposta_errore(s, sizeof(s), ERR_RIGA, 5);
     UGUALI_S(s, "ERRORE RIGA 5");
-    risposta_stato(s, sizeof(s), 40, 6, 0xAu, true, "FERMATO");
-    UGUALI_S(s, "STATO 40 6 0000000A BT FERMATO");
-    risposta_stato(s, sizeof(s), 0, 0, 0, false, "VUOTO");
-    UGUALI_S(s, "STATO 0 0 00000000 NOBT VUOTO");
+    risposta_stato(s, sizeof(s), 40, 6, 0xAu, true, "FERMATO", "1.1.0");
+    UGUALI_S(s, "STATO 40 6 0000000A BT FERMATO 1.1.0");
+    risposta_stato(s, sizeof(s), 0, 0, 0, false, "VUOTO", "12.3.45");
+    UGUALI_S(s, "STATO 0 0 00000000 NOBT VUOTO 12.3.45");
 }
 
 // --- motore -----------------------------------------------------------------

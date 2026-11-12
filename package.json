@@ -1,6 +1,6 @@
 {
   "name": "compilatore-misure",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "private": true,
   "description": "Coppie Angolo/Altezza per la maschera della macchina: codici a barre e QR da leggere col lettore, dettatura con Vosk, chiavetta-tastiera con Raspberry Pi Pico 2 W",
   "author": "Andrea Carletti",
@@ -8,6 +8,7 @@
   "type": "commonjs",
   "scripts": {
     "build": "node src/build.js",
+    "firmware": "powershell -NoProfile -ExecutionPolicy Bypass -File chiavetta/compila.ps1",
     "test": "node src/build.js && node --test --test-concurrency=1 test/logica.test.js test/dettato.test.js test/pagina.test.js test/voce.test.js test/chiavetta.test.js test/pagina-chiavetta.test.js",
     "test:vosk": "node src/build.js && node --test test/vosk-reale.test.js"
   },

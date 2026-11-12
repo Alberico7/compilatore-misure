@@ -238,7 +238,7 @@ size_t risposta_errore(char *out, size_t max, dati_errore_t e, uint32_t riga) {
 }
 
 size_t risposta_stato(char *out, size_t max, uint16_t n, uint16_t pos, uint32_t crc,
-                      bool bluetooth, const char *stato) {
-    return finisci(snprintf(out, max, "STATO %u %u %08lX %s %s", (unsigned)n, (unsigned)pos,
-                            (unsigned long)crc, bluetooth ? "BT" : "NOBT", stato), max);
+                      bool bluetooth, const char *stato, const char *versione) {
+    return finisci(snprintf(out, max, "STATO %u %u %08lX %s %s %s", (unsigned)n, (unsigned)pos,
+                            (unsigned long)crc, bluetooth ? "BT" : "NOBT", stato, versione), max);
 }

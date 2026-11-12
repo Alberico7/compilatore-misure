@@ -61,11 +61,13 @@ Per aggiornare il firmware si ripete la stessa cosa. I valori e il codice Blueto
 
 ## Uso in macchina
 
-1. Carica i valori dal sito. Il sito controlla che il **codice di controllo** della chiavetta sia uguale al suo.
+1. Carica i valori dal sito: scegli **Bluetooth** o **Cavo** e premi **Invia i valori**. Il sito controlla che il **codice di controllo** della chiavetta sia uguale al suo.
 2. Collega la chiavetta alla macchina **senza** premere il pulsante: il LED fa due lampi e poi resta acceso fisso (pronta).
 3. Metti il cursore sul campo **Angolo 1** della maschera.
 4. **Premi il pulsante:** dopo 1 secondo inizia a scrivere.
 5. Controlla i valori sullo schermo della macchina **prima** di avviare la tastatura.
+
+<!-- Le tabelle "Pulsante" e "LED" finiscono anche nella guida del sito (src/build.js): si cambiano solo qui. -->
 
 | Pulsante | Effetto |
 |---|---|
@@ -86,6 +88,16 @@ Con "Coppie per pressione" diverso da 0, ogni pressione scrive quel numero di co
 | Lampi lunghi (1 secondo acceso, 1 spento) | Nessun valore caricato |
 | Doppio lampo ripetuto | Abbinamento Bluetooth aperto |
 | Tre lampi veloci | Valori nuovi caricati, oppure tornata all'inizio |
+
+## Controllare la chiavetta
+
+Nella scheda Chiavetta del sito, **Controlla la chiavetta** chiede alla chiavetta cosa contiene e mostra:
+- quanti valori ha e a che punto è ("pronta dall'inizio", "fermata dopo il valore 12 di 40", "ha finito");
+- se sono **uguali alla tabella** del sito, impostazioni comprese (pause, coppie per pressione);
+- la **versione del firmware**, con un avviso se sul sito ce n'è una più nuova;
+- se il Bluetooth è acceso.
+
+Via Bluetooth funziona anche con la chiavetta collegata alla macchina: non cambia niente e non fa partire nessun tasto.
 
 ## Se qualcosa non va
 
@@ -108,8 +120,19 @@ Il firmware è in C, con l'[SDK ufficiale Raspberry Pi](https://github.com/raspb
 | `src/main.c`, `src/usb.c`, `src/ble.c`, `src/memoria.c`, `src/chiavetta.gatt` | Le parti che usano l'hardware |
 | `test/test_dati.c` | Test della parte pura (con `npm test`, oppure da solo) |
 | `test/simulatore.c` | Pico simulato usato dai test del sito |
+| `compila.ps1` | Compilazione su Windows con gli strumenti dell'estensione VS Code (`npm run firmware`) |
 
-Per compilare: `cmake -S chiavetta -B chiavetta/build -G Ninja && cmake --build chiavetta/build`. Servono `PICO_SDK_PATH`, la toolchain `arm-none-eabi`, CMake, Ninja e Python. Su GitHub Actions il firmware si compila a ogni push e `chiavetta.uf2` finisce sul sito.
+La **versione** si cambia solo in `CMakeLists.txt` (`project(chiavetta VERSION x.y.z ...)`). Da lì arriva al firmware (risposta di stato), a `picotool info` e al sito, che la mostra come "versione pubblicata".
+
+### Compilare sul proprio PC
+
+Su GitHub Actions il firmware si compila a ogni push e `chiavetta.uf2` finisce sul sito. Per compilarlo su Windows:
+
+1. Installa **VS Code** e l'estensione **Raspberry Pi Pico** (di Raspberry Pi).
+2. Con l'estensione crea una volta un progetto di prova per **Pico 2 W**, con SDK **2.3.1** o successivo. Così scarica in `%USERPROFILE%\.pico-sdk` l'SDK, il compilatore ARM, CMake, Ninja, picotool e pioasm.
+3. Nella cartella del progetto: `npm run firmware`. Lo script `compila.ps1` trova da solo gli strumenti e crea `chiavetta/build/chiavetta.uf2`. Poi `npm run build` lo mette nel sito.
+
+Se gli strumenti sono altrove: `PICO_STRUMENTI` (cartella in cui cercarli) e `PICO_SDK_PATH` (l'SDK). Con `-Pulisci` lo script ricomincia da zero. Su Linux e macOS: `cmake -S chiavetta -B chiavetta/build -G Ninja && cmake --build chiavetta/build`, con `PICO_SDK_PATH` impostata.
 
 **Protocollo** (uguale per Bluetooth e cavo):
 
@@ -121,7 +144,7 @@ Per compilare: `cmake -S chiavetta -B chiavetta/build -G Ninja && cmake --build 
 | `S` | Stato |
 | `P` + codice | Codice Bluetooth (solo con il cavo) |
 
-- Risposte: `OK n crc`, `ERRORE nome riga`, `STATO n pos crc BT|NOBT stato`, `CODICE OK|SPENTO`.
+- Risposte: `OK n crc`, `ERRORE nome riga`, `STATO n pos crc BT|NOBT stato versione`, `CODICE OK|SPENTO`. Il firmware 1.0 non manda la versione: il sito lo riconosce e invita ad aggiornarlo.
 - Con il cavo ogni pacchetto è preceduto dalla sua lunghezza (2 byte).
 - Il servizio Bluetooth è `0f600001-7d5c-4ab1-a5aa-df4e1c99d7c0`. WebUSB usa VID `0x1209` e PID `0x0006`, con `0x0005` per la tastiera: sono PID di prova di pid.codes, adatti a un dispositivo privato.
 

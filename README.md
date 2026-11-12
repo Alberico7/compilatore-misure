@@ -30,9 +30,10 @@ npm test           # compila e prova: codici decodificati con zxing, telefono, d
                    # oppure CC_CHIAVETTA="python -m ziglang cc"; senza compilatore quei test si saltano)
 npm run test:vosk  # solo Windows: vero Vosk con la voce sintetica di Windows al posto del microfono
 npm run build      # crea compilatore-misure.html e sito/
+npm run firmware   # solo Windows: compila chiavetta/build/chiavetta.uf2 (strumenti dell'estensione Pico per VS Code)
 ```
 
-- Sorgenti in `src/`: `template.html`, `logica.js` (conversione, validazione, Code 128, QR, prova lettore), `dettato.js` (parole → valori), `voce.js` (Vosk), `chiavetta.js` (protocollo, Web Bluetooth, WebUSB), `app.js` (pagina).
+- Sorgenti in `src/`: `template.html`, `logica.js` (conversione, validazione, Code 128, QR, prova lettore), `dettato.js` (parole → valori), `voce.js` (Vosk), `chiavetta.js` (protocollo, Web Bluetooth, WebUSB), `app-chiavetta.js` (scheda Chiavetta), `tabelle-md.js` (tabelle del LEGGIMI nella guida), `app.js` (pagina).
 - Firmware della chiavetta in `chiavetta/` (C, pico-sdk 2.3.1).
 - Documenti di progetto in `docs/`.
 - A ogni push su `main`, GitHub Actions compila il firmware, esegue i test e pubblica `sito/` (con `chiavetta.uf2`) su GitHub Pages.

@@ -3,6 +3,11 @@
 #include <stdio.h>
 #include <string.h>
 
+// Versione del firmware: viene da project(... VERSION ...) in CMakeLists.txt
+#ifndef FIRMWARE_VERSIONE
+#error "manca FIRMWARE_VERSIONE (la passa CMakeLists.txt)"
+#endif
+
 size_t protocollo_elabora(sistema_t *s, ricevitore_t *r, bool cavo,
                           const uint8_t *p, size_t n, char *out, size_t max, uint32_t ora) {
     switch (ric_pacchetto(r, p, n)) {
@@ -10,7 +15,8 @@ size_t protocollo_elabora(sistema_t *s, ricevitore_t *r, bool cavo,
         return 0;
     case RIC_STATO:
         return risposta_stato(out, max, s->dati->n, s->motore->pos, s->crc, dati_codice_valido(s->codice),
-                              s->caricamento ? "CARICAMENTO" : motore_nome_stato(s->motore->stato));
+                              s->caricamento ? "CARICAMENTO" : motore_nome_stato(s->motore->stato),
+                              FIRMWARE_VERSIONE);
     case RIC_ERRORE:
         return risposta_errore(out, max, r->errore, 0);
     case RIC_CODICE: {

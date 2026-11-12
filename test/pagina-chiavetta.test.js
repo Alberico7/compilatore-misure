@@ -8,7 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
 const { avviaServer } = require('./server');
-const { compilatoreOSalta, compila, avviaSimulatore, CHIAVETTA } = require('./chiavetta-sim');
+const { versioneFirmware, compilatoreOSalta, compila, avviaSimulatore, CHIAVETTA } = require('./chiavetta-sim');
 
 const { cc, salta } = compilatoreOSalta();
 const CARTELLA_SCREENSHOT = path.join(__dirname, 'screenshot');
@@ -27,7 +27,8 @@ test.after(async () => {
 });
 
 /* Nel browser: navigator.usb e navigator.bluetooth finti che passano i byte a window.__sim
-   (il Pico simulato, in Node). opzioni: { senzaApi, annullaScelta, rovina } */
+   (il Pico simulato, in Node). opzioni: { senzaApi, senzaBt, senzaUsb, annullaScelta, rovina, versione }
+   versione: cambia la versione nelle risposte di stato ('nessuna' = firmware vecchio, senza versione). */
 function dispositiviFinti(opzioni) {
   const hex = (u8) => Array.from(u8, (b) => b.toString(16).padStart(2, '0')).join('');
   const byteDi = (d) => new Uint8Array(d.buffer ? d.buffer.slice(d.byteOffset, d.byteOffset + d.byteLength) : d);
@@ -41,6 +42,12 @@ function dispositiviFinti(opzioni) {
     const e = new Error('User cancelled the requestDevice() chooser.');
     e.name = 'NotFoundError';
     return Promise.reject(e);
+  }
+  function trasforma(testo) {
+    if (!opzioni.versione || !testo.startsWith('STATO ')) return testo;
+    const p = testo.split(' ');
+    if (opzioni.versione === 'nessuna') p.pop(); else p[6] = opzioni.versione;
+    return p.join(' ');
   }
   let contatoreD = 0;
   function forse_rovina(u8) {
@@ -64,7 +71,7 @@ function dispositiviFinti(opzioni) {
           // il telaio: [lung][lung][pacchetto]
           if (u8[2] === 0x44) u8 = Uint8Array.from([u8[0], u8[1]].concat(Array.from(forse_rovina(u8.subarray(2)))));
           const righe = await window.__sim('CAVO ' + hex(u8));
-          righe.forEach((r) => { coda += r.slice(2) + '\n'; });
+          righe.forEach((r) => { coda += trasforma(r.slice(2)) + '\n'; });
           if (inAttesa && coda) { const f = inAttesa; inAttesa = null; f(); }
           return { status: 'ok', bytesWritten: u8.length };
         },
@@ -90,7 +97,7 @@ function dispositiviFinti(opzioni) {
       const comando = {
         writeValueWithResponse: async (dati) => {
           const righe = await window.__sim('BT ' + hex(forse_rovina(byteDi(dati))));
-          const testo = righe[0].slice(2);
+          const testo = trasforma(righe[0].slice(2));
           if (testo) {
             const valore = new DataView(new TextEncoder().encode(testo).buffer);
             setTimeout(() => ascoltatori.forEach((f) => f({ target: { value: valore } })), 5);
@@ -103,8 +110,8 @@ function dispositiviFinti(opzioni) {
       return { name: 'Chiavetta misure', gatt };
     },
   };
-  Object.defineProperty(navigator, 'usb', { value: usb, configurable: true });
-  Object.defineProperty(navigator, 'bluetooth', { value: bluetooth, configurable: true });
+  Object.defineProperty(navigator, 'usb', { value: opzioni.senzaUsb ? undefined : usb, configurable: true });
+  Object.defineProperty(navigator, 'bluetooth', { value: opzioni.senzaBt ? undefined : bluetooth, configurable: true });
 }
 
 async function nuovaPagina(sim, opzioni = {}, { telefono = false } = {}) {
@@ -129,6 +136,19 @@ async function scrivi(page, coppie) {
   await page.click('#tab-chiavetta');
 }
 
+/* Sceglie il collegamento e preme un pulsante della scheda: 'invia' o 'controlla'. */
+async function premi(page, mezzo, pulsante) {
+  await page.check(`input[name=ch-mezzo][value=${mezzo}]`);
+  await page.click('#btn-ch-' + pulsante);
+}
+
+async function esito(page, classe) {
+  // non i messaggi intermedi ("Collegamento…", "Lettura dello stato…")
+  const m = page.locator('#esito-chiavetta .messaggio.' + classe).filter({ hasNotText: '…' });
+  await m.waitFor();
+  return m.innerText();
+}
+
 const COPPIE = [['214,94', '26,94'], ['313,16', '82,38'], ['-1,5', '59,30']];
 const SCRITTO = 'K 21494\\n2694\\n31316\\n8238\\n-150\\n5930\\n';
 
@@ -140,7 +160,8 @@ test('Bluetooth: invio, conferma con lo stesso codice di controllo, poi la chiav
     const pronti = await page.locator('#esito-chiavetta').innerText();
     const crc = /controllo (\w{8})/.exec(pronti)[1];
     assert.match(pronti, /3 coppie \(6 valori\)/);
-    await page.click('#btn-ch-bt');
+    assert.ok(await page.locator('input[name=ch-mezzo][value=bluetooth]').isChecked(), 'Bluetooth predefinito');
+    await page.click('#btn-ch-invia');
     await page.locator('#esito-chiavetta .messaggio.ok').waitFor();
     const esito = await page.locator('#esito-chiavetta').innerText();
     assert.match(esito, new RegExp('6 valori caricati, codice di controllo ' + crc + ' uguale a quello del sito'));
@@ -165,7 +186,7 @@ test('cavo (WebUSB): invio con le impostazioni scelte, anche da telefono', { ski
     await scrivi(page, COPPIE);
     await page.fill('#ch-coppie', '1');
     await page.locator('#ch-coppie').dispatchEvent('change');
-    await page.click('#btn-ch-usb');
+    await premi(page, 'cavo', 'invia');
     await page.locator('#esito-chiavetta .messaggio.ok').waitFor();
     assert.match(await page.locator('#esito-chiavetta').innerText(), /ricollegala senza premere il pulsante/);
     assert.deepEqual(await page.evaluate(() => window.__finto.filtri), [[{ vendorId: 0x1209, productId: 0x0006 }]]);
@@ -214,31 +235,31 @@ test('errori: dati non validi, scelta annullata, dati rovinati, browser senza Bl
     // valori non validi: niente invio
     let page = await nuovaPagina(sim);
     await scrivi(page, [['214,94', 'abc']]);
-    assert.ok(await page.locator('#btn-ch-bt').isDisabled());
-    assert.ok(await page.locator('#btn-ch-usb').isDisabled());
+    assert.ok(await page.locator('#btn-ch-invia').isDisabled());
+    assert.ok(await page.locator('#btn-ch-controlla').isEnabled(), 'controllare si può anche con la tabella sbagliata');
     assert.match(await page.locator('#esito-chiavetta').innerText(), /Correggi i valori/);
     await page.context().close();
 
     // troppe cifre per la chiavetta
     page = await nuovaPagina(sim);
     await scrivi(page, [['12345678,90', '1']]);
-    assert.ok(await page.locator('#btn-ch-bt').isDisabled());
+    assert.ok(await page.locator('#btn-ch-invia').isDisabled());
     assert.match(await page.locator('#esito-chiavetta').innerText(), /troppe cifre/);
     await page.context().close();
 
     // scelta del dispositivo annullata
     page = await nuovaPagina(sim, { annullaScelta: true });
     await scrivi(page, COPPIE);
-    await page.click('#btn-ch-bt');
+    await page.click('#btn-ch-invia');
     await page.locator('#esito-chiavetta .messaggio.errore').waitFor();
     assert.match(await page.locator('#esito-chiavetta').innerText(), /Nessuna chiavetta scelta/);
-    assert.ok(await page.locator('#btn-ch-bt').isEnabled());
+    assert.ok(await page.locator('#btn-ch-invia').isEnabled());
     await page.context().close();
 
     // un byte cambiato per strada: la chiavetta rifiuta, il sito lo dice
     page = await nuovaPagina(sim, { rovina: true });
     await scrivi(page, COPPIE);
-    await page.click('#btn-ch-bt');
+    await page.click('#btn-ch-invia');
     await page.locator('#esito-chiavetta .messaggio.errore').waitFor();
     assert.match(await page.locator('#esito-chiavetta').innerText(), /rovinati/);
     await page.context().close();
@@ -246,8 +267,9 @@ test('errori: dati non validi, scelta annullata, dati rovinati, browser senza Bl
     // browser senza Bluetooth e WebUSB (es. Firefox): pulsanti nascosti e spiegazione
     page = await nuovaPagina(sim, { senzaApi: true });
     await scrivi(page, COPPIE);
-    assert.ok(await page.locator('#btn-ch-bt').isHidden());
-    assert.ok(await page.locator('#btn-ch-usb').isHidden());
+    assert.ok(await page.locator('#btn-ch-invia').isHidden());
+    assert.ok(await page.locator('#btn-ch-controlla').isHidden());
+    assert.ok(await page.locator('#ch-mezzo').isHidden());
     assert.match(await page.locator('#ch-supporto').innerText(), /Bluetooth.*WebUSB/s);
     assert.deepEqual(page.erroriJs, []);
     await page.context().close();
@@ -259,10 +281,124 @@ test('screenshot della scheda Chiavetta sul PC', { skip: salta }, async () => {
   try {
     const page = await nuovaPagina(sim);
     await scrivi(page, COPPIE);
-    await page.click('#btn-ch-bt');
+    await page.click('#btn-ch-invia');
     await page.locator('#esito-chiavetta .messaggio.ok').waitFor();
+    await page.click('#btn-ch-controlla');
+    await page.locator('#esito-chiavetta .messaggio.ok').filter({ hasText: 'Uguali' }).waitFor();
     await page.click('.ch-avanzate summary');
     await page.locator('#sez-codici').screenshot({ path: path.join(CARTELLA_SCREENSHOT, 'chiavetta-pc.png') });
+    await page.context().close();
+  } finally { sim.chiudi(); }
+});
+
+test('Controlla la chiavetta: avanzamento, confronto con la tabella (valori e impostazioni), versione', { skip: salta }, async () => {
+  const sim = avviaSimulatore(eseguibile);
+  try {
+    const page = await nuovaPagina(sim);
+    await scrivi(page, COPPIE);
+    await page.fill('#ch-coppie', '1');
+    await page.locator('#ch-coppie').dispatchEvent('change');
+    await premi(page, 'bluetooth', 'invia');
+    await esito(page, 'ok');
+
+    await page.click('#btn-ch-controlla');
+    let t = await esito(page, 'ok');
+    assert.match(t, /6 valori, pronta a scrivere dall'inizio/);
+    assert.match(t, /Uguali ai valori e alle impostazioni della tabella/);
+    assert.match(t, new RegExp('Firmware ' + versioneFirmware().replace(/\./g, '\\.') + '\\.'));
+
+    // la chiavetta scrive una coppia (1 coppia per pressione) e si ferma
+    assert.deepEqual(await sim.comando('PREMI 100'), ['K 21494\\n2694\\n']);
+    await page.click('#btn-ch-controlla');
+    t = await page.locator('#esito-chiavetta .messaggio').filter({ hasText: 'Fermata' }).innerText();
+    assert.match(t, /Fermata dopo il valore 2 di 6: una pressione breve riprende/);
+    assert.deepEqual(await sim.comando('STATO'), ['S FERMATO 2 6'], 'controllare non cambia niente');
+
+    // un valore diverso nella tabella
+    await page.click('#tab-barre');
+    await page.fill('#corpo-tabella input[data-r="1"][data-c="1"]', '82,39');
+    await page.click('#tab-chiavetta');
+    await page.click('#btn-ch-controlla');
+    assert.match(await esito(page, 'avviso'), /Diversi dalla tabella/);
+    // stessi valori, impostazione diversa
+    await page.click('#tab-barre');
+    await page.fill('#corpo-tabella input[data-r="1"][data-c="1"]', '82,38');
+    await page.click('#tab-chiavetta');
+    await page.fill('#ch-rit-inv', '300');
+    await page.locator('#ch-rit-inv').dispatchEvent('change');
+    await page.click('#btn-ch-controlla');
+    assert.match(await esito(page, 'avviso'), /Diversi dalla tabella/);
+    // di nuovo come prima: uguali
+    await page.fill('#ch-rit-inv', '200');
+    await page.locator('#ch-rit-inv').dispatchEvent('change');
+    await page.click('#btn-ch-controlla');
+    assert.match(await esito(page, 'ok'), /Uguali/);
+    assert.deepEqual(page.erroriJs, []);
+    await page.context().close();
+  } finally { sim.chiudi(); }
+});
+
+test('Controlla la chiavetta: firmware vecchio, con o senza versione', { skip: salta }, async () => {
+  const sim = avviaSimulatore(eseguibile);
+  try {
+    let page = await nuovaPagina(sim, { versione: 'nessuna' });
+    await scrivi(page, COPPIE);
+    await page.click('#btn-ch-controlla');
+    assert.match(await esito(page, 'avviso'), /versione precedente: aggiornalo/);
+    await page.context().close();
+
+    page = await nuovaPagina(sim, { versione: '0.9.0' });
+    await scrivi(page, COPPIE);
+    assert.equal(await page.locator('#ch-versione').textContent(), versioneFirmware());
+    await page.click('#btn-ch-controlla');
+    assert.match(await esito(page, 'avviso'), new RegExp('Firmware 0\\.9\\.0: è disponibile la ' + versioneFirmware().replace(/\./g, '\\.')));
+    await page.context().close();
+  } finally { sim.chiudi(); }
+});
+
+test('collegamento: scelta ricordata; con un solo collegamento disponibile si vede solo quello', { skip: salta }, async () => {
+  const sim = avviaSimulatore(eseguibile);
+  try {
+    let page = await nuovaPagina(sim);
+    await scrivi(page, COPPIE);
+    await page.check('input[name=ch-mezzo][value=cavo]');
+    await page.reload();
+    await page.click('#tab-chiavetta');
+    assert.ok(await page.locator('input[name=ch-mezzo][value=cavo]').isChecked());
+    await page.context().close();
+
+    page = await nuovaPagina(sim, { senzaBt: true });
+    await scrivi(page, COPPIE);
+    assert.ok(await page.locator('#lbl-ch-bt').isHidden());
+    assert.ok(await page.locator('input[name=ch-mezzo][value=cavo]').isChecked());
+    assert.match(await page.locator('#ch-supporto').innerText(), /Bluetooth/);
+    await sim.comando('MODO caricamento');
+    await page.click('#btn-ch-invia');
+    assert.match(await esito(page, 'ok'), /6 valori caricati/);
+    assert.deepEqual(await page.evaluate(() => window.__finto.scelte), ['usb']);
+    await page.context().close();
+
+    page = await nuovaPagina(sim, { senzaUsb: true });
+    await scrivi(page, COPPIE);
+    assert.ok(await page.locator('#lbl-ch-cavo').isHidden());
+    assert.ok(await page.locator('#btn-ch-codice').isDisabled(), 'il codice si imposta solo con il cavo');
+    await page.context().close();
+  } finally { sim.chiudi(); }
+});
+
+test('guida e titolo: tabelle "Pulsante" e "LED" uguali al LEGGIMI, sezione 2 "In macchina"', { skip: salta }, async () => {
+  const { righeTabella, testoCella, TABELLE } = require('../src/tabelle-md');
+  const leggimi = fs.readFileSync(path.join(CHIAVETTA, 'LEGGIMI.md'), 'utf8');
+  const sim = avviaSimulatore(eseguibile);
+  try {
+    const page = await nuovaPagina(sim);
+    assert.equal((await page.locator('#sez-codici h2').innerText()).replace(/\s+/g, ' ').trim(), '2 In macchina: codici o chiavetta');
+    assert.equal(await page.locator('nav.indice a[href="#sez-codici"]').innerText(), '2 · In macchina');
+    const tabelle = await page.$$eval('#sez-guida details table', (ts) => ts.map((t) =>
+      Array.from(t.rows, (r) => Array.from(r.cells, (c) => c.textContent.trim()))));
+    assert.deepEqual(tabelle, TABELLE.map((t) => righeTabella(leggimi, t).map((r) => r.map(testoCella))));
+    assert.equal(tabelle.length, 2);
+    assert.ok(tabelle[1].length >= 7, 'tutte le righe del LED');
     await page.context().close();
   } finally { sim.chiudi(); }
 });
