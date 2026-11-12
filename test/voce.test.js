@@ -1,0 +1,231 @@
+'use strict';
+// Dettatura sul sito, con un riconoscitore simulato al posto di Vosk (il vero Vosk: test/vosk-reale.test.js).
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const path = require('path');
+const { chromium } = require('playwright');
+const { avviaServer } = require('./server');
+
+let browser, server;
+test.before(async () => {
+  browser = await chromium.launch(process.env.CI ? {} : { channel: 'msedge' });
+  server = await avviaServer(path.join(__dirname, '..', 'sito'));
+});
+test.after(async () => { await browser.close(); await server.chiudi(); });
+
+/* Motore simulato: stessa interfaccia del motore Vosk (prepara, avvia, ferma, chiudiMicrofono).
+   Il test detta con window.__voce.dici(testo) (frase chiusa da una pausa) e window.__voce.finale = testo
+   (quello che Vosk restituisce quando si lascia il pulsante). */
+function simulatore(modelloGiaScaricato) {
+  window.__modelloSimulatoScaricato = modelloGiaScaricato;
+  window.__voce = { preparato: 0, avviato: 0, attivo: false, finale: '' };
+  window.__motoreVoceSimulato = () => {
+    const m = {
+      prepara: async (avanzamento) => { avanzamento('Scaricamento: 25,0 di 49,7 MB', 0.5); window.__voce.preparato++; },
+      avvia: async (g) => { m.g = g; window.__voce.avviato++; window.__voce.attivo = true; },
+      ferma: async () => {
+        window.__voce.attivo = false;
+        const t = window.__voce.finale; window.__voce.finale = '';
+        return { testo: t, audioMs: 1500, ms: 20 };
+      },
+      chiudiMicrofono: () => { window.__voce.attivo = false; },
+    };
+    window.__voce.dici = (t) => m.g.onRisultato(t);
+    window.__voce.parziale = (t) => m.g.onParziale(t);
+    return m;
+  };
+}
+
+async function nuovaPagina({ telefono = false, giaScaricato = true, simulato = true } = {}) {
+  const ctx = await browser.newContext(telefono
+    ? { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, reducedMotion: 'reduce' }
+    : { viewport: { width: 1200, height: 900 }, reducedMotion: 'reduce' });
+  if (simulato) await ctx.addInitScript(simulatore, giaScaricato);
+  const page = await ctx.newPage();
+  page.erroriJs = [];
+  page.on('pageerror', (e) => page.erroriJs.push(e.message));
+  await page.goto(server.url);
+  return page;
+}
+
+const valore = (page, r, c) => page.inputValue(`#cella-${r}-${c}`);
+const attivo = (page) => page.evaluate(() => document.activeElement.getAttribute('aria-label'));
+const statoVoce = (page) => page.locator('#voce-stato').innerText();
+
+async function tieniPremutoEDici(page, frase, sel = '#btn-voce') {
+  const b = await page.locator(sel).boundingBox();
+  await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+  await page.mouse.down();
+  await page.waitForFunction(() => window.__voce.attivo);
+  await page.evaluate((f) => { window.__voce.parziale(f); window.__voce.finale = f; }, frase);
+  await page.mouse.up();
+  await page.waitForFunction(() => !window.__voce.attivo);
+}
+
+test('le librerie della voce non si scaricano finché non si usa il microfono', async () => {
+  const page = await nuovaPagina({ simulato: false });
+  assert.equal(await page.locator('#voce').isVisible(), true, 'sul sito la dettatura c\'è');
+  await page.fill('#cella-0-0', '20,5');
+  assert.ok(!server.richieste.some((u) => u.startsWith('/voce/')), 'nessuna richiesta a voce/*.js');
+  // primo uso senza modello: chiede conferma; "Annulla" non scarica niente
+  await page.click('#btn-voce');
+  await page.locator('#conferma').waitFor();
+  assert.match(await page.locator('#conferma-testo').innerText(), /Circa 50 MB/);
+  await page.click('#conferma-no');
+  assert.ok(!server.richieste.some((u) => u.startsWith('/voce/')));
+  assert.deepEqual(page.erroriJs, []);
+  await page.context().close();
+});
+
+test('primo uso: conferma dello scaricamento, poi "tieni premuto" scrive e passa alla casella dopo', async () => {
+  const page = await nuovaPagina({ giaScaricato: false });
+  await page.click('#cella-0-0');
+  await page.click('#btn-voce'); // primo tocco: chiede di scaricare, non ascolta ancora
+  await page.locator('#conferma').waitFor();
+  await page.click('#conferma-si');
+  await page.waitForFunction(() => window.__voce.preparato === 1);
+  assert.match(await statoVoce(page), /pronto/i);
+  assert.equal(await page.evaluate(() => window.__voce.avviato), 0, 'il microfono non si apre senza tenere premuto');
+  await tieniPremutoEDici(page, 'duecentoquattordici virgola nove quattro');
+  assert.equal(await valore(page, 0, 0), '214,94');
+  assert.equal(await attivo(page), 'Altezza 1');
+  assert.match(await statoVoce(page), /Capito: 214,94 \(Angolo 1\) → in macchina 214\.94/);
+  await tieniPremutoEDici(page, 'ventisei virgola nove quattro');
+  assert.equal(await valore(page, 0, 1), '26,94');
+  assert.equal(await attivo(page), 'Angolo 2');
+  await tieniPremutoEDici(page, 'buongiorno');
+  assert.match(await statoVoce(page), /Non ho capito: «buongiorno»/);
+  assert.equal(await attivo(page), 'Angolo 2', 'parole non capite: la casella non cambia');
+  assert.equal(await page.locator('#ant-0-0').innerText(), 'In macchina: 214.94 · cifre: 21494');
+  assert.deepEqual(page.erroriJs, []);
+  await page.context().close();
+});
+
+test('barra spaziatrice tenuta premuta nella tabella (PC)', async () => {
+  const page = await nuovaPagina();
+  await page.click('#cella-2-1');
+  await page.keyboard.down(' ');
+  await page.waitForFunction(() => window.__voce.attivo);
+  await page.evaluate(() => { window.__voce.finale = 'meno uno virgola cinque'; });
+  await page.keyboard.up(' ');
+  await page.waitForFunction(() => !window.__voce.attivo);
+  assert.equal(await valore(page, 2, 1), '-1,5', 'nessuno spazio scritto nella casella');
+  assert.equal(await attivo(page), 'Angolo 4');
+  assert.match(await page.locator('#riepilogo').innerText(), /Valori negativi/);
+  await page.context().close();
+});
+
+test('più valori con un tocco, separati dalla pausa: 20 coppie, "correggi" e "stop"', async () => {
+  const page = await nuovaPagina();
+  await page.selectOption('#voce-modo', 'continuo');
+  assert.equal(await page.inputValue('#voce-separatore'), 'pausa', 'pausa predefinita');
+  await page.click('#btn-voce');
+  await page.waitForFunction(() => window.__voce.attivo);
+  assert.match(await page.locator('#btn-voce-testo').innerText(), /tocca per fermare/);
+  const frasi = [], attesi = [];
+  for (let i = 1; i <= 20; i++) {
+    frasi.push(`${['dieci', 'venti', 'trenta', 'quaranta'][i % 4]} virgola ${['uno', 'due', 'tre'][i % 3]}`, `${['cinque', 'sei'][i % 2]} virgola zero ${['quattro', 'otto'][i % 2]}`);
+    attesi.push([`${[10, 20, 30, 40][i % 4]},${[1, 2, 3][i % 3]}`, `${[5, 6][i % 2]},0${[4, 8][i % 2]}`]);
+  }
+  for (let k = 0; k < frasi.length; k++) {
+    await page.evaluate((f) => window.__voce.dici(f), frasi[k]);
+    if (k === 5) { // valore sbagliato e "correggi"
+      await page.evaluate(() => window.__voce.dici('novecento'));
+      await page.evaluate(() => window.__voce.dici('correggi'));
+    }
+  }
+  // l'ultima casella della tabella (Altezza 20) ferma l'ascolto da sola
+  await page.waitForFunction(() => !window.__voce.attivo);
+  for (let i = 0; i < 20; i++) {
+    assert.deepEqual([await valore(page, i, 0), await valore(page, i, 1)], attesi[i], 'riga ' + (i + 1));
+  }
+  assert.match(await statoVoce(page), /Ultima riga/);
+  assert.equal(await page.locator('#corpo-tabella tr').count(), 20, 'nessuna riga aggiunta');
+  // di nuovo, con "stop"
+  await page.click('#cella-3-0');
+  await page.click('#btn-voce');
+  await page.waitForFunction(() => window.__voce.attivo);
+  await page.evaluate(() => window.__voce.dici('cento stop'));
+  await page.waitForFunction(() => !window.__voce.attivo);
+  assert.equal(await valore(page, 3, 0), '100');
+  assert.match(await statoVoce(page), /Dettatura finita/);
+  assert.deepEqual(page.erroriJs, []);
+  await page.context().close();
+});
+
+test('più valori separati da "avanti": anche detti d\'un fiato, con pause a metà numero', async () => {
+  const page = await nuovaPagina();
+  await page.selectOption('#voce-modo', 'continuo');
+  await page.selectOption('#voce-separatore', 'avanti');
+  await page.click('#btn-voce');
+  await page.waitForFunction(() => window.__voce.attivo);
+  await page.evaluate(() => window.__voce.dici('duecento'));             // pausa a metà numero
+  assert.equal(await valore(page, 0, 0), '', 'senza "avanti" non si scrive ancora');
+  assert.match(await statoVoce(page), /In attesa di «avanti»: 200/);
+  await page.evaluate(() => window.__voce.dici('quattordici virgola nove quattro avanti'));
+  assert.equal(await valore(page, 0, 0), '214,94');
+  await page.evaluate(() => window.__voce.dici('venti avanti trenta virgola cinque avanti'));
+  assert.equal(await valore(page, 0, 1), '20');
+  assert.equal(await valore(page, 1, 0), '30,5');
+  await page.evaluate(() => window.__voce.dici('quaranta'));
+  await page.click('#btn-voce'); // fermando, il valore in attesa si scrive (senza passare oltre)
+  await page.waitForFunction(() => !window.__voce.attivo);
+  assert.equal(await valore(page, 1, 1), '40');
+  await page.context().close();
+});
+
+test('ascolto continuo: si ferma dopo 30 s di silenzio e se la pagina va in secondo piano', async () => {
+  const page = await nuovaPagina();
+  await page.clock.install();
+  await page.reload();
+  await page.selectOption('#voce-modo', 'continuo');
+  await page.click('#btn-voce');
+  await page.waitForFunction(() => window.__voce.attivo);
+  await page.clock.runFor(29000);
+  assert.equal(await page.evaluate(() => window.__voce.attivo), true);
+  await page.evaluate(() => window.__voce.parziale('venti'));
+  await page.clock.runFor(29000);
+  assert.equal(await page.evaluate(() => window.__voce.attivo), true, 'parlare riarma il tempo');
+  await page.clock.runFor(2000);
+  await page.clock.runFor(500);
+  assert.equal(await page.evaluate(() => window.__voce.attivo), false);
+  assert.match(await statoVoce(page), /30 secondi/);
+  await page.click('#btn-voce');
+  await page.waitForFunction(() => window.__voce.attivo);
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  await page.clock.runFor(500);
+  assert.equal(await page.evaluate(() => window.__voce.attivo), false);
+  assert.match(await statoVoce(page), /secondo piano/);
+  await page.context().close();
+});
+
+test('telefono: 🎤 nella barra in basso, la tastiera non si apre mentre si detta', async () => {
+  const page = await nuovaPagina({ telefono: true });
+  await page.tap('#cella-0-0');
+  assert.equal(await page.locator('#mob-voce').isVisible(), true);
+  await tieniPremutoEDici(page, 'dodici virgola sette cinque', '#mob-voce');
+  assert.equal(await valore(page, 0, 0), '12,75');
+  assert.equal(await attivo(page), 'Altezza 1');
+  assert.equal(await page.getAttribute('#cella-0-1', 'inputmode'), 'none', 'tastiera chiusa durante la dettatura');
+  await page.tap('#cella-1-0'); // toccando una casella si torna a scrivere a mano
+  assert.equal(await page.getAttribute('#cella-1-0', 'inputmode'), 'decimal');
+  const largh = await page.evaluate(() => document.documentElement.scrollWidth);
+  assert.ok(largh <= 390, 'nessuno scorrimento orizzontale: ' + largh);
+  await page.screenshot({ path: path.join(__dirname, 'screenshot', 'tel-scuro-5-dettatura.png') });
+  assert.deepEqual(page.erroriJs, []);
+  await page.context().close();
+});
+
+test('screenshot della dettatura sul PC', async () => {
+  const page = await nuovaPagina();
+  await page.selectOption('#voce-modo', 'continuo');
+  await page.click('#cella-0-0');
+  await page.click('#btn-voce');
+  await page.waitForFunction(() => window.__voce.attivo);
+  await page.evaluate(() => { window.__voce.dici('duecentoquattordici virgola nove quattro'); window.__voce.dici('ventisei virgola nove quattro'); window.__voce.parziale('trecentotredici virgola'); });
+  await page.locator('#sez-dati').screenshot({ path: path.join(__dirname, 'screenshot', 'pc-scuro-7-dettatura.png') });
+  await page.context().close();
+});

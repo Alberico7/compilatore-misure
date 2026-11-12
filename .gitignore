@@ -1,0 +1,5 @@
+node_modules/
+sito/
+test/screenshot/
+test/.browser-vosk/
+.claude/

@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--INIZIO_CONTENUTO_HEAD-->
+<title>Compilatore misure</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<!--
+  Compilatore misure Angolo/Altezza per la maschera della macchina
+  Copyright (c) 2026 Andrea Carletti. Licenza PolyForm Noncommercial 1.0.0: solo uso non commerciale (vedi LICENSE).
+  Include "QR Code Generator for JavaScript", Copyright (c) 2009 Kazuhiko Arase, licenza MIT.
+-->
+<script>
+/* Applica il tema prima del disegno della pagina (niente lampo bianco). Predefinito: scuro. */
+(function () {
+  var tema = 'scuro';
+  try { var s = JSON.parse(localStorage.getItem('compilatore-misure-v1') || 'null'); if (s && s.tema === 'chiaro') tema = 'chiaro'; } catch (e) {}
+  document.documentElement.setAttribute('data-tema', tema);
+})();
+</script>
+<style>
+/* Strumento da officina: colonna unica, numeri grandi, contrasto alto. Tema scuro predefinito, chiaro a scelta.
+   I codici restano sempre neri su bianco (i lettori non leggono codici invertiti). */
+:root {
+  --sfondo: #14171c;
+  --carta: #1d2128;
+  --campo: #252a33;
+  --testo: #eef1f5;
+  --tenue: #a3acb9;
+  --bordo: #3a414d;
+  --riga: #2a303a;
+  --accento: #6cb0ff;
+  --su-accento: #0b1a2c;
+  --accento-chiaro: #1e3350;
+  --altezza: #c9a4ff;
+  --errore: #ff8f86;
+  --errore-chiaro: #3d1f1f;
+  --avviso: #ffc266;
+  --avviso-chiaro: #3a2c14;
+  --bordo-avviso: #b07a20;
+  --ok: #7fd99a;
+  --ok-chiaro: #183324;
+  --ombra: rgba(0, 0, 0, .55);
+  --carattere: "Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif;
+  --mono: Consolas, "Courier New", monospace;
+  color-scheme: dark;
+}
+:root[data-tema="chiaro"] {
+  --sfondo: #f4f5f7;
+  --carta: #ffffff;
+  --campo: #ffffff;
+  --testo: #15181d;
+  --tenue: #545c69;
+  --bordo: #c3c9d2;
+  --riga: #eceef1;
+  --accento: #0b57a4;
+  --su-accento: #ffffff;
+  --accento-chiaro: #e3eefa;
+  --altezza: #6a3fa0;
+  --errore: #b3261e;
+  --errore-chiaro: #fdecea;
+  --avviso: #8a5300;
+  --avviso-chiaro: #fff4e0;
+  --bordo-avviso: #e0a030;
+  --ok: #1d6b35;
+  --ok-chiaro: #e6f4ea;
+  --ombra: rgba(20, 24, 30, .25);
+  color-scheme: light;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+button:active { filter: brightness(1.15); }
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+body {
+  margin: 0; background: var(--sfondo); color: var(--testo);
+  font: 17px/1.45 var(--carattere);
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--sfondo); }
+.pagina {
+  max-width: 1120px; margin: 0 auto; padding-block: 0 96px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+header.testata { padding: 20px 0 8px; display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; align-items: start; }
+header.testata .sicurezza { grid-column: 1 / -1; }
+h1 { font-size: 28px; margin: 0 0 4px; text-wrap: balance; }
+.sottotitolo { color: var(--tenue); margin: 0; }
+h2 { font-size: 22px; margin: 0 0 12px; display: flex; align-items: center; gap: 10px; }
+h2 .num { background: var(--accento); color: var(--su-accento); border-radius: 50%; width: 32px; height: 32px; display: inline-grid; place-items: center; font-size: 17px; flex: none; }
+nav.indice {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--sfondo);
+  padding: 8px 0; display: flex; gap: 8px; flex-wrap: wrap; border-bottom: 1px solid var(--bordo);
+}
+nav.indice a { text-decoration: none; color: var(--accento); font-weight: 600; padding: 8px 12px; border-radius: 6px; background: var(--carta); border: 1px solid var(--bordo); }
+section.blocco { background: var(--carta); border: 1px solid var(--bordo); border-radius: 10px; padding: 20px; margin-top: 18px; scroll-margin-top: 72px; min-width: 0; }
+.sicurezza { background: var(--avviso-chiaro); border: 2px solid var(--bordo-avviso); border-radius: 10px; padding: 12px 16px; margin-top: 12px; font-weight: 600; }
+.sicurezza strong { color: var(--avviso); }
+
+/* impostazioni */
+.impostazioni { display: flex; flex-wrap: wrap; gap: 16px 28px; align-items: flex-end; margin-bottom: 14px; }
+.campo { display: flex; flex-direction: column; gap: 4px; }
+.campo > span, fieldset legend { font-weight: 600; font-size: 15px; color: var(--tenue); }
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+.radio { display: flex; gap: 6px; flex-wrap: wrap; }
+.radio label { border: 1px solid var(--bordo); border-radius: 8px; padding: 10px 12px; cursor: pointer; background: var(--campo); min-height: 44px; display: flex; align-items: center; gap: 6px; }
+.radio label:has(input:checked) { border-color: var(--accento); background: var(--accento-chiaro); font-weight: 600; }
+input[type=number].piccolo { width: 84px; }
+input, select, textarea, button { font: inherit; color: var(--testo); }
+input[type=number], select { padding: 8px 10px; border: 1px solid var(--bordo); border-radius: 8px; background: var(--campo); min-height: 44px; }
+button { padding: 9px 16px; min-height: 44px; border-radius: 8px; border: 1px solid var(--bordo); background: var(--campo); cursor: pointer; font-weight: 600; }
+button:hover { border-color: var(--accento); }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible { outline: 3px solid var(--accento); outline-offset: 2px; }
+button.primario { background: var(--accento); color: var(--su-accento); border-color: var(--accento); }
+button.pericolo { color: var(--errore); border-color: var(--errore); }
+button:disabled { opacity: .45; cursor: default; }
+.pulsanti { display: flex; gap: 8px; flex-wrap: wrap; }
+.nota { color: var(--tenue); font-size: 15px; margin: 6px 0 12px; }
+kbd { border: 1px solid var(--bordo); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font-size: 14px; background: var(--campo); }
+#btn-tema { white-space: nowrap; }
+
+/* tabella */
+.contenitore-tabella { overflow-x: auto; }
+table.misure { border-collapse: collapse; width: 100%; max-width: 640px; }
+table.misure th { text-align: left; font-size: 15px; color: var(--tenue); padding: 6px 8px; border-bottom: 2px solid var(--bordo); }
+table.misure td { padding: 4px 8px; vertical-align: top; border-bottom: 1px solid var(--riga); }
+table.misure td.n { font-weight: 700; color: var(--tenue); padding-top: 13px; width: 48px; text-align: right; }
+table.misure input { width: 100%; min-width: 0; font-size: 21px; padding: 7px 10px; border: 2px solid var(--bordo); border-radius: 8px; background: var(--campo); font-variant-numeric: tabular-nums; }
+table.misure input:focus { outline: none; border-color: var(--accento); box-shadow: 0 0 0 3px var(--accento-chiaro); }
+table.misure input.errore { border-color: var(--errore); background: var(--errore-chiaro); }
+table.misure input.avviso { border-color: var(--bordo-avviso); background: var(--avviso-chiaro); }
+.anteprima { font-size: 14px; min-height: 20px; color: var(--tenue); padding: 2px 2px 4px; }
+.anteprima b { color: var(--testo); font-size: 16px; font-variant-numeric: tabular-nums; }
+.anteprima.errore { color: var(--errore); font-weight: 600; }
+.anteprima.avviso { color: var(--avviso); }
+
+/* riepilogo */
+.riepilogo { margin-top: 14px; }
+.messaggio { border-radius: 8px; padding: 10px 14px; margin-top: 8px; }
+.messaggio.errore { background: var(--errore-chiaro); color: var(--errore); }
+.messaggio.avviso { background: var(--avviso-chiaro); color: var(--avviso); }
+.messaggio.ok { background: var(--ok-chiaro); color: var(--ok); font-weight: 600; }
+.messaggio ul { margin: 6px 0 0; padding-left: 20px; }
+.messaggio a { color: inherit; }
+
+/* schede */
+.schede { display: flex; gap: 4px; border-bottom: 2px solid var(--bordo); margin-bottom: 16px; flex-wrap: wrap; }
+.schede button { border: 0; border-radius: 8px 8px 0 0; background: transparent; padding: 10px 16px; color: var(--tenue); margin-bottom: -2px; border-bottom: 3px solid transparent; }
+.schede button[aria-selected=true] { color: var(--accento); border-bottom-color: var(--accento); background: var(--accento-chiaro); }
+.vuoto-codici { padding: 28px; text-align: center; border: 2px dashed var(--bordo); border-radius: 10px; color: var(--tenue); font-weight: 600; }
+
+/* cornice bianca dei codici: identica nei due temi */
+.cornice { background: #ffffff; padding: 6px; border-radius: 6px; display: inline-block; line-height: 0; max-width: 100%; }
+.cornice svg { display: block; max-width: 100%; }
+.cornice svg.qr { height: auto; }
+
+/* codici a barre */
+.griglia-barre { display: grid; grid-template-columns: 1fr 1fr; gap: 0; border-top: 1px solid var(--bordo); }
+.cella-barra { padding: 14px 10px 12px; border-bottom: 1px solid var(--bordo); text-align: center; break-inside: avoid; min-width: 0; }
+.cella-barra:nth-child(odd) { border-right: 1px solid var(--bordo); }
+.etichetta { font-weight: 700; font-size: 17px; }
+.tipo-ang { color: var(--accento); }
+.tipo-alt { color: var(--altezza); }
+.cella-barra .cornice { margin: 6px auto 4px; }
+.cella-barra .valore { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cifre { font-size: 13px; color: var(--tenue); }
+
+/* QR */
+.barra-qr { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: flex-end; margin-bottom: 14px; }
+.check { display: flex; gap: 8px; align-items: center; cursor: pointer; min-height: 44px; }
+.check input { width: 22px; height: 22px; }
+.navigazione { display: flex; align-items: center; gap: 12px; justify-content: center; margin: 8px 0; flex-wrap: wrap; }
+.navigazione .stato { font-size: 22px; font-weight: 700; min-width: 160px; text-align: center; }
+.info-blocco { text-align: center; font-size: 17px; margin-bottom: 8px; }
+.info-blocco b { color: var(--accento); }
+.area-qr { display: flex; justify-content: center; padding: 8px 0; }
+.contenuto-qr { margin: 10px auto 0; max-width: 560px; }
+.contenuto-qr table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; }
+.contenuto-qr td, .contenuto-qr th { padding: 3px 8px; border-bottom: 1px solid var(--riga); text-align: left; font-size: 15px; }
+.contenuto-qr th { color: var(--tenue); }
+.grezzo { font-family: var(--mono); font-size: 14px; background: var(--campo); border: 1px solid var(--bordo); border-radius: 6px; padding: 8px; word-break: break-all; margin-top: 8px; }
+
+/* prova lettore */
+textarea#prova { width: 100%; min-height: 160px; font-family: var(--mono); font-size: 18px; padding: 10px; border: 2px solid var(--bordo); border-radius: 8px; background: var(--campo); }
+textarea#prova:focus { outline: none; border-color: var(--accento); }
+.contenitore-esiti { overflow-x: auto; }
+.esiti { border-collapse: collapse; margin-top: 10px; font-variant-numeric: tabular-nums; }
+.esiti td, .esiti th { padding: 4px 12px; border-bottom: 1px solid var(--riga); text-align: left; }
+.esiti tr.ok td:last-child { color: var(--ok); font-weight: 600; }
+.esiti tr.ko td { background: var(--errore-chiaro); }
+.esiti tr.ko td:last-child { color: var(--errore); font-weight: 700; }
+.vis { font-family: var(--mono); }
+
+/* guida */
+.guida ol, .guida ul { padding-left: 22px; }
+.guida li { margin: 4px 0; }
+details summary { cursor: pointer; font-weight: 700; font-size: 18px; min-height: 44px; display: flex; align-items: center; }
+footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
+
+/* dettatura */
+.voce { margin-top: 14px; padding: 12px; border: 1px solid var(--bordo); border-radius: 10px; background: var(--campo); }
+.voce-comandi { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-end; }
+.voce-btn { font-size: 19px; min-height: 52px; padding: 10px 20px; touch-action: none; user-select: none; -webkit-user-select: none; }
+.voce-btn.ascolto, .voce-mob.ascolto { background: var(--errore); color: var(--su-accento); border-color: var(--errore); }
+.voce-btn.caricamento { opacity: .7; }
+.voce-stato { margin-top: 10px; font-size: 20px; font-weight: 700; min-height: 28px; font-variant-numeric: tabular-nums; }
+.voce-stato .provvisorio { color: var(--tenue); font-weight: 400; font-style: italic; }
+.voce-stato .non-capito { color: var(--errore); }
+.voce-stato .info { color: var(--tenue); font-weight: 600; font-size: 16px; }
+.voce-stato progress { width: 100%; max-width: 360px; height: 10px; display: block; margin-top: 6px; }
+.voce-ultimi { color: var(--tenue); font-size: 15px; font-variant-numeric: tabular-nums; }
+.voce-ultimi b { color: var(--testo); }
+
+/* barra in basso per il telefono (avanti / segno / indietro) */
+.barra-mobile {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: flex; gap: 8px;
+  background: var(--carta); border-top: 1px solid var(--bordo); box-shadow: 0 -4px 16px var(--ombra);
+  padding: 8px max(12px, env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+}
+.barra-mobile button { flex: 1; min-height: 52px; font-size: 17px; padding: 6px 4px; white-space: nowrap; }
+.barra-mobile button.segno { flex: 0 0 64px; }
+
+/* modalità lettura uno alla volta */
+.lettura {
+  position: fixed; inset: 0; z-index: 30; background: var(--sfondo); display: flex; flex-direction: column;
+  padding: calc(12px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+}
+.lettura .testa { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.lettura .avanzamento { font-size: 18px; font-weight: 700; color: var(--tenue); font-variant-numeric: tabular-nums; }
+.lettura .centro { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; text-align: center; min-height: 0; }
+.lettura .etichetta { font-size: 30px; }
+.lettura .valore { font-size: 44px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.lettura .cornice { padding: 10px; }
+.lettura .comandi { display: flex; gap: 10px; }
+.lettura .comandi button { flex: 1; min-height: 64px; font-size: 20px; }
+.lettura .barra-progresso { height: 6px; background: var(--riga); border-radius: 3px; overflow: hidden; margin-top: 8px; }
+.lettura .barra-progresso div { height: 100%; background: var(--accento); }
+
+/* conferma dentro la pagina */
+.velo { position: fixed; inset: 0; z-index: 40; background: rgba(0, 0, 0, .55); display: grid; place-items: center; padding: 16px; }
+.finestra { background: var(--carta); border: 1px solid var(--bordo); border-radius: 12px; padding: 20px; max-width: 440px; width: 100%; box-shadow: 0 10px 40px var(--ombra); }
+.finestra p { margin: 0 0 16px; font-size: 18px; white-space: pre-line; }
+.finestra .pulsanti { justify-content: flex-end; }
+
+.solo-stretto { display: none; }
+@media (max-width: 640px) {
+  body { font-size: 16px; }
+  h1 { font-size: 24px; }
+  header.testata { grid-template-columns: 1fr; }
+  #btn-tema { justify-self: start; }
+  .griglia-barre { grid-template-columns: 1fr; }
+  .cella-barra:nth-child(odd) { border-right: 0; }
+  section.blocco { padding: 14px; border-radius: 8px; }
+  nav.indice { gap: 6px; }
+  nav.indice a { padding: 8px 10px; font-size: 15px; }
+  .solo-largo { display: none; }
+  .solo-stretto { display: inline; }
+  .impostazioni { gap: 12px 16px; }
+  .radio { flex-direction: column; }
+  table.misure td { padding: 4px 4px; }
+  table.misure td.n { width: 30px; padding-left: 0; }
+  .pulsanti > button { flex: 1 1 auto; }
+  .navigazione .stato { order: -1; flex-basis: 100%; }
+  .navigazione button { flex: 1; }
+}
+@media print {
+  :root { --sfondo: #fff; --carta: #fff; --testo: #000; --tenue: #333; --bordo: #999; --accento: #000; --altezza: #000; color-scheme: light; }
+  body { font-size: 12pt; }
+  nav.indice, #sez-dati, #sez-prova, #sez-guida, .schede, .barra-qr, .pulsanti, footer, header.testata .sottotitolo, #btn-tema, .barra-mobile, .lettura, .nota { display: none !important; }
+  section.blocco { border: 0; padding: 0; margin: 0; }
+  .sicurezza { border: 1px solid #000; background: #fff; }
+}
+</style>
+<!--FINE_CONTENUTO_HEAD-->
+</head>
+<body>
+<div class="pagina">
+  <header class="testata">
+    <div>
+      <h1>Compilatore misure</h1>
+      <p class="sottotitolo">Angolo e Altezza per la maschera della macchina, letti con il lettore di codici in modalità tastiera.</p>
+    </div>
+    <button type="button" id="btn-tema" aria-pressed="false"></button>
+    <div class="sicurezza" role="note">
+      <strong>Sicurezza:</strong> lo strumento compila solo i campi, non avvia cicli.
+      Prima di avviare la tastatura controlla sempre i valori sullo schermo della macchina:
+      un valore sbagliato può mandare il tastatore contro l'utensile.
+    </div>
+  </header>
+
+  <nav class="indice" aria-label="Sezioni">
+    <a href="#sez-dati">1 · Valori</a>
+    <a href="#sez-codici">2 · Codici</a>
+    <a href="#sez-prova">3 · <span class="solo-largo">Prova del lettore</span><span class="solo-stretto">Prova</span></a>
+    <a href="#sez-guida">4 · Guida</a>
+  </nav>
+
+  <!-- 1. VALORI -->
+  <section class="blocco" id="sez-dati">
+    <h2><span class="num">1</span>Valori</h2>
+    <div class="impostazioni">
+      <fieldset>
+        <legend>Come scrivi i valori</legend>
+        <div class="radio">
+          <label><input type="radio" name="modo" id="modo-separatore" value="separatore"> Con separatore (20.00 o 20,00)</label>
+          <label><input type="radio" name="modo" id="modo-macchina" value="macchina"> Come in macchina (2000)</label>
+        </div>
+      </fieldset>
+      <label class="campo"><span>Decimali angolo</span><input type="number" class="piccolo" id="dec-ang" min="0" max="6" step="1" inputmode="numeric"></label>
+      <label class="campo"><span>Decimali altezza</span><input type="number" class="piccolo" id="dec-alt" min="0" max="6" step="1" inputmode="numeric"></label>
+      <label class="campo"><span>Righe</span><input type="number" class="piccolo" id="num-righe" min="1" max="500" step="1" inputmode="numeric"></label>
+    </div>
+    <div class="pulsanti">
+      <button type="button" id="btn-aggiungi">+ Aggiungi riga</button>
+      <button type="button" id="btn-togli">− Elimina ultima riga</button>
+      <button type="button" class="pericolo" id="btn-svuota">Svuota tutto</button>
+    </div>
+    <div class="voce" id="voce" hidden>
+      <div class="voce-comandi">
+        <button type="button" class="voce-btn" id="btn-voce"><span aria-hidden="true">🎤</span> <span id="btn-voce-testo">Detta</span></button>
+        <label class="campo"><span>Dettatura</span>
+          <select id="voce-modo">
+            <option value="premi">Un valore: tieni premuto</option>
+            <option value="continuo">Più valori: tocca per iniziare</option>
+          </select>
+        </label>
+        <label class="campo" id="campo-separatore"><span>Fine di ogni valore</span>
+          <select id="voce-separatore">
+            <option value="pausa">Una pausa</option>
+            <option value="avanti">La parola "avanti"</option>
+          </select>
+        </label>
+      </div>
+      <div class="voce-stato" id="voce-stato" aria-live="polite"></div>
+      <div class="voce-ultimi" id="voce-ultimi"></div>
+    </div>
+    <p class="nota">
+      <span class="solo-largo"><kbd>Invio</kbd> passa da Angolo ad Altezza e poi alla riga dopo, come in macchina. <kbd>↑</kbd> <kbd>↓</kbd> cambiano riga.
+      Da Excel: seleziona le due colonne, copia, clicca su <b>Angolo 1</b> e incolla con <kbd>Ctrl</kbd>+<kbd>V</kbd>.</span>
+      <span class="solo-stretto">Tocca una casella: in basso compaiono <b>Indietro</b>, <b>±</b> (segno) e <b>Avanti</b> (come INVIO in macchina).</span>
+      <span id="stato-salvataggio"></span>
+    </p>
+    <div class="contenitore-tabella">
+      <table class="misure">
+        <thead><tr><th>N°</th><th>Angolo</th><th>Altezza</th></tr></thead>
+        <tbody id="corpo-tabella"></tbody>
+      </table>
+    </div>
+    <div class="riepilogo" id="riepilogo" aria-live="polite"></div>
+  </section>
+
+  <!-- 2. CODICI -->
+  <section class="blocco" id="sez-codici">
+    <h2><span class="num">2</span>Codici da leggere in macchina</h2>
+    <div class="schede" role="tablist">
+      <button type="button" role="tab" id="tab-barre" data-scheda="barre">Codici a barre (1D)</button>
+      <button type="button" role="tab" id="tab-qr" data-scheda="qr">QR a blocchi (2D)</button>
+    </div>
+
+    <div id="pannello-barre" role="tabpanel">
+      <div class="pulsanti" style="margin-bottom:10px">
+        <button type="button" class="primario" id="btn-lettura">Leggi uno alla volta</button>
+        <button type="button" id="btn-stampa" hidden>Stampa codici</button>
+      </div>
+      <p class="nota">In macchina mettiti sul campo <b>Angolo 1</b>, poi leggi i codici nell'ordine (da sinistra a destra, riga per riga).
+        Ogni codice contiene solo le cifre: l'INVIO lo aggiunge il lettore. Da telefono usa <b>Leggi uno alla volta</b>.</p>
+      <div id="uscita-barre"></div>
+    </div>
+
+    <div id="pannello-qr" role="tabpanel" hidden>
+      <div class="barra-qr">
+        <label class="campo"><span>Coppie per blocco</span>
+          <select id="coppie-blocco">
+            <option value="5">5</option><option value="10">10</option><option value="20">20</option><option value="25">25</option><option value="50">50</option>
+          </select>
+        </label>
+        <label class="check"><input type="checkbox" id="invio-finale"> Aggiungi INVIO finale nel QR</label>
+      </div>
+      <p class="nota">Lascia <b>disattivato</b> "INVIO finale" se il lettore aggiunge già l'INVIO dopo ogni lettura: altrimenti l'INVIO è doppio e in macchina si salta un campo.</p>
+      <div id="uscita-qr"></div>
+    </div>
+  </section>
+
+  <!-- 3. PROVA -->
+  <section class="blocco" id="sez-prova">
+    <h2><span class="num">3</span>Prova del lettore</h2>
+    <p class="nota">Collega il lettore a <b>questo PC</b>, clicca nella casella e leggi i codici: lo strumento confronta quello che arriva con i valori attesi.
+      La prova vale per la macchina solo se il layout di tastiera di questo PC è uguale a quello della macchina.</p>
+    <div class="impostazioni">
+      <label class="campo"><span>Confronta con</span>
+        <select id="confronto"></select>
+      </label>
+      <div class="pulsanti"><button type="button" id="btn-svuota-prova">Svuota prova</button></div>
+    </div>
+    <textarea id="prova" spellcheck="false" autocomplete="off" placeholder="Clicca qui e leggi i codici con il lettore…"></textarea>
+    <div id="esito-prova" aria-live="polite"></div>
+  </section>
+
+  <!-- 4. GUIDA -->
+  <section class="blocco guida" id="sez-guida">
+    <h2><span class="num">4</span>Guida</h2>
+    <details open>
+      <summary>Come si usa</summary>
+      <ol>
+        <li>Scegli come scrivi i valori: <b>con separatore</b> (20.00 o 20,00) oppure <b>come in macchina</b> (2000, senza punto). Imposta i decimali di angolo e altezza come in macchina.</li>
+        <li>Scrivi i valori nella tabella oppure incolla due colonne da Excel. Sotto ogni casella vedi il valore come apparirà in macchina: controllalo.</li>
+        <li>Correggi le caselle in rosso. I codici compaiono solo quando tutti i valori sono corretti.</li>
+        <li>Scegli <b>Codici a barre</b> (lettore 1D, un codice per valore) o <b>QR a blocchi</b> (lettore 2D, più coppie per codice).</li>
+        <li>In macchina posiziona il cursore sul campo <b>Angolo 1</b> della maschera.</li>
+        <li>Leggi i codici nell'ordine. Con i QR usa <b>Successivo</b> dopo ogni blocco: il riquadro dice da quale coppia riparte.</li>
+        <li><b>Controlla tutti i valori sullo schermo della macchina prima di avviare la tastatura.</b></li>
+      </ol>
+      <p>Se si salta un campo o un valore è sbagliato: fermati, correggi a mano in macchina, poi riparti dal codice giusto (le etichette "Angolo n" / "Altezza n" dicono dove sei).</p>
+    </details>
+    <details>
+      <summary>Da smartphone</summary>
+      <ul>
+        <li>Per scrivere: tocca una casella, scrivi il numero e premi <b>Avanti</b> nella barra in basso (fa come INVIO). <b>±</b> cambia il segno, <b>Indietro</b> torna alla casella prima.</li>
+        <li>Per leggere i codici dal telefono in macchina: <b>Leggi uno alla volta</b>. Un codice per schermata, con <b>Successivo</b> o scorrendo col dito. Se lo schermo si spegne, riparti da dove eri.</li>
+        <li>Luminosità dello schermo al massimo, telefono fermo e dritto davanti al lettore.</li>
+        <li>Alcuni lettori 1D <b>laser</b> non leggono da uno schermo; quelli a fotocamera ("imager") sì. Provalo prima con il vostro lettore.</li>
+        <li>I valori salvati restano su quel telefono: non passano dal PC al telefono.</li>
+      </ul>
+    </details>
+    <details>
+      <summary>Dettatura</summary>
+      <ul>
+        <li>Funziona sul sito (non aprendo il file dal PC). La prima volta chiede di scaricare il riconoscimento vocale (circa 50 MB, una volta sola) e il permesso del microfono. L'audio non esce dal dispositivo.</li>
+        <li><b>Un valore: tieni premuto</b> 🎤 (sul PC anche la barra spaziatrice nella tabella), di' il valore, lascia: il valore va nella casella e si passa alla successiva.</li>
+        <li><b>Più valori: tocca</b> 🎤 una volta e detta i valori uno dopo l'altro. Ogni valore finisce con <b>una pausa</b> oppure con la parola <b>"avanti"</b> (impostazione accanto). Tocca di nuovo 🎤 o di' "stop" per finire.</li>
+        <li>Come dire i numeri: "duecentoquattordici virgola nove quattro" → 214,94; "zero virgola zero cinque" → 0,05; "meno uno virgola cinque" → -1,5.</li>
+        <li>Comandi: "correggi" (svuota il valore appena dettato e ci torna), "indietro", "cancella", "riga dodici", "stop".</li>
+        <li>Con la pausa come fine del valore, non fermarti a metà numero: "duecento … quattordici" diventerebbero due valori. Controlla sempre "Capito: …" e l'anteprima sotto le caselle.</li>
+        <li>Su Vanadium (GrapheneOS), se il riconoscimento è lento, attiva "JavaScript JIT" per questo sito nelle impostazioni del sito.</li>
+      </ul>
+    </details>
+    <details>
+      <summary>Configurazione del lettore</summary>
+      <ul>
+        <li><b>Modalità tastiera USB (HID)</b>, con suffisso <b>INVIO</b> (CR) dopo ogni lettura.</li>
+        <li><b>Layout di tastiera uguale a quello della macchina</b> (probabilmente tedesco). Le cifre di solito arrivano giuste con qualsiasi layout, il segno meno no.</li>
+        <li><b>QR:</b> attiva l'invio dei caratteri di controllo (<i>Function key emulation</i> o simile), altrimenti il CR dentro il QR non diventa INVIO e i valori arrivano attaccati.</li>
+        <li>Se la maschera <b>perde caratteri</b>, imposta un ritardo tra i caratteri (<i>inter-character delay</i>) sul lettore.</li>
+        <li>Prima di andare in macchina fai la <b>Prova del lettore</b> (sezione 3) su questo PC.</li>
+      </ul>
+    </details>
+    <details>
+      <summary>Note</summary>
+      <ul>
+        <li>I valori e le impostazioni si salvano da soli in questo browser, su questo dispositivo. "Svuota tutto" cancella i valori, non le impostazioni.</li>
+        <li>I valori negativi sono permessi ma segnalati: non è ancora verificato se la maschera accetta il segno meno.</li>
+        <li>I codici restano neri su bianco anche con il tema scuro: i lettori non leggono codici invertiti.</li>
+      </ul>
+    </details>
+  </section>
+
+  <footer>
+    © 2026 Andrea Carletti · Licenza PolyForm Noncommercial 1.0.0: solo uso non commerciale.
+    Include QR Code Generator for JavaScript © 2009 Kazuhiko Arase (licenza MIT). "QR Code" è un marchio registrato di DENSO WAVE INCORPORATED.
+  </footer>
+</div>
+
+<div class="barra-mobile" id="barra-mobile" hidden>
+  <button type="button" id="mob-indietro">◀ Indietro</button>
+  <button type="button" class="segno" id="mob-segno" aria-label="Cambia segno">±</button>
+  <button type="button" class="segno voce-mob" id="mob-voce" aria-label="Detta" hidden>🎤</button>
+  <button type="button" class="primario" id="mob-avanti">Avanti ▶</button>
+</div>
+
+<div class="lettura" id="lettura" role="dialog" aria-modal="true" aria-label="Lettura uno alla volta" hidden>
+  <div class="testa">
+    <span class="avanzamento" id="lettura-avanzamento"></span>
+    <button type="button" id="lettura-chiudi">✕ Chiudi</button>
+  </div>
+  <div class="barra-progresso"><div id="lettura-progresso"></div></div>
+  <div class="centro" id="lettura-centro"></div>
+  <div class="comandi">
+    <button type="button" id="lettura-prec">◀ Precedente</button>
+    <button type="button" class="primario" id="lettura-succ">Successivo ▶</button>
+  </div>
+</div>
+
+<div class="velo" id="conferma" hidden>
+  <div class="finestra" role="alertdialog" aria-modal="true" aria-labelledby="conferma-testo">
+    <p id="conferma-testo"></p>
+    <div class="pulsanti">
+      <button type="button" id="conferma-no">Annulla</button>
+      <button type="button" class="pericolo" id="conferma-si">Conferma</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/*QRCODE_LIB*/
+</script>
+<script>
+/*LOGICA*/
+</script>
+<script>
+/*DETTATO*/
+</script>
+<script>
+/*VOCE*/
+</script>
+<script>
+/*APP*/
+</script>
+</body>
+</html>
