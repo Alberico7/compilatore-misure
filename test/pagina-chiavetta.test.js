@@ -184,6 +184,7 @@ test('cavo (WebUSB): invio con le impostazioni scelte, anche da telefono', { ski
     await sim.comando('MODO caricamento');
     const page = await nuovaPagina(sim, {}, { telefono: true });
     await scrivi(page, COPPIE);
+    await page.evaluate(() => { document.getElementById('ch-scrittura').open = true; });
     await page.fill('#ch-coppie', '1');
     await page.locator('#ch-coppie').dispatchEvent('change');
     await premi(page, 'cavo', 'invia');
@@ -296,6 +297,7 @@ test('Controlla la chiavetta: avanzamento, confronto con la tabella (valori e im
   try {
     const page = await nuovaPagina(sim);
     await scrivi(page, COPPIE);
+    await page.evaluate(() => { document.getElementById('ch-scrittura').open = true; });
     await page.fill('#ch-coppie', '1');
     await page.locator('#ch-coppie').dispatchEvent('change');
     await premi(page, 'bluetooth', 'invia');
@@ -324,6 +326,7 @@ test('Controlla la chiavetta: avanzamento, confronto con la tabella (valori e im
     await page.click('#tab-barre');
     await page.fill('#corpo-tabella input[data-r="1"][data-c="1"]', '82,38');
     await page.click('#tab-chiavetta');
+    await page.evaluate(() => { document.getElementById('ch-scrittura').open = true; });
     await page.fill('#ch-rit-inv', '300');
     await page.locator('#ch-rit-inv').dispatchEvent('change');
     await page.click('#btn-ch-controlla');

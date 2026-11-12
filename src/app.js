@@ -3,15 +3,17 @@
 
   var CHIAVE = 'compilatore-misure-v1';
   var MAX_RIGHE = 500;
+  var RIGHE_INIZIALI = 5;   // le altre si aggiungono da sole con INVIO / Avanti sull'ultima casella
 
   function statoIniziale() {
     var righe = [];
-    for (var i = 0; i < 20; i++) righe.push(['', '']);
+    for (var i = 0; i < RIGHE_INIZIALI; i++) righe.push(['', '']);
     return {
       modo: 'separatore', decAng: 2, decAlt: 2, righe: righe,
       coppieBlocco: 10, invioFinale: false, scheda: 'barre', blocco: 0, confronto: 'tutti',
       tema: 'scuro', lettura: 0, voceModo: 'premi', voceSeparatore: 'pausa',
-      chRitCar: 30, chRitInv: 200, chCoppie: 0, chMezzo: 'bluetooth'
+      chRitCar: 30, chRitInv: 200, chCoppie: 0, chMezzo: 'bluetooth',
+      impAperte: true   // riquadro delle impostazioni aperto al primo uso
     };
   }
 
@@ -34,6 +36,7 @@
         Object.keys(base).forEach(function (k) { if (s[k] !== undefined) base[k] = s[k]; });
         base.righe = s.righe.slice(0, MAX_RIGHE).map(function (r) { return [String(r[0] || ''), String(r[1] || '')]; });
         if (!base.righe.length) base.righe.push(['', '']);
+        if (s.impAperte === undefined) base.impAperte = false;   // chi l'ha già usato le ha già scelte
         stato = base;
       }
     } catch (e) { salvataggioOk = false; }
@@ -92,10 +95,11 @@
   /* ---------- tema ---------- */
   function applicaTema() {
     document.documentElement.setAttribute('data-tema', stato.tema === 'chiaro' ? 'chiaro' : 'scuro');
-    var b = $('btn-tema');
-    b.textContent = stato.tema === 'chiaro' ? '☾ Tema scuro' : '☀ Tema chiaro';
+    var b = $('btn-tema'), etichetta = 'Passa al ' + (stato.tema === 'chiaro' ? 'tema scuro' : 'tema chiaro');
+    b.textContent = stato.tema === 'chiaro' ? '☾' : '☀';
     b.setAttribute('aria-pressed', String(stato.tema === 'chiaro'));
-    b.title = 'Passa al ' + (stato.tema === 'chiaro' ? 'tema scuro' : 'tema chiaro');
+    b.setAttribute('aria-label', etichetta);
+    b.title = etichetta;
   }
 
   /* ---------- tabella ---------- */
@@ -119,6 +123,14 @@
     }
     $('corpo-tabella').innerHTML = html.join('');
     $('num-righe').value = stato.righe.length;
+    riepilogoImpostazioni();
+  }
+
+  /* Riga sempre visibile del riquadro delle impostazioni. */
+  function riepilogoImpostazioni() {
+    var n = stato.righe.length;
+    $('imp-riepilogo').textContent = (stato.modo === 'macchina' ? 'Come in macchina' : 'Con separatore') +
+      ' · decimali ' + stato.decAng + ' / ' + stato.decAlt + ' · ' + n + (n === 1 ? ' riga' : ' righe');
   }
 
   function impostaRighe(n, chiediConferma) {
@@ -186,6 +198,7 @@
       }
     }
     mostraRiepilogo(usate.length);
+    riepilogoImpostazioni();
     mostraBarre();
     mostraQR();
     chiavetta.aggiorna();
@@ -321,11 +334,13 @@
     var centro = $('lettura-centro');
     var larg = Math.min(centro.clientWidth || window.innerWidth - 32, 900) - 24;
     var alt = Math.max(90, Math.min(200, Math.round(window.innerHeight * 0.22)));
-    centro.innerHTML =
+    var html =
       '<div class="etichetta" id="lettura-etichetta">' + etichetta(v) + '</div>' +
       '<div class="cornice" id="lettura-codice">' + Logica.code128Svg(v.cifre, moduloBarre(v.cifre, larg, 6), alt) + '</div>' +
       '<div class="valore">' + (v.cifre.charAt(0) === '-' ? '⚠ ' : '') + esc(v.display) + '</div>' +
       '<div class="cifre">cifre: ' + esc(v.cifre) + '</div>';
+    // solo se cambia: ridisegnare lo stesso codice mentre il lettore lo inquadra lo fa sfarfallare
+    if (centro.dataset.html !== html) { centro.innerHTML = html; centro.dataset.html = html; }
     $('lettura-avanzamento').textContent = (stato.lettura + 1) + ' di ' + valori.length;
     $('lettura-progresso').style.width = ((stato.lettura + 1) / valori.length * 100) + '%';
     $('lettura-prec').disabled = stato.lettura === 0;
@@ -467,9 +482,10 @@
   }
 
   /* Passa alla casella successiva; in ascolto continuo si ferma dopo l'ultima casella della tabella. */
+  /* Come Avanti; all'ultima casella aggiunge una riga, fino al massimo di righe. */
   function avantiDettato(p) {
-    if (ascoltoContinuo && p.r === stato.righe.length - 1 && p.c === 1) {
-      fermaContinuo('Ultima riga della tabella: dettatura finita.');
+    if (ascoltoContinuo && p.r >= MAX_RIGHE - 1 && p.c === 1) {
+      fermaContinuo('Raggiunte ' + MAX_RIGHE + ' righe: dettatura finita.');
       return;
     }
     avanti(p.r, p.c);
@@ -650,6 +666,7 @@
   function collegaVoce() {
     if (!Voce.disponibile()) return;
     $('voce').hidden = false;
+    $('voce-impostazioni').hidden = false;
     $('mob-voce').hidden = false;
     [$('btn-voce'), $('mob-voce')].forEach(function (b) {
       b.addEventListener('pointerdown', function (e) {
@@ -793,6 +810,11 @@
     document.querySelectorAll('.schede button').forEach(function (b) {
       b.addEventListener('click', function () { stato.scheda = b.dataset.scheda; mostraScheda(); salva(); });
     });
+    /* "Lettore 1D → Codici a barre · ...": apre la scheda (il link porta già alla sezione) */
+    document.querySelectorAll('[data-apri-scheda]').forEach(function (a) {
+      a.addEventListener('click', function () { stato.scheda = a.dataset.apriScheda; mostraScheda(); salva(); });
+    });
+    $('imp-valori').addEventListener('toggle', function () { stato.impAperte = this.open; salva(); });
     /* La stampa funziona solo aprendo il file dal PC (nella pagina pubblicata è bloccata). */
     if (location.protocol === 'file:') $('btn-stampa').hidden = false;
     $('btn-stampa').addEventListener('click', function () { window.print(); });
@@ -865,6 +887,7 @@
     }
     sel.value = String(stato.coppieBlocco);
     $('invio-finale').checked = !!stato.invioFinale;
+    $('imp-valori').open = !!stato.impAperte;
     chiavetta.applicaImpostazioni();
     applicaTema();
   }

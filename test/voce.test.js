@@ -134,13 +134,16 @@ test('più valori con un tocco, separati dalla pausa: 20 coppie, "correggi" e "s
       await page.evaluate(() => window.__voce.dici('correggi'));
     }
   }
-  // l'ultima casella della tabella (Altezza 20) ferma l'ascolto da sola
-  await page.waitForFunction(() => !window.__voce.attivo);
+  // le righe si aggiungono da sole: la dettatura continua oltre la tabella iniziale (5 righe)
+  await page.waitForFunction(() => document.querySelectorAll('#corpo-tabella tr').length === 21);
+  assert.ok(await page.evaluate(() => window.__voce.attivo), 'ancora in ascolto');
   for (let i = 0; i < 20; i++) {
     assert.deepEqual([await valore(page, i, 0), await valore(page, i, 1)], attesi[i], 'riga ' + (i + 1));
   }
-  assert.match(await statoVoce(page), /Ultima riga/);
-  assert.equal(await page.locator('#corpo-tabella tr').count(), 20, 'nessuna riga aggiunta');
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'cella-20-0', 'pronta per Angolo 21');
+  await page.evaluate(() => window.__voce.dici('stop'));
+  await page.waitForFunction(() => !window.__voce.attivo);
+  assert.equal(await valore(page, 20, 0), '', 'niente scritto con "stop"');
   // di nuovo, con "stop"
   await page.click('#cella-3-0');
   await page.click('#btn-voce');

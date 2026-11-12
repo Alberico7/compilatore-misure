@@ -60,6 +60,9 @@ var AppChiavetta = (function () {
       $('ch-supporto').textContent = nota.join(' ');
       $('ch-supporto').hidden = !nota.length;
       $('ch-versione').textContent = Chiavetta.versionePubblicata() || 'non disponibile';
+      var s = stato();
+      $('ch-imp-riepilogo').textContent = 'pause ' + s.chRitCar + ' / ' + s.chRitInv + ' ms · ' +
+        (s.chCoppie ? s.chCoppie + (s.chCoppie === 1 ? ' coppia' : ' coppie') + ' per pressione' : 'tutte le coppie');
 
       var x = dati();
       $('btn-ch-invia').disabled = !!x.errore || occupata;

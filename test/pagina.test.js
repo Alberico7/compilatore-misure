@@ -292,8 +292,8 @@ test('eliminare righe con valori chiede conferma nella pagina', async () => {
   await page.dispatchEvent('#num-righe', 'change');
   assert.match(await page.locator('#conferma-testo').innerText(), /contengono 2 coppie/);
   await page.click('#conferma-no');
-  assert.equal(await page.locator('#corpo-tabella tr').count(), 20);
-  assert.equal(await page.inputValue('#num-righe'), '20');
+  assert.equal(await page.locator('#corpo-tabella tr').count(), 5);
+  assert.equal(await page.inputValue('#num-righe'), '5');
   await page.fill('#num-righe', '1');
   await page.dispatchEvent('#num-righe', 'change');
   await page.click('#conferma-si');
@@ -309,7 +309,8 @@ test('tema scuro predefinito, cambio tema salvato', async () => {
   const page = await nuovaPagina();
   assert.equal(await tema(page), 'scuro');
   assert.equal(await sfondo(page), 'rgb(20, 23, 28)');
-  assert.match(await page.locator('#btn-tema').innerText(), /Tema chiaro/);
+  assert.equal(await page.locator('#btn-tema').innerText(), '☀', 'solo l\'icona');
+  assert.equal(await page.getAttribute('#btn-tema', 'aria-label'), 'Passa al tema chiaro');
   await page.click('#btn-tema');
   assert.equal(await tema(page), 'chiaro');
   assert.equal(await sfondo(page), 'rgb(244, 245, 247)');
@@ -397,7 +398,7 @@ test('smartphone: tastierino e barra Indietro / ± / Avanti come INVIO', async (
   // nel modo "come in macchina" il tastierino è solo numerico
   await page.tap('#modo-macchina');
   assert.equal(await page.getAttribute('#cella-0-0', 'inputmode'), 'numeric');
-  assert.equal(await page.locator('#barra-mobile').isVisible(), false, 'barra nascosta fuori dalla tabella');
+  await page.locator('#barra-mobile').waitFor({ state: 'hidden', timeout: 2000 });   // barra nascosta fuori dalla tabella
   await page.context().close();
 });
 

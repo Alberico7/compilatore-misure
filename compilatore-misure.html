@@ -117,7 +117,22 @@ button:disabled { opacity: .45; cursor: default; }
 .pulsanti { display: flex; gap: 8px; flex-wrap: wrap; }
 .nota { color: var(--tenue); font-size: 15px; margin: 6px 0 12px; }
 kbd { border: 1px solid var(--bordo); border-bottom-width: 2px; border-radius: 4px; padding: 0 5px; font-size: 14px; background: var(--campo); }
-#btn-tema { white-space: nowrap; }
+#btn-tema { min-width: 44px; padding: 6px 10px; font-size: 20px; line-height: 1; }
+/* riquadri apribili con riepilogo (impostazioni) */
+details.riquadro { border: 1px solid var(--bordo); border-radius: 10px; background: var(--campo); margin-bottom: 12px; }
+details.riquadro > summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  padding: 10px 14px; min-height: 48px; font-weight: 600; }
+details.riquadro > summary::-webkit-details-marker { display: none; }
+details.riquadro > summary .cambia { color: var(--accento); white-space: nowrap; }
+details.riquadro > summary .cambia::after { content: " ▾"; }
+details.riquadro[open] > summary .cambia::after { content: " ▴"; }
+details.riquadro[open] > summary { border-bottom: 1px solid var(--bordo); }
+details.riquadro > :not(summary) { margin-left: 14px; margin-right: 14px; }
+details.riquadro > .impostazioni:first-of-type { margin-top: 12px; }
+details.riquadro > :last-child { margin-bottom: 14px; }
+.azioni-valori { align-items: center; margin-bottom: 8px; }
+.voce-impostazioni { margin-top: 12px; }
+.metodi a { color: var(--accento); font-weight: 600; }
 
 /* tabella */
 .contenitore-tabella { overflow-x: auto; }
@@ -201,12 +216,11 @@ details summary { cursor: pointer; font-weight: 700; font-size: 18px; min-height
 footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
 
 /* dettatura */
-.voce { margin-top: 14px; padding: 12px; border: 1px solid var(--bordo); border-radius: 10px; background: var(--campo); }
-.voce-comandi { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: flex-end; }
+.voce-stato:empty, .voce-ultimi:empty { display: none; }
 .voce-btn { font-size: 19px; min-height: 52px; padding: 10px 20px; touch-action: none; user-select: none; -webkit-user-select: none; }
 .voce-btn.ascolto, .voce-mob.ascolto { background: var(--errore); color: var(--su-accento); border-color: var(--errore); }
 .voce-btn.caricamento { opacity: .7; }
-.voce-stato { margin-top: 10px; font-size: 20px; font-weight: 700; min-height: 28px; font-variant-numeric: tabular-nums; }
+.voce-stato { margin: 4px 0 8px; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .voce-stato .provvisorio { color: var(--tenue); font-weight: 400; font-style: italic; }
 .voce-stato .non-capito { color: var(--errore); }
 .voce-stato .info { color: var(--tenue); font-weight: 600; font-size: 16px; }
@@ -249,8 +263,14 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
 @media (max-width: 640px) {
   body { font-size: 16px; }
   h1 { font-size: 24px; }
-  header.testata { grid-template-columns: 1fr; }
-  #btn-tema { justify-self: start; }
+  header.testata { padding-top: 12px; }
+  .sottotitolo { display: none; }   /* sul telefono conta vedere subito la tabella */
+  .azioni-valori > button { flex: none; }
+  .sicurezza { font-size: 14px; padding: 8px 12px; margin-top: 8px; }
+  nav.indice { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  nav.indice::-webkit-scrollbar { display: none; }
+  nav.indice a { white-space: nowrap; flex: none; }
+  .schede button { padding: 10px 12px; }
   .griglia-barre { grid-template-columns: 1fr; }
   .cella-barra:nth-child(odd) { border-right: 0; }
   section.blocco { padding: 14px; border-radius: 8px; }
@@ -291,35 +311,34 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
   </header>
 
   <nav class="indice" aria-label="Sezioni">
-    <a href="#sez-dati">1 · Valori</a>
-    <a href="#sez-codici">2 · In macchina</a>
-    <a href="#sez-prova">3 · <span class="solo-largo">Prova del lettore</span><span class="solo-stretto">Prova</span></a>
-    <a href="#sez-guida">4 · Guida</a>
+    <a href="#sez-dati"><span class="solo-largo">1 · Valori</span><span class="solo-stretto">1 Valori</span></a>
+    <a href="#sez-codici"><span class="solo-largo">2 · In macchina</span><span class="solo-stretto">2 Macchina</span></a>
+    <a href="#sez-prova"><span class="solo-largo">3 · Prova del lettore</span><span class="solo-stretto">3 Prova</span></a>
+    <a href="#sez-guida"><span class="solo-largo">4 · Guida</span><span class="solo-stretto">4 Guida</span></a>
   </nav>
 
   <!-- 1. VALORI -->
   <section class="blocco" id="sez-dati">
     <h2><span class="num">1</span>Valori</h2>
-    <div class="impostazioni">
-      <fieldset>
-        <legend>Come scrivi i valori</legend>
-        <div class="radio">
-          <label><input type="radio" name="modo" id="modo-separatore" value="separatore"> Con separatore (20.00 o 20,00)</label>
-          <label><input type="radio" name="modo" id="modo-macchina" value="macchina"> Come in macchina (2000)</label>
-        </div>
-      </fieldset>
-      <label class="campo"><span>Decimali angolo</span><input type="number" class="piccolo" id="dec-ang" min="0" max="6" step="1" inputmode="numeric"></label>
-      <label class="campo"><span>Decimali altezza</span><input type="number" class="piccolo" id="dec-alt" min="0" max="6" step="1" inputmode="numeric"></label>
-      <label class="campo"><span>Righe</span><input type="number" class="piccolo" id="num-righe" min="1" max="500" step="1" inputmode="numeric"></label>
-    </div>
-    <div class="pulsanti">
-      <button type="button" id="btn-aggiungi">+ Aggiungi riga</button>
-      <button type="button" id="btn-togli">− Elimina ultima riga</button>
-      <button type="button" class="pericolo" id="btn-svuota">Svuota tutto</button>
-    </div>
-    <div class="voce" id="voce" hidden>
-      <div class="voce-comandi">
-        <button type="button" class="voce-btn" id="btn-voce"><span aria-hidden="true">🎤</span> <span id="btn-voce-testo">Detta</span></button>
+    <details class="riquadro" id="imp-valori">
+      <summary><span id="imp-riepilogo"></span><span class="cambia">Cambia</span></summary>
+      <div class="impostazioni">
+        <fieldset>
+          <legend>Come scrivi i valori</legend>
+          <div class="radio">
+            <label><input type="radio" name="modo" id="modo-separatore" value="separatore"> Con separatore (20.00 o 20,00)</label>
+            <label><input type="radio" name="modo" id="modo-macchina" value="macchina"> Come in macchina (2000)</label>
+          </div>
+        </fieldset>
+        <label class="campo"><span>Decimali angolo</span><input type="number" class="piccolo" id="dec-ang" min="0" max="6" step="1" inputmode="numeric"></label>
+        <label class="campo"><span>Decimali altezza</span><input type="number" class="piccolo" id="dec-alt" min="0" max="6" step="1" inputmode="numeric"></label>
+        <label class="campo"><span>Righe</span><input type="number" class="piccolo" id="num-righe" min="1" max="500" step="1" inputmode="numeric"></label>
+      </div>
+      <div class="pulsanti">
+        <button type="button" id="btn-aggiungi">+ Aggiungi riga</button>
+        <button type="button" id="btn-togli">− Elimina ultima riga</button>
+      </div>
+      <div class="impostazioni voce-impostazioni" id="voce-impostazioni" hidden>
         <label class="campo"><span>Dettatura</span>
           <select id="voce-modo">
             <option value="premi">Un valore: tieni premuto</option>
@@ -333,9 +352,15 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
           </select>
         </label>
       </div>
-      <div class="voce-stato" id="voce-stato" aria-live="polite"></div>
-      <div class="voce-ultimi" id="voce-ultimi"></div>
+    </details>
+    <div class="pulsanti azioni-valori">
+      <div class="voce" id="voce" hidden>
+        <button type="button" class="voce-btn" id="btn-voce"><span aria-hidden="true">🎤</span> <span id="btn-voce-testo">Detta</span></button>
+      </div>
+      <button type="button" class="pericolo" id="btn-svuota">Svuota tutto</button>
     </div>
+    <div class="voce-stato" id="voce-stato" aria-live="polite"></div>
+    <div class="voce-ultimi" id="voce-ultimi"></div>
     <p class="nota">
       <span class="solo-largo"><kbd>Invio</kbd> passa da Angolo ad Altezza e poi alla riga dopo, come in macchina. <kbd>↑</kbd> <kbd>↓</kbd> cambiano riga.
       Da Excel: seleziona le due colonne, copia, clicca su <b>Angolo 1</b> e incolla con <kbd>Ctrl</kbd>+<kbd>V</kbd>.</span>
@@ -354,9 +379,12 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
   <!-- 2. CODICI -->
   <section class="blocco" id="sez-codici">
     <h2><span class="num">2</span>In macchina: codici o chiavetta</h2>
+    <p class="nota metodi">Lettore 1D → <a href="#sez-codici" data-apri-scheda="barre">Codici a barre</a> ·
+      Lettore 2D → <a href="#sez-codici" data-apri-scheda="qr">QR</a> ·
+      Senza lettore → <a href="#sez-codici" data-apri-scheda="chiavetta">Chiavetta</a></p>
     <div class="schede" role="tablist">
-      <button type="button" role="tab" id="tab-barre" data-scheda="barre">Codici a barre (1D)</button>
-      <button type="button" role="tab" id="tab-qr" data-scheda="qr">QR a blocchi (2D)</button>
+      <button type="button" role="tab" id="tab-barre" data-scheda="barre">Codici a barre</button>
+      <button type="button" role="tab" id="tab-qr" data-scheda="qr">QR</button>
       <button type="button" role="tab" id="tab-chiavetta" data-scheda="chiavetta">Chiavetta</button>
     </div>
 
@@ -384,12 +412,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     </div>
 
     <div id="pannello-chiavetta" role="tabpanel" hidden>
-      <p class="nota">La <b>chiavetta</b> (Raspberry Pi Pico 2 W) si collega alla macchina come una tastiera e scrive da sola i valori, ciascuno seguito da INVIO, quando premi il suo pulsante. Qui le carichi i valori: via Bluetooth dal telefono, oppure con il cavo.</p>
-      <div class="impostazioni">
-        <label class="campo"><span>Pausa tra i tasti (ms)</span><input type="number" class="piccolo" id="ch-rit-car" min="1" max="1000" step="1" inputmode="numeric"></label>
-        <label class="campo"><span>Pausa dopo INVIO (ms)</span><input type="number" class="piccolo" id="ch-rit-inv" min="0" max="5000" step="10" inputmode="numeric"></label>
-        <label class="campo"><span>Coppie per pressione (0 = tutte)</span><input type="number" class="piccolo" id="ch-coppie" min="0" max="500" step="1" inputmode="numeric"></label>
-      </div>
+      <p class="nota">La <b>chiavetta</b> scrive i valori in macchina come una tastiera, quando premi il suo pulsante.</p>
       <fieldset id="ch-mezzo">
         <legend>Collegamento</legend>
         <div class="radio">
@@ -403,6 +426,15 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
       </div>
       <p class="nota" id="ch-supporto"></p>
       <div id="esito-chiavetta" aria-live="polite"></div>
+      <details class="riquadro" id="ch-scrittura">
+        <summary><span>Impostazioni di scrittura: <span id="ch-imp-riepilogo"></span></span><span class="cambia">Cambia</span></summary>
+        <div class="impostazioni">
+          <label class="campo"><span>Pausa tra i tasti (ms)</span><input type="number" class="piccolo" id="ch-rit-car" min="1" max="1000" step="1" inputmode="numeric"></label>
+          <label class="campo"><span>Pausa dopo INVIO (ms)</span><input type="number" class="piccolo" id="ch-rit-inv" min="0" max="5000" step="10" inputmode="numeric"></label>
+          <label class="campo"><span>Coppie per pressione (0 = tutte)</span><input type="number" class="piccolo" id="ch-coppie" min="0" max="500" step="1" inputmode="numeric"></label>
+        </div>
+        <p class="nota">Se la maschera perde caratteri, aumenta la pausa tra i tasti; se salta un campo, la pausa dopo INVIO. Con le coppie per pressione ogni pressione del pulsante scrive solo quelle (per le maschere a pagine).</p>
+      </details>
       <details class="ch-avanzate">
         <summary>Codice Bluetooth e firmware</summary>
         <p class="nota">Il codice di abbinamento (6 cifre) si imposta <b>solo con il cavo</b>: collega la chiavetta tenendo premuto il pulsante. Annotalo: il telefono lo chiede la prima volta. Cambiandolo si cancellano gli abbinamenti. Il sito non lo salva.</p>
@@ -442,8 +474,8 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     <details open>
       <summary>Come si usa</summary>
       <ol>
-        <li>Scegli come scrivi i valori: <b>con separatore</b> (20.00 o 20,00) oppure <b>come in macchina</b> (2000, senza punto). Imposta i decimali di angolo e altezza come in macchina.</li>
-        <li>Scrivi i valori nella tabella oppure incolla due colonne da Excel. Sotto ogni casella vedi il valore come apparirà in macchina: controllalo.</li>
+        <li>Nel riquadro in alto (<b>Cambia</b>) scegli come scrivi i valori: <b>con separatore</b> (20.00 o 20,00) oppure <b>come in macchina</b> (2000, senza punto), e i decimali di angolo e altezza come in macchina. Si sceglie una volta: poi resta il riepilogo.</li>
+        <li>Scrivi i valori nella tabella oppure incolla due colonne da Excel: INVIO (o Avanti) sull'ultima casella aggiunge una riga. Sotto ogni casella vedi il valore come apparirà in macchina: controllalo.</li>
         <li>Correggi le caselle in rosso. I codici compaiono solo quando tutti i valori sono corretti.</li>
         <li>Scegli <b>Codici a barre</b> (lettore 1D, un codice per valore) o <b>QR a blocchi</b> (lettore 2D, più coppie per codice).</li>
         <li>In macchina posiziona il cursore sul campo <b>Angolo 1</b> della maschera.</li>
@@ -467,7 +499,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
       <ul>
         <li>Funziona sul sito (non aprendo il file dal PC). La prima volta chiede di scaricare il riconoscimento vocale (circa 50 MB, una volta sola) e il permesso del microfono. L'audio non esce dal dispositivo.</li>
         <li><b>Un valore: tieni premuto</b> 🎤 (sul PC anche la barra spaziatrice nella tabella), di' il valore, lascia: il valore va nella casella e si passa alla successiva.</li>
-        <li><b>Più valori: tocca</b> 🎤 una volta e detta i valori uno dopo l'altro. Ogni valore finisce con <b>una pausa</b> oppure con la parola <b>"avanti"</b> (impostazione accanto). Tocca di nuovo 🎤 o di' "stop" per finire.</li>
+        <li><b>Più valori: tocca</b> 🎤 una volta e detta i valori uno dopo l'altro. Ogni valore finisce con <b>una pausa</b> oppure con la parola <b>"avanti"</b> (impostazione nel riquadro <b>Cambia</b>). Tocca di nuovo 🎤 o di' "stop" per finire. Le righe si aggiungono da sole.</li>
         <li>Come dire i numeri: "duecentoquattordici virgola nove quattro" → 214,94; "zero virgola zero cinque" → 0,05; "meno uno virgola cinque" → -1,5.</li>
         <li>Comandi: "correggi" (svuota il valore appena dettato e ci torna), "indietro", "cancella", "riga dodici", "stop".</li>
         <li>Con la pausa come fine del valore, non fermarti a metà numero: "duecento … quattordici" diventerebbero due valori. Controlla sempre "Capito: …" e l'anteprima sotto le caselle.</li>
@@ -3858,6 +3890,9 @@ var AppChiavetta = (function () {
       $('ch-supporto').textContent = nota.join(' ');
       $('ch-supporto').hidden = !nota.length;
       $('ch-versione').textContent = Chiavetta.versionePubblicata() || 'non disponibile';
+      var s = stato();
+      $('ch-imp-riepilogo').textContent = 'pause ' + s.chRitCar + ' / ' + s.chRitInv + ' ms · ' +
+        (s.chCoppie ? s.chCoppie + (s.chCoppie === 1 ? ' coppia' : ' coppie') + ' per pressione' : 'tutte le coppie');
 
       var x = dati();
       $('btn-ch-invia').disabled = !!x.errore || occupata;
@@ -4034,15 +4069,17 @@ var AppChiavetta = (function () {
 
   var CHIAVE = 'compilatore-misure-v1';
   var MAX_RIGHE = 500;
+  var RIGHE_INIZIALI = 5;   // le altre si aggiungono da sole con INVIO / Avanti sull'ultima casella
 
   function statoIniziale() {
     var righe = [];
-    for (var i = 0; i < 20; i++) righe.push(['', '']);
+    for (var i = 0; i < RIGHE_INIZIALI; i++) righe.push(['', '']);
     return {
       modo: 'separatore', decAng: 2, decAlt: 2, righe: righe,
       coppieBlocco: 10, invioFinale: false, scheda: 'barre', blocco: 0, confronto: 'tutti',
       tema: 'scuro', lettura: 0, voceModo: 'premi', voceSeparatore: 'pausa',
-      chRitCar: 30, chRitInv: 200, chCoppie: 0, chMezzo: 'bluetooth'
+      chRitCar: 30, chRitInv: 200, chCoppie: 0, chMezzo: 'bluetooth',
+      impAperte: true   // riquadro delle impostazioni aperto al primo uso
     };
   }
 
@@ -4065,6 +4102,7 @@ var AppChiavetta = (function () {
         Object.keys(base).forEach(function (k) { if (s[k] !== undefined) base[k] = s[k]; });
         base.righe = s.righe.slice(0, MAX_RIGHE).map(function (r) { return [String(r[0] || ''), String(r[1] || '')]; });
         if (!base.righe.length) base.righe.push(['', '']);
+        if (s.impAperte === undefined) base.impAperte = false;   // chi l'ha già usato le ha già scelte
         stato = base;
       }
     } catch (e) { salvataggioOk = false; }
@@ -4123,10 +4161,11 @@ var AppChiavetta = (function () {
   /* ---------- tema ---------- */
   function applicaTema() {
     document.documentElement.setAttribute('data-tema', stato.tema === 'chiaro' ? 'chiaro' : 'scuro');
-    var b = $('btn-tema');
-    b.textContent = stato.tema === 'chiaro' ? '☾ Tema scuro' : '☀ Tema chiaro';
+    var b = $('btn-tema'), etichetta = 'Passa al ' + (stato.tema === 'chiaro' ? 'tema scuro' : 'tema chiaro');
+    b.textContent = stato.tema === 'chiaro' ? '☾' : '☀';
     b.setAttribute('aria-pressed', String(stato.tema === 'chiaro'));
-    b.title = 'Passa al ' + (stato.tema === 'chiaro' ? 'tema scuro' : 'tema chiaro');
+    b.setAttribute('aria-label', etichetta);
+    b.title = etichetta;
   }
 
   /* ---------- tabella ---------- */
@@ -4150,6 +4189,14 @@ var AppChiavetta = (function () {
     }
     $('corpo-tabella').innerHTML = html.join('');
     $('num-righe').value = stato.righe.length;
+    riepilogoImpostazioni();
+  }
+
+  /* Riga sempre visibile del riquadro delle impostazioni. */
+  function riepilogoImpostazioni() {
+    var n = stato.righe.length;
+    $('imp-riepilogo').textContent = (stato.modo === 'macchina' ? 'Come in macchina' : 'Con separatore') +
+      ' · decimali ' + stato.decAng + ' / ' + stato.decAlt + ' · ' + n + (n === 1 ? ' riga' : ' righe');
   }
 
   function impostaRighe(n, chiediConferma) {
@@ -4217,6 +4264,7 @@ var AppChiavetta = (function () {
       }
     }
     mostraRiepilogo(usate.length);
+    riepilogoImpostazioni();
     mostraBarre();
     mostraQR();
     chiavetta.aggiorna();
@@ -4352,11 +4400,13 @@ var AppChiavetta = (function () {
     var centro = $('lettura-centro');
     var larg = Math.min(centro.clientWidth || window.innerWidth - 32, 900) - 24;
     var alt = Math.max(90, Math.min(200, Math.round(window.innerHeight * 0.22)));
-    centro.innerHTML =
+    var html =
       '<div class="etichetta" id="lettura-etichetta">' + etichetta(v) + '</div>' +
       '<div class="cornice" id="lettura-codice">' + Logica.code128Svg(v.cifre, moduloBarre(v.cifre, larg, 6), alt) + '</div>' +
       '<div class="valore">' + (v.cifre.charAt(0) === '-' ? '⚠ ' : '') + esc(v.display) + '</div>' +
       '<div class="cifre">cifre: ' + esc(v.cifre) + '</div>';
+    // solo se cambia: ridisegnare lo stesso codice mentre il lettore lo inquadra lo fa sfarfallare
+    if (centro.dataset.html !== html) { centro.innerHTML = html; centro.dataset.html = html; }
     $('lettura-avanzamento').textContent = (stato.lettura + 1) + ' di ' + valori.length;
     $('lettura-progresso').style.width = ((stato.lettura + 1) / valori.length * 100) + '%';
     $('lettura-prec').disabled = stato.lettura === 0;
@@ -4498,9 +4548,10 @@ var AppChiavetta = (function () {
   }
 
   /* Passa alla casella successiva; in ascolto continuo si ferma dopo l'ultima casella della tabella. */
+  /* Come Avanti; all'ultima casella aggiunge una riga, fino al massimo di righe. */
   function avantiDettato(p) {
-    if (ascoltoContinuo && p.r === stato.righe.length - 1 && p.c === 1) {
-      fermaContinuo('Ultima riga della tabella: dettatura finita.');
+    if (ascoltoContinuo && p.r >= MAX_RIGHE - 1 && p.c === 1) {
+      fermaContinuo('Raggiunte ' + MAX_RIGHE + ' righe: dettatura finita.');
       return;
     }
     avanti(p.r, p.c);
@@ -4681,6 +4732,7 @@ var AppChiavetta = (function () {
   function collegaVoce() {
     if (!Voce.disponibile()) return;
     $('voce').hidden = false;
+    $('voce-impostazioni').hidden = false;
     $('mob-voce').hidden = false;
     [$('btn-voce'), $('mob-voce')].forEach(function (b) {
       b.addEventListener('pointerdown', function (e) {
@@ -4824,6 +4876,11 @@ var AppChiavetta = (function () {
     document.querySelectorAll('.schede button').forEach(function (b) {
       b.addEventListener('click', function () { stato.scheda = b.dataset.scheda; mostraScheda(); salva(); });
     });
+    /* "Lettore 1D → Codici a barre · ...": apre la scheda (il link porta già alla sezione) */
+    document.querySelectorAll('[data-apri-scheda]').forEach(function (a) {
+      a.addEventListener('click', function () { stato.scheda = a.dataset.apriScheda; mostraScheda(); salva(); });
+    });
+    $('imp-valori').addEventListener('toggle', function () { stato.impAperte = this.open; salva(); });
     /* La stampa funziona solo aprendo il file dal PC (nella pagina pubblicata è bloccata). */
     if (location.protocol === 'file:') $('btn-stampa').hidden = false;
     $('btn-stampa').addEventListener('click', function () { window.print(); });
@@ -4896,6 +4953,7 @@ var AppChiavetta = (function () {
     }
     sel.value = String(stato.coppieBlocco);
     $('invio-finale').checked = !!stato.invioFinale;
+    $('imp-valori').open = !!stato.impAperte;
     chiavetta.applicaImpostazioni();
     applicaTema();
   }
