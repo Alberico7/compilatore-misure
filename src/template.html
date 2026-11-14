@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!--INIZIO_CONTENUTO_HEAD-->
 <title>Compilatore misure</title>
+<!--ICONE-->
 <meta name="claude:viewport-fit-sides" content="cover">
 <!--
   Compilatore misure Angolo/Altezza per la maschera della macchina
@@ -83,7 +84,8 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 }
 header.testata { padding: 20px 0 8px; display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; align-items: start; }
 header.testata .sicurezza { grid-column: 1 / -1; }
-h1 { font-size: 28px; margin: 0 0 4px; text-wrap: balance; }
+h1 { font-size: 28px; margin: 0 0 4px; text-wrap: balance; display: flex; align-items: center; gap: 10px; }
+h1 .logo { flex: none; width: 40px; height: 40px; }
 .sottotitolo { color: var(--tenue); margin: 0; }
 h2 { font-size: 22px; margin: 0 0 12px; display: flex; align-items: center; gap: 10px; }
 h2 .num { background: var(--accento); color: var(--su-accento); border-radius: 50%; width: 32px; height: 32px; display: inline-grid; place-items: center; font-size: 17px; flex: none; }
@@ -303,7 +305,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
 <div class="pagina">
   <header class="testata">
     <div>
-      <h1>Compilatore misure</h1>
+      <h1><img class="logo" src="__LOGO__" alt="" width="40" height="40"><span>Compilatore misure</span></h1>
       <p class="sottotitolo">Angolo e Altezza per la maschera della macchina, letti con il lettore di codici in modalità tastiera.</p>
     </div>
     <button type="button" id="btn-tema" aria-pressed="false"></button>

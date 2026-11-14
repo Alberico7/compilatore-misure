@@ -171,3 +171,21 @@ test('scheda Chiavetta: prima collegamento e pulsanti, impostazioni di scrittura
   assert.deepEqual(page.erroriJs, []);
   await page.context().close();
 });
+
+/* docs/2026-11-14-logo-pettirosso.md */
+test('logo: accanto al titolo, icona del browser e icone per la schermata Home sul sito', async () => {
+  const page = await apri(320, { salvato: UTENTE_CHE_TORNA });
+  const logo = page.locator('h1 .logo');
+  assert.equal(await logo.isVisible(), true);
+  assert.ok(await logo.evaluate((i) => i.complete && i.naturalWidth > 0), 'il logo si carica');
+  const box = await logo.boundingBox(), tema = await page.locator('#btn-tema').boundingBox();
+  assert.ok(box.x + box.width < tema.x, 'il logo non tocca il pulsante del tema');
+  assert.match(await page.getAttribute('link[rel="icon"]', 'href'), /^data:image\/svg\+xml;base64,/);
+  assert.equal(await page.locator('link[rel="apple-touch-icon"]').count(), 0, 'nel file per il PC niente PNG esterne');
+  await page.context().close();
+  const sito = fs.readFileSync(path.join(__dirname, '..', 'sito', 'index.html'), 'utf8');
+  for (const f of ['icona-180.png', 'icona-192.png']) {
+    assert.ok(sito.includes(`href="${f}"`), f + ' collegata nel sito');
+    assert.ok(fs.existsSync(path.join(__dirname, '..', 'sito', f)), f + ' presente nel sito');
+  }
+});

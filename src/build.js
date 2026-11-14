@@ -39,6 +39,16 @@ if (!versione) throw new Error('Versione del firmware non trovata in chiavetta/C
 if (html.split('__VERSIONE_FIRMWARE__').length !== 2) throw new Error('Segnaposto __VERSIONE_FIRMWARE__ assente o ripetuto');
 html = html.replace('__VERSIONE_FIRMWARE__', versione[1]);
 
+// Logo (docs/2026-11-14-logo-pettirosso.md): l'SVG dentro la pagina, così funziona anche il file aperto dal PC.
+// Le PNG per "Aggiungi a schermata Home" (npm run icone) esistono solo sul sito: lì si aggiungono i loro link.
+const logo = 'data:image/svg+xml;base64,' + Buffer.from(leggi('icona.svg')).toString('base64');
+for (const s of ['<!--ICONE-->', '__LOGO__']) if (html.split(s).length !== 2) throw new Error('Segnaposto ' + s + ' assente o ripetuto');
+html = html.replace('__LOGO__', logo);
+const ICONA_SVG = '<link rel="icon" type="image/svg+xml" href="' + logo + '">';
+const ICONE_SITO = ICONA_SVG + '\n<link rel="apple-touch-icon" href="icona-180.png">\n<link rel="icon" type="image/png" sizes="192x192" href="icona-192.png">';
+const htmlSito = html.replace('<!--ICONE-->', ICONE_SITO);
+html = html.replace('<!--ICONE-->', ICONA_SVG);
+
 function scrivi(file, testo) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, testo);
@@ -49,7 +59,8 @@ scrivi(path.join(radice, 'compilatore-misure.html'), html);
 
 const sito = path.join(radice, 'sito');
 fs.rmSync(sito, { recursive: true, force: true });
-scrivi(path.join(sito, 'index.html'), html);
+scrivi(path.join(sito, 'index.html'), htmlSito);
+for (const f of ['icona-180.png', 'icona-192.png']) scrivi(path.join(sito, f), fs.readFileSync(path.join(src, 'icone', f)));
 const moduli = path.join(radice, 'node_modules');
 scrivi(path.join(sito, 'voce', 'vosk.js'), fs.readFileSync(path.join(moduli, 'vosk-browser', 'dist', 'vosk.js')));
 scrivi(path.join(sito, 'voce', 'fflate.js'), fs.readFileSync(path.join(moduli, 'fflate', 'umd', 'index.js')));

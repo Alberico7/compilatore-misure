@@ -10,7 +10,8 @@
     "build": "node src/build.js",
     "firmware": "powershell -NoProfile -ExecutionPolicy Bypass -File chiavetta/compila.ps1",
     "test": "node src/build.js && node --test --test-concurrency=1 test/logica.test.js test/dettato.test.js test/pagina.test.js test/voce.test.js test/chiavetta.test.js test/pagina-chiavetta.test.js test/semplicita.test.js",
-    "test:vosk": "node src/build.js && node --test test/vosk-reale.test.js"
+    "test:vosk": "node src/build.js && node --test test/vosk-reale.test.js",
+    "icone": "node src/icone.js"
   },
   "devDependencies": {
     "fflate": "0.8.3",
