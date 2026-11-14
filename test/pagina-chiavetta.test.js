@@ -395,7 +395,7 @@ test('guida e titolo: tabelle "Pulsante" e "LED" uguali al LEGGIMI, sezione 2 "I
   const sim = avviaSimulatore(eseguibile);
   try {
     const page = await nuovaPagina(sim);
-    assert.equal((await page.locator('#sez-codici h2').innerText()).replace(/\s+/g, ' ').trim(), '2 In macchina: codici o chiavetta');
+    assert.equal((await page.locator('#sez-codici h2').innerText()).replace(/\s+/g, ' ').trim(), '2 In macchina: chiavetta o codici');
     assert.equal(await page.locator('nav.indice a[href="#sez-codici"]').innerText(), '2 · In macchina');
     const tabelle = await page.$$eval('#sez-guida details table', (ts) => ts.map((t) =>
       Array.from(t.rows, (r) => Array.from(r.cells, (c) => c.textContent.trim()))));
