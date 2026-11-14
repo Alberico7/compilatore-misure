@@ -382,14 +382,14 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
 
   <!-- 2. CODICI -->
   <section class="blocco" id="sez-codici">
-    <h2><span class="num">2</span>In macchina: codici o chiavetta</h2>
-    <p class="nota metodi">Lettore 1D → <a href="#sez-codici" data-apri-scheda="barre">Codici a barre</a> ·
-      Lettore 2D → <a href="#sez-codici" data-apri-scheda="qr">QR</a> ·
-      Senza lettore → <a href="#sez-codici" data-apri-scheda="chiavetta">Chiavetta</a></p>
+    <h2><span class="num">2</span>In macchina: chiavetta o codici</h2>
+    <p class="nota metodi"><a href="#sez-codici" data-apri-scheda="chiavetta">Chiavetta</a> (consigliata) ·
+      Lettore 1D → <a href="#sez-codici" data-apri-scheda="barre">Codici a barre</a> ·
+      Lettore 2D → <a href="#sez-codici" data-apri-scheda="qr">QR</a></p>
     <div class="schede" role="tablist">
+      <button type="button" role="tab" id="tab-chiavetta" data-scheda="chiavetta">Chiavetta</button>
       <button type="button" role="tab" id="tab-barre" data-scheda="barre">Codici a barre</button>
       <button type="button" role="tab" id="tab-qr" data-scheda="qr">QR</button>
-      <button type="button" role="tab" id="tab-chiavetta" data-scheda="chiavetta">Chiavetta</button>
     </div>
 
     <div id="pannello-barre" role="tabpanel">
@@ -481,12 +481,25 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
         <li>Nel riquadro in alto (<b>Cambia</b>) scegli come scrivi i valori: <b>con separatore</b> (20.00 o 20,00) oppure <b>come in macchina</b> (2000, senza punto), e i decimali di angolo e altezza come in macchina. Si sceglie una volta: poi resta il riepilogo.</li>
         <li>Scrivi i valori nella tabella oppure incolla due colonne da Excel: INVIO (o Avanti) sull'ultima casella aggiunge una riga. Sotto ogni casella vedi il valore come apparirà in macchina: controllalo.</li>
         <li>Correggi le caselle in rosso. I codici compaiono solo quando tutti i valori sono corretti.</li>
-        <li>Scegli <b>Codici a barre</b> (lettore 1D, un codice per valore) o <b>QR a blocchi</b> (lettore 2D, più coppie per codice).</li>
-        <li>In macchina posiziona il cursore sul campo <b>Angolo 1</b> della maschera.</li>
-        <li>Leggi i codici nell'ordine. Con i QR usa <b>Successivo</b> dopo ogni blocco: il riquadro dice da quale coppia riparte.</li>
+        <li>Scegli il metodo: <b>Chiavetta</b> (consigliata, vedi la guida <b>Chiavetta</b> qui sotto), <b>Codici a barre</b> (lettore 1D, un codice per valore) o <b>QR a blocchi</b> (lettore 2D, più coppie per codice).</li>
+        <li>Con i codici: in macchina posiziona il cursore sul campo <b>Angolo 1</b> della maschera.</li>
+        <li>Con i codici: leggili nell'ordine. Con i QR usa <b>Successivo</b> dopo ogni blocco: il riquadro dice da quale coppia riparte.</li>
         <li><b>Controlla tutti i valori sullo schermo della macchina prima di avviare la tastatura.</b></li>
       </ol>
       <p>Se si salta un campo o un valore è sbagliato: fermati, correggi a mano in macchina, poi riparti dal codice giusto (le etichette "Angolo n" / "Altezza n" dicono dove sei).</p>
+    </details>
+    <details>
+      <summary>Chiavetta</summary>
+      <ol>
+        <li>Nella scheda <b>Chiavetta</b> scegli il collegamento: <b>Bluetooth</b> (Chrome su Android) oppure <b>Cavo</b>, collegando la chiavetta <b>tenendo premuto il pulsante</b> (telefono con adattatore OTG, oppure PC). Poi premi <b>Invia i valori</b>.</li>
+        <li>Il sito confronta il <b>codice di controllo</b> della chiavetta con il suo: se coincidono, i valori sono arrivati identici.</li>
+        <li>In macchina collega la chiavetta <b>senza</b> premere il pulsante: è una tastiera e basta. Metti il cursore su <b>Angolo 1</b> e premi il pulsante: dopo 1 secondo scrive.</li>
+        <li><b>Controlla la chiavetta</b> dice cosa contiene, a che punto è e se i valori sono uguali alla tabella. Via Bluetooth funziona anche con la chiavetta collegata alla macchina e non fa partire nessun tasto.</li>
+        <li>Prima volta col Bluetooth: imposta il codice con il cavo, poi tieni premuto il pulsante <b>5 secondi</b> (doppio lampo) e invia dal telefono entro un minuto: il telefono chiede il codice. Si ricorda un solo telefono.</li>
+        <li>La chiavetta manda solo cifre, il "−" del tastierino numerico e INVIO: funziona con layout tedesco, italiano e inglese.</li>
+        <li><b>Controlla tutti i valori sullo schermo della macchina prima di avviare la tastatura.</b></li>
+      </ol>
+      <!--TABELLE_CHIAVETTA-->
     </details>
     <details>
       <summary>Da smartphone</summary>
@@ -509,19 +522,6 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
         <li>Con la pausa come fine del valore, non fermarti a metà numero: "duecento … quattordici" diventerebbero due valori. Controlla sempre "Capito: …" e l'anteprima sotto le caselle.</li>
         <li>Su Vanadium (GrapheneOS), se il riconoscimento è lento, attiva "JavaScript JIT" per questo sito nelle impostazioni del sito.</li>
       </ul>
-    </details>
-    <details>
-      <summary>Chiavetta</summary>
-      <ol>
-        <li>Nella scheda <b>Chiavetta</b> scegli il collegamento: <b>Bluetooth</b> (Chrome su Android) oppure <b>Cavo</b>, collegando la chiavetta <b>tenendo premuto il pulsante</b> (telefono con adattatore OTG, oppure PC). Poi premi <b>Invia i valori</b>.</li>
-        <li>Il sito confronta il <b>codice di controllo</b> della chiavetta con il suo: se coincidono, i valori sono arrivati identici.</li>
-        <li>In macchina collega la chiavetta <b>senza</b> premere il pulsante: è una tastiera e basta. Metti il cursore su <b>Angolo 1</b> e premi il pulsante: dopo 1 secondo scrive.</li>
-        <li><b>Controlla la chiavetta</b> dice cosa contiene, a che punto è e se i valori sono uguali alla tabella. Via Bluetooth funziona anche con la chiavetta collegata alla macchina e non fa partire nessun tasto.</li>
-        <li>Prima volta col Bluetooth: imposta il codice con il cavo, poi tieni premuto il pulsante <b>5 secondi</b> (doppio lampo) e invia dal telefono entro un minuto: il telefono chiede il codice. Si ricorda un solo telefono.</li>
-        <li>La chiavetta manda solo cifre, il "−" del tastierino numerico e INVIO: funziona con layout tedesco, italiano e inglese.</li>
-        <li><b>Controlla tutti i valori sullo schermo della macchina prima di avviare la tastatura.</b></li>
-      </ol>
-      <!--TABELLE_CHIAVETTA-->
     </details>
     <details>
       <summary>Configurazione del lettore</summary>

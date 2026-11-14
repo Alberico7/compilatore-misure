@@ -5,15 +5,21 @@
   var MAX_RIGHE = 500;
   var RIGHE_INIZIALI = 5;   // le altre si aggiungono da sole con INVIO / Avanti sull'ultima casella
 
+  /* La chiavetta si carica via Bluetooth o cavo: senza nessuno dei due (Firefox, iPhone) si parte dai codici */
+  function schedaPredefinita() {
+    return (navigator.bluetooth || navigator.usb) ? 'chiavetta' : 'barre';
+  }
+
   function statoIniziale() {
     var righe = [];
     for (var i = 0; i < RIGHE_INIZIALI; i++) righe.push(['', '']);
     return {
       modo: 'separatore', decAng: 2, decAlt: 2, righe: righe,
-      coppieBlocco: 10, invioFinale: false, scheda: 'barre', blocco: 0, confronto: 'tutti',
+      coppieBlocco: 10, invioFinale: false, scheda: schedaPredefinita(), blocco: 0, confronto: 'tutti',
       tema: 'scuro', lettura: 0, voceModo: 'premi', voceSeparatore: 'pausa',
       chRitCar: 30, chRitInv: 200, chCoppie: 0, chMezzo: 'bluetooth',
-      impAperte: true   // riquadro delle impostazioni aperto al primo uso
+      impAperte: true,   // riquadro delle impostazioni aperto al primo uso
+      schedaChiavetta: true   // segno: lo spostamento una tantum sulla Chiavetta è già fatto
     };
   }
 
@@ -37,6 +43,9 @@
         base.righe = s.righe.slice(0, MAX_RIGHE).map(function (r) { return [String(r[0] || ''), String(r[1] || '')]; });
         if (!base.righe.length) base.righe.push(['', '']);
         if (s.impAperte === undefined) base.impAperte = false;   // chi l'ha già usato le ha già scelte
+        /* docs/2026-11-14-chiavetta-predefinita.md: una volta sola tutti passano alla scheda predefinita
+           (prima era "Codici a barre"); poi si ricorda la scelta */
+        if (s.schedaChiavetta === undefined) base.scheda = schedaPredefinita();
         stato = base;
       }
     } catch (e) { salvataggioOk = false; }
@@ -272,7 +281,8 @@
   }
 
   function mostraQR() {
-    if (!analisi.valido) { $('uscita-qr').innerHTML = messaggioNonPronto(); return; }
+    var uscita = $('uscita-qr');
+    if (!analisi.valido) { uscita.innerHTML = messaggioNonPronto(); uscita.dataset.html = ''; return; }
     stato.blocco = Math.min(Math.max(0, stato.blocco), blocchi.length - 1);
     var b = blocchi[stato.blocco];
     var righe = [];
@@ -281,7 +291,7 @@
       righe.push('<tr><td>' + a.coppia + '</td><td>' + esc(a.display) + '</td><td>' + (h2 ? esc(h2.display) : '') + '</td></tr>');
     }
     var grezzo = b.testo.split(Logica.CR).map(esc).join('<b>⏎</b>');
-    $('uscita-qr').innerHTML =
+    var html =
       '<div class="navigazione">' +
       '<button type="button" id="qr-prec"' + (stato.blocco === 0 ? ' disabled' : '') + '>◀ Precedente</button>' +
       '<span class="stato" id="qr-stato">Blocco ' + (stato.blocco + 1) + ' di ' + blocchi.length + '</span>' +
@@ -291,6 +301,10 @@
       '<div class="area-qr"><div class="cornice" id="qr-codice">' + Logica.qrSvg(qrcode, b.testo, latoQR()) + '</div></div>' +
       '<div class="contenuto-qr"><table><thead><tr><th>Coppia</th><th>Angolo</th><th>Altezza</th></tr></thead><tbody>' + righe.join('') + '</tbody></table>' +
       '<div class="grezzo" title="Contenuto del QR: ⏎ = INVIO">' + grezzo + '</div></div>';
+    /* ridisegna solo se cambia (il ridimensionamento della finestra lo richiama anche senza modifiche) */
+    if (uscita.dataset.html === html) return;
+    uscita.innerHTML = html;
+    uscita.dataset.html = html;
     $('qr-prec').onclick = function () { stato.blocco--; mostraQR(); salva(); };
     $('qr-succ').onclick = function () { stato.blocco++; mostraQR(); salva(); };
   }

@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!--INIZIO_CONTENUTO_HEAD-->
 <title>Compilatore misure</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <!--
@@ -296,6 +297,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
   .sicurezza { border: 1px solid #000; background: #fff; }
 }
 </style>
+<!--FINE_CONTENUTO_HEAD-->
 </head>
 <body>
 <div class="pagina">
@@ -380,14 +382,14 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
 
   <!-- 2. CODICI -->
   <section class="blocco" id="sez-codici">
-    <h2><span class="num">2</span>In macchina: codici o chiavetta</h2>
-    <p class="nota metodi">Lettore 1D → <a href="#sez-codici" data-apri-scheda="barre">Codici a barre</a> ·
-      Lettore 2D → <a href="#sez-codici" data-apri-scheda="qr">QR</a> ·
-      Senza lettore → <a href="#sez-codici" data-apri-scheda="chiavetta">Chiavetta</a></p>
+    <h2><span class="num">2</span>In macchina: chiavetta o codici</h2>
+    <p class="nota metodi"><a href="#sez-codici" data-apri-scheda="chiavetta">Chiavetta</a> (consigliata) ·
+      Lettore 1D → <a href="#sez-codici" data-apri-scheda="barre">Codici a barre</a> ·
+      Lettore 2D → <a href="#sez-codici" data-apri-scheda="qr">QR</a></p>
     <div class="schede" role="tablist">
+      <button type="button" role="tab" id="tab-chiavetta" data-scheda="chiavetta">Chiavetta</button>
       <button type="button" role="tab" id="tab-barre" data-scheda="barre">Codici a barre</button>
       <button type="button" role="tab" id="tab-qr" data-scheda="qr">QR</button>
-      <button type="button" role="tab" id="tab-chiavetta" data-scheda="chiavetta">Chiavetta</button>
     </div>
 
     <div id="pannello-barre" role="tabpanel">
@@ -479,12 +481,26 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
         <li>Nel riquadro in alto (<b>Cambia</b>) scegli come scrivi i valori: <b>con separatore</b> (20.00 o 20,00) oppure <b>come in macchina</b> (2000, senza punto), e i decimali di angolo e altezza come in macchina. Si sceglie una volta: poi resta il riepilogo.</li>
         <li>Scrivi i valori nella tabella oppure incolla due colonne da Excel: INVIO (o Avanti) sull'ultima casella aggiunge una riga. Sotto ogni casella vedi il valore come apparirà in macchina: controllalo.</li>
         <li>Correggi le caselle in rosso. I codici compaiono solo quando tutti i valori sono corretti.</li>
-        <li>Scegli <b>Codici a barre</b> (lettore 1D, un codice per valore) o <b>QR a blocchi</b> (lettore 2D, più coppie per codice).</li>
-        <li>In macchina posiziona il cursore sul campo <b>Angolo 1</b> della maschera.</li>
-        <li>Leggi i codici nell'ordine. Con i QR usa <b>Successivo</b> dopo ogni blocco: il riquadro dice da quale coppia riparte.</li>
+        <li>Scegli il metodo: <b>Chiavetta</b> (consigliata, vedi la guida <b>Chiavetta</b> qui sotto), <b>Codici a barre</b> (lettore 1D, un codice per valore) o <b>QR a blocchi</b> (lettore 2D, più coppie per codice).</li>
+        <li>Con i codici: in macchina posiziona il cursore sul campo <b>Angolo 1</b> della maschera.</li>
+        <li>Con i codici: leggili nell'ordine. Con i QR usa <b>Successivo</b> dopo ogni blocco: il riquadro dice da quale coppia riparte.</li>
         <li><b>Controlla tutti i valori sullo schermo della macchina prima di avviare la tastatura.</b></li>
       </ol>
       <p>Se si salta un campo o un valore è sbagliato: fermati, correggi a mano in macchina, poi riparti dal codice giusto (le etichette "Angolo n" / "Altezza n" dicono dove sei).</p>
+    </details>
+    <details>
+      <summary>Chiavetta</summary>
+      <ol>
+        <li>Nella scheda <b>Chiavetta</b> scegli il collegamento: <b>Bluetooth</b> (Chrome su Android) oppure <b>Cavo</b>, collegando la chiavetta <b>tenendo premuto il pulsante</b> (telefono con adattatore OTG, oppure PC). Poi premi <b>Invia i valori</b>.</li>
+        <li>Il sito confronta il <b>codice di controllo</b> della chiavetta con il suo: se coincidono, i valori sono arrivati identici.</li>
+        <li>In macchina collega la chiavetta <b>senza</b> premere il pulsante: è una tastiera e basta. Metti il cursore su <b>Angolo 1</b> e premi il pulsante: dopo 1 secondo scrive.</li>
+        <li><b>Controlla la chiavetta</b> dice cosa contiene, a che punto è e se i valori sono uguali alla tabella. Via Bluetooth funziona anche con la chiavetta collegata alla macchina e non fa partire nessun tasto.</li>
+        <li>Prima volta col Bluetooth: imposta il codice con il cavo, poi tieni premuto il pulsante <b>5 secondi</b> (doppio lampo) e invia dal telefono entro un minuto: il telefono chiede il codice. Si ricorda un solo telefono.</li>
+        <li>La chiavetta manda solo cifre, il "−" del tastierino numerico e INVIO: funziona con layout tedesco, italiano e inglese.</li>
+        <li><b>Controlla tutti i valori sullo schermo della macchina prima di avviare la tastatura.</b></li>
+      </ol>
+      <table><thead><tr><th>Pulsante</th><th>Effetto</th></tr></thead><tbody><tr><td>Pressione breve, da pronta o fermata</td><td>Scrive, dopo 1 secondo</td></tr><tr><td>Pressione mentre scrive (o nel secondo di attesa)</td><td>Si ferma dopo il valore in corso, mai a metà numero</td></tr><tr><td>Tenuto da 2 a 5 secondi</td><td>Torna all'inizio; poi una pressione breve scrive dal primo valore</td></tr><tr><td>Tenuto più di 5 secondi</td><td>Apre l'abbinamento Bluetooth per un minuto</td></tr><tr><td>Pressione breve quando ha finito</td><td>Niente: per riscrivere tutto, prima tenere premuto 2–5 secondi</td></tr></tbody></table>
+<table><thead><tr><th>LED</th><th>Significato</th></tr></thead><tbody><tr><td>Acceso fisso</td><td>Pronta, dall'inizio</td></tr><tr><td>Lampeggio veloce</td><td>Sta scrivendo</td></tr><tr><td>Lampeggio lento (mezzo secondo)</td><td>Fermata a metà o a fine blocco</td></tr><tr><td>Un lampo ogni 2 secondi</td><td>Ha finito</td></tr><tr><td>Lampi lunghi (1 secondo acceso, 1 spento)</td><td>Nessun valore caricato</td></tr><tr><td>Doppio lampo ripetuto</td><td>Abbinamento Bluetooth aperto</td></tr><tr><td>Tre lampi veloci</td><td>Valori nuovi caricati, oppure tornata all'inizio</td></tr></tbody></table>
     </details>
     <details>
       <summary>Da smartphone</summary>
@@ -507,20 +523,6 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
         <li>Con la pausa come fine del valore, non fermarti a metà numero: "duecento … quattordici" diventerebbero due valori. Controlla sempre "Capito: …" e l'anteprima sotto le caselle.</li>
         <li>Su Vanadium (GrapheneOS), se il riconoscimento è lento, attiva "JavaScript JIT" per questo sito nelle impostazioni del sito.</li>
       </ul>
-    </details>
-    <details>
-      <summary>Chiavetta</summary>
-      <ol>
-        <li>Nella scheda <b>Chiavetta</b> scegli il collegamento: <b>Bluetooth</b> (Chrome su Android) oppure <b>Cavo</b>, collegando la chiavetta <b>tenendo premuto il pulsante</b> (telefono con adattatore OTG, oppure PC). Poi premi <b>Invia i valori</b>.</li>
-        <li>Il sito confronta il <b>codice di controllo</b> della chiavetta con il suo: se coincidono, i valori sono arrivati identici.</li>
-        <li>In macchina collega la chiavetta <b>senza</b> premere il pulsante: è una tastiera e basta. Metti il cursore su <b>Angolo 1</b> e premi il pulsante: dopo 1 secondo scrive.</li>
-        <li><b>Controlla la chiavetta</b> dice cosa contiene, a che punto è e se i valori sono uguali alla tabella. Via Bluetooth funziona anche con la chiavetta collegata alla macchina e non fa partire nessun tasto.</li>
-        <li>Prima volta col Bluetooth: imposta il codice con il cavo, poi tieni premuto il pulsante <b>5 secondi</b> (doppio lampo) e invia dal telefono entro un minuto: il telefono chiede il codice. Si ricorda un solo telefono.</li>
-        <li>La chiavetta manda solo cifre, il "−" del tastierino numerico e INVIO: funziona con layout tedesco, italiano e inglese.</li>
-        <li><b>Controlla tutti i valori sullo schermo della macchina prima di avviare la tastatura.</b></li>
-      </ol>
-      <table><thead><tr><th>Pulsante</th><th>Effetto</th></tr></thead><tbody><tr><td>Pressione breve, da pronta o fermata</td><td>Scrive, dopo 1 secondo</td></tr><tr><td>Pressione mentre scrive (o nel secondo di attesa)</td><td>Si ferma dopo il valore in corso, mai a metà numero</td></tr><tr><td>Tenuto da 2 a 5 secondi</td><td>Torna all'inizio; poi una pressione breve scrive dal primo valore</td></tr><tr><td>Tenuto più di 5 secondi</td><td>Apre l'abbinamento Bluetooth per un minuto</td></tr><tr><td>Pressione breve quando ha finito</td><td>Niente: per riscrivere tutto, prima tenere premuto 2–5 secondi</td></tr></tbody></table>
-<table><thead><tr><th>LED</th><th>Significato</th></tr></thead><tbody><tr><td>Acceso fisso</td><td>Pronta, dall'inizio</td></tr><tr><td>Lampeggio veloce</td><td>Sta scrivendo</td></tr><tr><td>Lampeggio lento (mezzo secondo)</td><td>Fermata a metà o a fine blocco</td></tr><tr><td>Un lampo ogni 2 secondi</td><td>Ha finito</td></tr><tr><td>Lampi lunghi (1 secondo acceso, 1 spento)</td><td>Nessun valore caricato</td></tr><tr><td>Doppio lampo ripetuto</td><td>Abbinamento Bluetooth aperto</td></tr><tr><td>Tre lampi veloci</td><td>Valori nuovi caricati, oppure tornata all'inizio</td></tr></tbody></table>
     </details>
     <details>
       <summary>Configurazione del lettore</summary>
@@ -4073,15 +4075,21 @@ var AppChiavetta = (function () {
   var MAX_RIGHE = 500;
   var RIGHE_INIZIALI = 5;   // le altre si aggiungono da sole con INVIO / Avanti sull'ultima casella
 
+  /* La chiavetta si carica via Bluetooth o cavo: senza nessuno dei due (Firefox, iPhone) si parte dai codici */
+  function schedaPredefinita() {
+    return (navigator.bluetooth || navigator.usb) ? 'chiavetta' : 'barre';
+  }
+
   function statoIniziale() {
     var righe = [];
     for (var i = 0; i < RIGHE_INIZIALI; i++) righe.push(['', '']);
     return {
       modo: 'separatore', decAng: 2, decAlt: 2, righe: righe,
-      coppieBlocco: 10, invioFinale: false, scheda: 'barre', blocco: 0, confronto: 'tutti',
+      coppieBlocco: 10, invioFinale: false, scheda: schedaPredefinita(), blocco: 0, confronto: 'tutti',
       tema: 'scuro', lettura: 0, voceModo: 'premi', voceSeparatore: 'pausa',
       chRitCar: 30, chRitInv: 200, chCoppie: 0, chMezzo: 'bluetooth',
-      impAperte: true   // riquadro delle impostazioni aperto al primo uso
+      impAperte: true,   // riquadro delle impostazioni aperto al primo uso
+      schedaChiavetta: true   // segno: lo spostamento una tantum sulla Chiavetta è già fatto
     };
   }
 
@@ -4105,6 +4113,9 @@ var AppChiavetta = (function () {
         base.righe = s.righe.slice(0, MAX_RIGHE).map(function (r) { return [String(r[0] || ''), String(r[1] || '')]; });
         if (!base.righe.length) base.righe.push(['', '']);
         if (s.impAperte === undefined) base.impAperte = false;   // chi l'ha già usato le ha già scelte
+        /* docs/2026-11-14-chiavetta-predefinita.md: una volta sola tutti passano alla scheda predefinita
+           (prima era "Codici a barre"); poi si ricorda la scelta */
+        if (s.schedaChiavetta === undefined) base.scheda = schedaPredefinita();
         stato = base;
       }
     } catch (e) { salvataggioOk = false; }
@@ -4340,7 +4351,8 @@ var AppChiavetta = (function () {
   }
 
   function mostraQR() {
-    if (!analisi.valido) { $('uscita-qr').innerHTML = messaggioNonPronto(); return; }
+    var uscita = $('uscita-qr');
+    if (!analisi.valido) { uscita.innerHTML = messaggioNonPronto(); uscita.dataset.html = ''; return; }
     stato.blocco = Math.min(Math.max(0, stato.blocco), blocchi.length - 1);
     var b = blocchi[stato.blocco];
     var righe = [];
@@ -4349,7 +4361,7 @@ var AppChiavetta = (function () {
       righe.push('<tr><td>' + a.coppia + '</td><td>' + esc(a.display) + '</td><td>' + (h2 ? esc(h2.display) : '') + '</td></tr>');
     }
     var grezzo = b.testo.split(Logica.CR).map(esc).join('<b>⏎</b>');
-    $('uscita-qr').innerHTML =
+    var html =
       '<div class="navigazione">' +
       '<button type="button" id="qr-prec"' + (stato.blocco === 0 ? ' disabled' : '') + '>◀ Precedente</button>' +
       '<span class="stato" id="qr-stato">Blocco ' + (stato.blocco + 1) + ' di ' + blocchi.length + '</span>' +
@@ -4359,6 +4371,10 @@ var AppChiavetta = (function () {
       '<div class="area-qr"><div class="cornice" id="qr-codice">' + Logica.qrSvg(qrcode, b.testo, latoQR()) + '</div></div>' +
       '<div class="contenuto-qr"><table><thead><tr><th>Coppia</th><th>Angolo</th><th>Altezza</th></tr></thead><tbody>' + righe.join('') + '</tbody></table>' +
       '<div class="grezzo" title="Contenuto del QR: ⏎ = INVIO">' + grezzo + '</div></div>';
+    /* ridisegna solo se cambia (il ridimensionamento della finestra lo richiama anche senza modifiche) */
+    if (uscita.dataset.html === html) return;
+    uscita.innerHTML = html;
+    uscita.dataset.html = html;
     $('qr-prec').onclick = function () { stato.blocco--; mostraQR(); salva(); };
     $('qr-succ').onclick = function () { stato.blocco++; mostraQR(); salva(); };
   }

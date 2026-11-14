@@ -62,7 +62,8 @@ test.before(async () => {
 test.after(async () => { await browser.close(); });
 
 /* telefono: viewport 390x844 con tocco, come uno smartphone. */
-async function nuovaPagina(larghezza = 1200, { telefono = false } = {}) {
+/* Questi test riguardano i codici: si parte dalla scheda "Codici a barre" (la predefinita è Chiavetta). */
+async function nuovaPagina(larghezza = 1200, { telefono = false, scheda = 'barre' } = {}) {
   const ctx = await browser.newContext(telefono
     ? { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, reducedMotion: 'reduce' }
     : { viewport: { width: larghezza, height: 900 }, deviceScaleFactor: 1, reducedMotion: 'reduce' });
@@ -70,6 +71,7 @@ async function nuovaPagina(larghezza = 1200, { telefono = false } = {}) {
   const erroriJs = [];
   page.on('pageerror', (e) => erroriJs.push(e.message));
   await page.goto(PAGINA);
+  if (scheda) await page.click('#tab-' + scheda);
   page.erroriJs = erroriJs;
   return page;
 }

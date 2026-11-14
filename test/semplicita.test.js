@@ -108,17 +108,45 @@ test('indice e schede su una riga, senza scorrimento orizzontale della pagina', 
 
 test('"quale metodo": ogni nome apre la sua scheda; tema solo icona', async () => {
   const page = await apri(1200, { telefono: false, salvato: UTENTE_CHE_TORNA });
-  assert.match(await page.locator('.metodi').innerText(), /Lettore 1D → Codici a barre · Lettore 2D → QR · Senza lettore → Chiavetta/);
+  assert.match(await page.locator('.metodi').innerText(), /Chiavetta \(consigliata\) · Lettore 1D → Codici a barre · Lettore 2D → QR/);
   for (const [scheda, pannello] of [['chiavetta', 'pannello-chiavetta'], ['qr', 'pannello-qr'], ['barre', 'pannello-barre']]) {
     await page.click(`.metodi a[data-apri-scheda="${scheda}"]`);
     assert.equal(await page.locator('#' + pannello).isVisible(), true, scheda);
     assert.equal(await page.getAttribute('#tab-' + scheda, 'aria-selected'), 'true');
   }
-  assert.deepEqual(await page.$$eval('.schede button', (bs) => bs.map((b) => b.innerText.trim())), ['Codici a barre', 'QR', 'Chiavetta']);
+  assert.deepEqual(await page.$$eval('.schede button', (bs) => bs.map((b) => b.innerText.trim())), ['Chiavetta', 'Codici a barre', 'QR']);
   assert.equal(await page.locator('#btn-tema').innerText(), '☀');
   assert.equal(await page.getAttribute('#btn-tema', 'title'), 'Passa al tema chiaro');
   assert.deepEqual(page.erroriJs, []);
   await page.context().close();
+});
+
+/* docs/2026-11-14-chiavetta-predefinita.md */
+test('Chiavetta predefinita: per i nuovi, una volta sola per chi tornava, codici senza Bluetooth né cavo', async () => {
+  const scheda = (p) => p.evaluate(() => document.querySelector('.schede [aria-selected="true"]').dataset.scheda);
+  // prima volta (Edge e Chromium hanno navigator.bluetooth / navigator.usb)
+  let page = await apri(390);
+  assert.equal(await scheda(page), 'chiavetta');
+  assert.equal(await page.locator('#pannello-chiavetta').isVisible(), true);
+  await page.context().close();
+  // chi aveva "barre" salvato (era la predefinita): passa alla Chiavetta, poi la scelta resta
+  page = await apri(390, { salvato: Object.assign({}, UTENTE_CHE_TORNA, { scheda: 'barre' }) });
+  assert.equal(await scheda(page), 'chiavetta', 'spostamento una tantum');
+  await page.tap('#tab-qr');
+  const salvatoOra = await page.evaluate((k) => localStorage.getItem(k), CHIAVE);
+  await page.context().close();
+  page = await apri(390, { salvato: JSON.parse(salvatoOra) });
+  assert.equal(await scheda(page), 'qr', 'dopo lo spostamento si ricorda la scelta');
+  await page.context().close();
+  // browser senza Bluetooth né cavo (Firefox, iPhone): si parte dai codici
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  await ctx.addInitScript(() => {
+    for (const k of ['bluetooth', 'usb']) Object.defineProperty(Navigator.prototype, k, { get: () => undefined, configurable: true });
+  });
+  page = await ctx.newPage();
+  await page.goto(PAGINA);
+  assert.equal(await scheda(page), 'barre');
+  await ctx.close();
 });
 
 test('scheda Chiavetta: prima collegamento e pulsanti, impostazioni di scrittura chiuse con riepilogo', async () => {
