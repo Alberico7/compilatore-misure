@@ -24,6 +24,13 @@ async function apri(larghezza, { telefono = true, salvato = null, altezza = 844 
   const ctx = await browser.newContext(telefono
     ? { viewport: { width: larghezza, height: altezza }, deviceScaleFactor: 1, isMobile: true, hasTouch: true, reducedMotion: 'reduce' }
     : { viewport: { width: larghezza, height: 900 }, reducedMotion: 'reduce' });
+  // Chromium headless su Linux (CI) può non avere Web Bluetooth / WebUSB: qui si simula un browser che li ha
+  // (la pagina li usa solo quando si preme un pulsante della Chiavetta)
+  await ctx.addInitScript(() => {
+    if (!navigator.usb && !navigator.bluetooth) {
+      Object.defineProperty(Navigator.prototype, 'usb', { get: () => ({ requestDevice: () => Promise.reject(new Error('finto')) }), configurable: true });
+    }
+  });
   if (salvato) await ctx.addInitScript(([k, v]) => localStorage.setItem(k, v), [CHIAVE, JSON.stringify(salvato)]);
   const page = await ctx.newPage();
   const erroriJs = [];
