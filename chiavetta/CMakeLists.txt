@@ -4,7 +4,7 @@ set(PICO_BOARD pico2_w CACHE STRING "Scheda")
 include(pico_sdk_import.cmake)
 
 # La versione del firmware si cambia solo qui: arriva al firmware, a picotool e al sito.
-project(chiavetta VERSION 1.1.0 LANGUAGES C CXX ASM)
+project(chiavetta VERSION 1.1.1 LANGUAGES C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 
 if (PICO_SDK_VERSION_STRING VERSION_LESS "2.1.0")
