@@ -189,3 +189,38 @@ test('logo: accanto al titolo, icona del browser e icone per la schermata Home s
     assert.ok(fs.existsSync(path.join(__dirname, '..', 'sito', f)), f + ' presente nel sito');
   }
 });
+
+/* Android: senza icona "maskable" nel manifest aggiunge un bordo bianco (come risolto nell'Etichettatrice) */
+test('manifest con icone ritagliabili; il pettirosso sta nella zona sicura', async () => {
+  const sito = path.join(__dirname, '..', 'sito');
+  assert.match(fs.readFileSync(path.join(sito, 'index.html'), 'utf8'), /<link rel="manifest" href="manifest.webmanifest">/);
+  const m = JSON.parse(fs.readFileSync(path.join(sito, 'manifest.webmanifest'), 'utf8'));
+  assert.equal(m.display, 'browser', 'la pagina si apre come prima, nel browser');
+  assert.ok(m.icons.some((i) => i.purpose === 'any'));
+  assert.ok(m.icons.some((i) => i.purpose === 'maskable' && i.sizes === '512x512'));
+  const page = await browser.newPage();
+  for (const i of m.icons) {
+    const file = path.join(sito, i.src);
+    assert.ok(fs.existsSync(file), i.src);
+    const [l] = i.sizes.split('x').map(Number);
+    const misura = await page.evaluate(async (u) => { const im = new Image(); im.src = u; await im.decode(); return [im.naturalWidth, im.naturalHeight]; },
+      'data:image/png;base64,' + fs.readFileSync(file).toString('base64'));
+    assert.deepEqual(misura, [l, l], i.src + ' ' + i.sizes);
+  }
+  // fuori dal cerchio di raggio 40 % (zona sicura) c'è solo il blu dello sfondo
+  const fuori = await page.evaluate(async (u) => {
+    const im = new Image(); im.src = u; await im.decode();
+    const c = document.createElement('canvas'); c.width = c.height = 512;
+    const g = c.getContext('2d'); g.drawImage(im, 0, 0);
+    const d = g.getImageData(0, 0, 512, 512).data;
+    let n = 0;
+    for (let y = 0; y < 512; y += 2) for (let x = 0; x < 512; x += 2) {
+      if (Math.hypot(x - 256, y - 256) <= 512 * 0.4) continue;
+      const k = (y * 512 + x) * 4;
+      if (Math.abs(d[k] - 0x27) + Math.abs(d[k + 1] - 0x4e) + Math.abs(d[k + 2] - 0x76) > 12) n++;
+    }
+    return n;
+  }, 'data:image/png;base64,' + fs.readFileSync(path.join(sito, 'icona-ritagliabile-512.png')).toString('base64'));
+  assert.equal(fuori, 0, 'nessun pixel del disegno fuori dalla zona sicura');
+  await page.close();
+});

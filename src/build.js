@@ -45,7 +45,8 @@ const logo = 'data:image/svg+xml;base64,' + Buffer.from(leggi('icona.svg')).toSt
 for (const s of ['<!--ICONE-->', '__LOGO__']) if (html.split(s).length !== 2) throw new Error('Segnaposto ' + s + ' assente o ripetuto');
 html = html.replace('__LOGO__', logo);
 const ICONA_SVG = '<link rel="icon" type="image/svg+xml" href="' + logo + '">';
-const ICONE_SITO = ICONA_SVG + '\n<link rel="apple-touch-icon" href="icona-180.png">\n<link rel="icon" type="image/png" sizes="192x192" href="icona-192.png">';
+const ICONE_SITO = ICONA_SVG + '\n<link rel="apple-touch-icon" href="icona-180.png">\n<link rel="icon" type="image/png" sizes="192x192" href="icona-192.png">' +
+  '\n<link rel="manifest" href="manifest.webmanifest">';   // icone ritagliabili: niente bordo bianco su Android
 const htmlSito = html.replace('<!--ICONE-->', ICONE_SITO);
 html = html.replace('<!--ICONE-->', ICONA_SVG);
 
@@ -60,7 +61,10 @@ scrivi(path.join(radice, 'compilatore-misure.html'), html);
 const sito = path.join(radice, 'sito');
 fs.rmSync(sito, { recursive: true, force: true });
 scrivi(path.join(sito, 'index.html'), htmlSito);
-for (const f of ['icona-180.png', 'icona-192.png']) scrivi(path.join(sito, f), fs.readFileSync(path.join(src, 'icone', f)));
+for (const f of ['icona-180.png', 'icona-192.png', 'icona-ritagliabile-192.png', 'icona-ritagliabile-512.png']) {
+  scrivi(path.join(sito, f), fs.readFileSync(path.join(src, 'icone', f)));
+}
+scrivi(path.join(sito, 'manifest.webmanifest'), leggi('manifest.webmanifest'));
 const moduli = path.join(radice, 'node_modules');
 scrivi(path.join(sito, 'voce', 'vosk.js'), fs.readFileSync(path.join(moduli, 'vosk-browser', 'dist', 'vosk.js')));
 scrivi(path.join(sito, 'voce', 'fflate.js'), fs.readFileSync(path.join(moduli, 'fflate', 'umd', 'index.js')));

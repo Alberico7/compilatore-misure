@@ -57,3 +57,17 @@ I file stanno in `src/icona.svg` e `src/icone/`. `build.js` copia le PNG in `sit
   - solo nel sito aggiunge `apple-touch-icon` e l'icona PNG da 192 px, e copia le PNG in `sito/`.
 - Sul telefono il titolo andava già su due righe anche senza logo (a 24 px non ci sta), quindi la testata non si allunga.
 - Test in `semplicita.test.js`.
+
+## Correzione: bordo bianco su Android (2026-11-14)
+
+Aggiungendo la pagina alla schermata Home, Android metteva il quadrato blu dentro un bordo bianco. È lo stesso problema dell'Etichettatrice (vedi il suo `docs/2026-11-07-icona-ritagliabile.md`), e la soluzione è la stessa:
+
+- **`src/icona-ritagliabile.svg`:** fondo blu fino ai bordi; pettirosso alla scala 0,65 (`translate(87 61)`), dentro la zona sicura.
+- **`npm run icone`:** genera anche `icona-ritagliabile-192.png` e `icona-ritagliabile-512.png`.
+- **`src/manifest.webmanifest`**, collegato solo nel sito:
+  - le icone normali (`any`) e quelle ritagliabili (`maskable`);
+  - `display: "browser"`, così la pagina si apre come prima, nella scheda del browser.
+- **Test:**
+  - il manifest è valido e le icone esistono con le dimensioni giuste;
+  - fuori dal cerchio di raggio 40 % c'è solo il blu dello sfondo.
+- **A vista, sul telefono:** l'icona già sulla schermata Home non si aggiorna da sola. Va tolta e rimessa.
