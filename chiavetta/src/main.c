@@ -21,7 +21,11 @@
 #include "tusb.h"
 #include "usb.h"
 
-#define PIN_PULSANTE 15   // pulsante verso GND, resistenza interna verso l'alto
+// Tasti verso GND, resistenza interna verso l'alto. Ferma e Ricomincia sono facoltativi:
+// scollegati restano alti, cioe' non premuti (docs/2026-11-14-tastiera-3-tasti.md).
+#define PIN_PULSANTE   15   // Scrivi (il pulsante singolo)
+#define PIN_FERMA      14
+#define PIN_RICOMINCIA 13
 
 static dati_t dati;           // valori in uso
 static dati_t nuovi;          // valori appena ricevuti, controllati qui prima di usarli
@@ -35,6 +39,12 @@ static sistema_t sistema = { .dati = &dati, .nuovi = &nuovi, .motore = &motore }
 static uint32_t ora_ms(void) { return to_ms_since_boot(get_absolute_time()); }
 
 static bool pulsante_premuto(void) { return !gpio_get(PIN_PULSANTE); }
+
+static void ingresso_tasto(uint pin) {
+    gpio_init(pin);
+    gpio_set_dir(pin, GPIO_IN);
+    gpio_pull_up(pin);
+}
 
 static void carica_da_memoria(void) {
     memoria_leggi(&mem);
@@ -114,10 +124,12 @@ static void imposta_led(bool acceso) {
 }
 
 int main(void) {
-    bi_decl(bi_1pin_with_name(PIN_PULSANTE, "Pulsante verso GND"));
-    gpio_init(PIN_PULSANTE);
-    gpio_set_dir(PIN_PULSANTE, GPIO_IN);
-    gpio_pull_up(PIN_PULSANTE);
+    bi_decl(bi_1pin_with_name(PIN_PULSANTE, "Scrivi (pulsante) verso GND"));
+    bi_decl(bi_1pin_with_name(PIN_FERMA, "Ferma verso GND"));
+    bi_decl(bi_1pin_with_name(PIN_RICOMINCIA, "Ricomincia verso GND"));
+    ingresso_tasto(PIN_PULSANTE);
+    ingresso_tasto(PIN_FERMA);
+    ingresso_tasto(PIN_RICOMINCIA);
     sleep_ms(20);
     caricamento = pulsante_premuto();
 
@@ -157,9 +169,10 @@ int main(void) {
             continue;
         }
 
-        if (motore_pulsante(&motore, pulsante_premuto(), ora) == EV_ABBINA && ble_attivo()) {
-            ble_apri_abbinamento(ora);
-        }
+        bool abbina = motore_pulsante(&motore, pulsante_premuto(), ora) == EV_ABBINA;
+        motore_tasto(&motore, MT_FERMA, !gpio_get(PIN_FERMA), ora);
+        abbina |= motore_tasto(&motore, MT_RICOMINCIA, !gpio_get(PIN_RICOMINCIA), ora) == EV_ABBINA;
+        if (abbina && ble_attivo()) ble_apri_abbinamento(ora);
         motore.abbina_fino = ble_abbinamento_fino(ora);
         if (ble_abbinamenti_riusciti() != abbinamenti_visti) {
             abbinamenti_visti = ble_abbinamenti_riusciti();

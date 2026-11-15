@@ -496,12 +496,14 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
         <li>Nella scheda <b>Chiavetta</b> scegli il collegamento: <b>Bluetooth</b> (Chrome su Android) oppure <b>Cavo</b>, collegando la chiavetta <b>tenendo premuto il pulsante</b> (telefono con adattatore OTG, oppure PC). Poi premi <b>Invia i valori</b>.</li>
         <li>Il sito confronta il <b>codice di controllo</b> della chiavetta con il suo: se coincidono, i valori sono arrivati identici.</li>
         <li>In macchina collega la chiavetta <b>senza</b> premere il pulsante: è una tastiera e basta. Metti il cursore su <b>Angolo 1</b> e premi il pulsante: dopo 1 secondo scrive.</li>
+        <li>Con i tre tasti, facoltativi: <b>Ferma</b> si ferma dopo il valore in corso, <b>Ricomincia</b> torna alla prima coppia.</li>
         <li><b>Controlla la chiavetta</b> dice cosa contiene, a che punto è e se i valori sono uguali alla tabella. Via Bluetooth funziona anche con la chiavetta collegata alla macchina e non fa partire nessun tasto.</li>
         <li>Prima volta col Bluetooth: imposta il codice con il cavo, poi tieni premuto il pulsante <b>5 secondi</b> (doppio lampo) e invia dal telefono entro un minuto: il telefono chiede il codice. Si ricorda un solo telefono.</li>
         <li>La chiavetta manda solo cifre, il "−" del tastierino numerico e INVIO: funziona con layout tedesco, italiano e inglese.</li>
         <li><b>Controlla tutti i valori sullo schermo della macchina prima di avviare la tastatura.</b></li>
       </ol>
       <table><thead><tr><th>Pulsante</th><th>Effetto</th></tr></thead><tbody><tr><td>Pressione breve, da pronta o fermata</td><td>Scrive, dopo 1 secondo</td></tr><tr><td>Pressione mentre scrive (o nel secondo di attesa)</td><td>Si ferma dopo il valore in corso, mai a metà numero</td></tr><tr><td>Tenuto da 2 a 5 secondi</td><td>Torna all'inizio; poi una pressione breve scrive dal primo valore</td></tr><tr><td>Tenuto più di 5 secondi</td><td>Apre l'abbinamento Bluetooth per un minuto</td></tr><tr><td>Pressione breve quando ha finito</td><td>Niente: per riscrivere tutto, prima tenere premuto 2–5 secondi</td></tr></tbody></table>
+<table><thead><tr><th>Tasti</th><th>Effetto</th></tr></thead><tbody><tr><td><b>Scrivi</b></td><td>Come il pulsante, pressioni lunghe comprese</td></tr><tr><td><b>Ferma</b></td><td>Durante la scrittura o il secondo di attesa: si ferma dopo il valore in corso, mai a metà numero. A chiavetta ferma non fa niente</td></tr><tr><td><b>Ricomincia</b>, pressione breve</td><td>Torna alla prima coppia (tre lampi); poi Scrivi scrive dal primo valore</td></tr><tr><td><b>Ricomincia</b> tenuto 5 secondi</td><td>Apre l'abbinamento Bluetooth per un minuto. Quando lo puoi lasciare, il LED fa già il doppio lampo</td></tr><tr><td><b>Ricomincia</b> mentre scrive</td><td>Niente: prima premi Ferma, così non perdi il segno</td></tr></tbody></table>
 <table><thead><tr><th>LED</th><th>Significato</th></tr></thead><tbody><tr><td>Acceso fisso</td><td>Pronta, dall'inizio</td></tr><tr><td>Lampeggio veloce</td><td>Sta scrivendo</td></tr><tr><td>Lampeggio lento (mezzo secondo)</td><td>Fermata a metà o a fine blocco</td></tr><tr><td>Un lampo ogni 2 secondi</td><td>Ha finito</td></tr><tr><td>Lampi lunghi (1 secondo acceso, 1 spento)</td><td>Nessun valore caricato</td></tr><tr><td>Doppio lampo ripetuto</td><td>Abbinamento Bluetooth aperto</td></tr><tr><td>Tre lampi veloci</td><td>Valori nuovi caricati, oppure tornata all'inizio</td></tr></tbody></table>
     </details>
     <details>
@@ -3580,7 +3582,7 @@ var Chiavetta = (function () {
   var NESSUN_CODICE = 0xFFFFFFFF;
   var ATTESA_RISPOSTA_MS = 8000;
   /* Versione del firmware pubblicato sul sito: build.js la prende da chiavetta/CMakeLists.txt. */
-  var VERSIONE_PUBBLICATA = '1.1.1';
+  var VERSIONE_PUBBLICATA = '1.2.0';
   function versionePubblicata() { return /^\d+\.\d+\.\d+$/.test(VERSIONE_PUBBLICATA) ? VERSIONE_PUBBLICATA : null; }
 
   /* < 0 se a è più vecchia di b, 0 se uguali, > 0 se più nuova ("1.10.0" > "1.9.3"). */

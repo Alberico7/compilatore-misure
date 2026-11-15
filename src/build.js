@@ -29,7 +29,7 @@ for (const [segnaposto, codice] of Object.entries(parti)) {
 // il template è diviso in due per un'eventuale pubblicazione senza scheletro: qui i segnaposto non servono
 html = html.replace('<!--INIZIO_CONTENUTO_HEAD-->\n', '').replace('<!--FINE_CONTENUTO_HEAD-->\n', '');
 
-// Chiavetta: tabelle "Pulsante" e "LED" dal LEGGIMI (fonte unica) e versione del firmware dal CMakeLists
+// Chiavetta: tabelle "Pulsante", "Tasti" e "LED" dal LEGGIMI (fonte unica) e versione del firmware dal CMakeLists
 const { tabellaHtml, TABELLE } = require('./tabelle-md');
 const leggimi = fs.readFileSync(path.join(radice, 'chiavetta', 'LEGGIMI.md'), 'utf8');
 if (!html.includes('<!--TABELLE_CHIAVETTA-->')) throw new Error('Segnaposto mancante: TABELLE_CHIAVETTA');

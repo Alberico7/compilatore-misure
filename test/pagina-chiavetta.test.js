@@ -389,7 +389,7 @@ test('collegamento: scelta ricordata; con un solo collegamento disponibile si ve
   } finally { sim.chiudi(); }
 });
 
-test('guida e titolo: tabelle "Pulsante" e "LED" uguali al LEGGIMI, sezione 2 "In macchina"', { skip: salta }, async () => {
+test('guida e titolo: tabelle "Pulsante", "Tasti" e "LED" uguali al LEGGIMI, sezione 2 "In macchina"', { skip: salta }, async () => {
   const { righeTabella, testoCella, TABELLE } = require('../src/tabelle-md');
   const leggimi = fs.readFileSync(path.join(CHIAVETTA, 'LEGGIMI.md'), 'utf8');
   const sim = avviaSimulatore(eseguibile);
@@ -400,8 +400,10 @@ test('guida e titolo: tabelle "Pulsante" e "LED" uguali al LEGGIMI, sezione 2 "I
     const tabelle = await page.$$eval('#sez-guida details table', (ts) => ts.map((t) =>
       Array.from(t.rows, (r) => Array.from(r.cells, (c) => c.textContent.trim()))));
     assert.deepEqual(tabelle, TABELLE.map((t) => righeTabella(leggimi, t).map((r) => r.map(testoCella))));
-    assert.equal(tabelle.length, 2);
-    assert.ok(tabelle[1].length >= 7, 'tutte le righe del LED');
+    assert.equal(tabelle.length, 3);
+    assert.equal(tabelle[1][0][0], 'Tasti');
+    assert.ok(tabelle[1].length >= 6, 'tutte le righe dei tasti');
+    assert.ok(tabelle[2].length >= 7, 'tutte le righe del LED');
     await page.context().close();
   } finally { sim.chiudi(); }
 });

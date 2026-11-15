@@ -1,5 +1,5 @@
 'use strict';
-// Legge le tabelle Markdown del LEGGIMI della chiavetta (fonte unica di "Pulsante" e "LED")
+// Legge le tabelle Markdown del LEGGIMI della chiavetta (fonte unica di "Pulsante", "Tasti" e "LED")
 // e le trasforma in HTML per la guida del sito. Usato da build.js e dai test.
 
 /* Righe della tabella che ha come prima intestazione "titolo": [[cella, ...], ...] (intestazione compresa). */
@@ -28,4 +28,4 @@ function tabellaHtml(md, titolo) {
 /* Testo semplice di una cella (senza **), per confrontare guida e LEGGIMI. */
 function testoCella(s) { return s.replace(/\*\*/g, ''); }
 
-module.exports = { righeTabella, tabellaHtml, testoCella, TABELLE: ['Pulsante', 'LED'] };
+module.exports = { righeTabella, tabellaHtml, testoCella, TABELLE: ['Pulsante', 'Tasti', 'LED'] };

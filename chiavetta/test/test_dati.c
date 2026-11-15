@@ -56,13 +56,22 @@ typedef struct {
 
 static motore_t M;
 
-static void simula(motore_t *m, const layout_t *l, uint32_t da, uint32_t a,
-                   const intervallo_t *pressioni, size_t np, uscita_t *u,
-                   bool (*hid_pronto)(uint32_t)) {
+// Pressione di uno dei tre tasti: SCRIVI e' il pulsante (motore_pulsante), gli altri motore_tasto.
+#define SCRIVI (-1)
+typedef struct { int tasto; uint32_t da, a; } pressione_t;
+
+static bool tenuto(const pressione_t *p, size_t np, int tasto, uint32_t ora) {
+    for (size_t i = 0; i < np; i++) if (p[i].tasto == tasto && ora >= p[i].da && ora < p[i].a) return true;
+    return false;
+}
+
+static void simula_tasti(motore_t *m, const layout_t *l, uint32_t da, uint32_t a,
+                         const pressione_t *pressioni, size_t np, uscita_t *u,
+                         bool (*hid_pronto)(uint32_t)) {
     for (uint32_t ora = da; ora < a; ora++) {
-        bool premuto = false;
-        for (size_t i = 0; i < np; i++) if (ora >= pressioni[i].da && ora < pressioni[i].a) premuto = true;
-        if (motore_pulsante(m, premuto, ora) == EV_ABBINA) u->eventi_abbina++;
+        if (motore_pulsante(m, tenuto(pressioni, np, SCRIVI, ora), ora) == EV_ABBINA) u->eventi_abbina++;
+        for (int k = 0; k < MT_NUMERO; k++)
+            if (motore_tasto(m, (motore_tasto_t)k, tenuto(pressioni, np, k, ora), ora) == EV_ABBINA) u->eventi_abbina++;
         uint8_t tasto = 0;
         bool pronto = hid_pronto ? hid_pronto(ora) : true;
         motore_azione_t az = motore_passo(m, ora, pronto, &tasto);
@@ -86,6 +95,16 @@ static void simula(motore_t *m, const layout_t *l, uint32_t da, uint32_t a,
             u->t_ultimo_rilascio = ora;
         }
     }
+}
+
+// Solo il pulsante (Scrivi), come prima dei tre tasti
+static void simula(motore_t *m, const layout_t *l, uint32_t da, uint32_t a,
+                   const intervallo_t *pressioni, size_t np, uscita_t *u,
+                   bool (*hid_pronto)(uint32_t)) {
+    pressione_t p[16];
+    if (np > 16) np = 16;
+    for (size_t i = 0; i < np; i++) p[i] = (pressione_t){ SCRIVI, pressioni[i].da, pressioni[i].a };
+    simula_tasti(m, l, da, a, p, np, u, hid_pronto);
 }
 
 static void uscita_init(uscita_t *u) {
@@ -469,6 +488,113 @@ static void test_motore(void) {
     VERO(accesi > 100 && accesi < 300);
 }
 
+// docs/2026-11-14-tastiera-3-tasti.md
+static void test_tre_tasti(void) {
+    printf("tre tasti\n");
+    layout_t l;
+    layout_base(&l, "IT");
+    uscita_t u;
+
+    // Ferma mentre scrive: finisce il valore in corso; Scrivi riparte da li'
+    carica(VALORI_PROVA);
+    uscita_init(&u);
+    pressione_t f1[] = { { SCRIVI, 100, 200 }, { MT_FERMA, 1700, 1800 } };
+    simula_tasti(&M, &l, 0, 6000, f1, 2, &u, NULL);
+    VERO(M.stato == ST_FERMATO && M.pos > 0 && M.pos < 6);
+    VERO(u.n > 0 && u.testo[u.n - 1] == '\n');     // mai a meta' numero
+    pressione_t f2[] = { { SCRIVI, 7000, 7100 } };
+    simula_tasti(&M, &l, 6000, 30000, f2, 1, &u, NULL);
+    UGUALI_S(u.testo, ATTESO_PROVA);
+    VERO(u.errori_sequenza == 0);
+
+    // Ferma durante il secondo di attesa: non scrive niente
+    carica(VALORI_PROVA);
+    uscita_init(&u);
+    pressione_t f3[] = { { SCRIVI, 100, 200 }, { MT_FERMA, 600, 700 } };
+    simula_tasti(&M, &l, 0, 10000, f3, 2, &u, NULL);
+    VERO(u.n == 0 && M.stato == ST_PRONTO);
+
+    // Ferma a chiavetta ferma, anche tenuto a lungo: niente, ne' abbinamento
+    carica(VALORI_PROVA);
+    uscita_init(&u);
+    pressione_t f4[] = { { MT_FERMA, 100, 200 }, { MT_FERMA, 1000, 7000 } };
+    simula_tasti(&M, &l, 0, 10000, f4, 2, &u, NULL);
+    VERO(u.n == 0 && M.stato == ST_PRONTO && M.pos == 0 && u.eventi_abbina == 0);
+
+    // Ferma con rimbalzi di 5 ms mentre scrive: non conta
+    carica(VALORI_PROVA);
+    uscita_init(&u);
+    pressione_t f5[] = { { SCRIVI, 100, 200 }, { MT_FERMA, 1700, 1705 }, { MT_FERMA, 1900, 1904 } };
+    simula_tasti(&M, &l, 0, 30000, f5, 3, &u, NULL);
+    UGUALI_S(u.testo, ATTESO_PROVA);
+
+    // Ricomincia breve, da fermata a meta': torna alla prima coppia con tre lampi, non scrive da solo
+    carica(VALORI_PROVA);
+    uscita_init(&u);
+    pressione_t r1[] = { { SCRIVI, 100, 200 }, { MT_FERMA, 1700, 1800 }, { MT_RICOMINCIA, 8000, 8100 } };
+    simula_tasti(&M, &l, 0, 8200, r1, 3, &u, NULL);
+    VERO(M.stato == ST_PRONTO && M.pos == 0 && M.lampi == 3);
+    size_t prima = u.n;
+    simula_tasti(&M, &l, 8200, 12000, NULL, 0, &u, NULL);
+    VERO(u.n == prima);
+    pressione_t r2[] = { { SCRIVI, 12000, 12100 } };
+    simula_tasti(&M, &l, 12000, 40000, r2, 1, &u, NULL);
+    VERO(strcmp(u.testo + prima, ATTESO_PROVA) == 0);   // dopo il pezzo di prima, tutto dall'inizio
+
+    // Ricomincia da finita, anche tenuto 2-5 s: torna all'inizio, senza abbinamento
+    pressione_t r3[] = { { MT_RICOMINCIA, 41000, 44000 } };
+    VERO(M.stato == ST_FINITO);
+    simula_tasti(&M, &l, 40000, 46000, r3, 1, &u, NULL);
+    VERO(M.stato == ST_PRONTO && M.pos == 0 && u.eventi_abbina == 0);
+
+    // Ricomincia mentre scrive: ignorato, anche se lo si lascia dopo la fine della scrittura
+    carica(VALORI_PROVA);
+    uscita_init(&u);
+    pressione_t r4[] = { { SCRIVI, 100, 200 }, { MT_RICOMINCIA, 1600, 1700 }, { MT_RICOMINCIA, 2000, 9000 } };
+    simula_tasti(&M, &l, 0, 12000, r4, 3, &u, NULL);
+    UGUALI_S(u.testo, ATTESO_PROVA);
+    VERO(M.stato == ST_FINITO && M.pos == 6 && u.eventi_abbina == 0);
+
+    // Ricomincia durante l'attesa: ignorato, la scrittura parte lo stesso
+    carica(VALORI_PROVA);
+    uscita_init(&u);
+    pressione_t r5[] = { { SCRIVI, 100, 200 }, { MT_RICOMINCIA, 600, 700 } };
+    simula_tasti(&M, &l, 0, 30000, r5, 2, &u, NULL);
+    UGUALI_S(u.testo, ATTESO_PROVA);
+
+    // Ricomincia tenuto 5 s: LED fisso, poi doppio lampo; al rilascio abbinamento, posizione invariata
+    carica(VALORI_PROVA);
+    uscita_init(&u);
+    pressione_t r6[] = { { MT_RICOMINCIA, 100, 8000 } };
+    simula_tasti(&M, &l, 0, 3000, r6, 1, &u, NULL);
+    VERO(motore_led(&M, 3000));
+    simula_tasti(&M, &l, 3000, 6000, r6, 1, &u, NULL);
+    uint32_t d = 6000 - M.tasto[MT_RICOMINCIA].t_premuto;   // oltre 5 s
+    VERO(d >= MOTORE_ABBINA_MS);
+    uint32_t inizio = 6000 + (1000 - d % 1000);              // inizio del prossimo giro
+    VERO(motore_led(&M, inizio + 50) && !motore_led(&M, inizio + 150) &&
+         motore_led(&M, inizio + 250) && !motore_led(&M, inizio + 500));
+    VERO(u.eventi_abbina == 0);                               // l'abbinamento si apre al rilascio
+    simula_tasti(&M, &l, 6000, 12000, r6, 1, &u, NULL);
+    VERO(u.eventi_abbina == 1 && u.n == 0 && M.stato == ST_PRONTO);
+
+    // senza valori: Ricomincia breve non fa niente, tenuto 5 s apre comunque l'abbinamento (primo uso)
+    memset(&D, 0, sizeof(D));
+    motore_init(&M, &D, 0);
+    uscita_init(&u);
+    pressione_t r7[] = { { MT_RICOMINCIA, 100, 200 }, { MT_RICOMINCIA, 1000, 6500 }, { MT_FERMA, 8000, 8100 } };
+    simula_tasti(&M, &l, 0, 10000, r7, 3, &u, NULL);
+    VERO(u.n == 0 && M.stato == ST_VUOTO && u.eventi_abbina == 1 && M.lampi == 0);
+
+    // il pulsante da solo funziona come prima anche con gli altri tasti scollegati (gia' provato
+    // in test_motore); qui: pressione lunga di Scrivi ancora valida insieme ai tasti nuovi
+    carica(VALORI_PROVA);
+    uscita_init(&u);
+    pressione_t s1[] = { { SCRIVI, 100, 200 }, { MT_FERMA, 1700, 1800 }, { SCRIVI, 8000, 11000 } };
+    simula_tasti(&M, &l, 0, 15000, s1, 3, &u, NULL);
+    VERO(M.stato == ST_PRONTO && M.pos == 0);
+}
+
 int main(void) {
     test_crc();
     test_analizza();
@@ -483,6 +609,7 @@ int main(void) {
     test_motore_layout(&de);
     test_motore_layout(&it);
     test_motore();
+    test_tre_tasti();
     printf("\n%d controlli, %d falliti\n", controlli, fallimenti);
     return fallimenti ? 1 : 0;
 }

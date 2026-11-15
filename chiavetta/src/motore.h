@@ -31,6 +31,20 @@ typedef enum {
     EV_ABBINA,      // pressione di almeno 5 s a chiavetta ferma
 } motore_evento_t;
 
+// Tasti in piu' rispetto al pulsante (che e' "Scrivi"): docs/2026-11-14-tastiera-3-tasti.md
+typedef enum {
+    MT_FERMA = 0,   // ferma dopo il valore in corso (o annulla l'attesa)
+    MT_RICOMINCIA,  // breve: torna all'inizio; tenuto 5 s: abbinamento. Ignorato mentre scrive
+    MT_NUMERO,
+} motore_tasto_t;
+
+typedef struct {
+    bool liv_grezzo, liv;    // true = premuto
+    uint32_t t_cambio_grezzo;
+    uint32_t t_premuto;
+    bool consumata;          // la pressione non deve fare niente al rilascio
+} motore_tasto_stato_t;
+
 typedef struct {
     const dati_t *dati;
     motore_stato_t stato;
@@ -48,6 +62,7 @@ typedef struct {
     uint32_t t_cambio_grezzo;
     uint32_t t_premuto;
     bool consumata;          // la pressione e' gia' servita a fermare
+    motore_tasto_stato_t tasto[MT_NUMERO];   // Ferma e Ricomincia
     // LED
     uint32_t t_lampi;
     uint8_t lampi;           // lampi veloci da mostrare (avvisi)
@@ -60,6 +75,8 @@ void motore_init(motore_t *m, const dati_t *d, uint32_t ora);
 bool motore_nuovi_dati(motore_t *m, uint32_t ora);
 // Livello del pulsante letto adesso (true = premuto). Si chiama spesso.
 motore_evento_t motore_pulsante(motore_t *m, bool premuto, uint32_t ora);
+// Livello di Ferma o Ricomincia letto adesso. Scollegati restano "non premuti".
+motore_evento_t motore_tasto(motore_t *m, motore_tasto_t t, bool premuto, uint32_t ora);
 // Passo della scrittura. hid_pronto: la tastiera USB puo' ricevere un rapporto.
 motore_azione_t motore_passo(motore_t *m, uint32_t ora, bool hid_pronto, uint8_t *tasto);
 bool motore_led(const motore_t *m, uint32_t ora);

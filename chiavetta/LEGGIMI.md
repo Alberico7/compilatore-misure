@@ -11,7 +11,8 @@ I valori si caricano dal [sito](https://alberico7.github.io/compilatore-misure/)
 ## Cosa serve
 
 - **Raspberry Pi Pico 2 W**, meglio la versione "WH" con i pin già saldati.
-- **Un pulsante** normalmente aperto, per esempio un pulsantino da circuito stampato.
+- **Un pulsante** normalmente aperto, per esempio un pulsantino da circuito stampato. In alternativa **tre tasti**: Scrivi, Ferma e Ricomincia.
+- Facoltativo: il **case stampabile in 3D** per il Pico e i tre tasti, in [case/](../case/LEGGIMI.md).
 - **Un cavo micro-USB → USB-A** corto e di buona qualità, per la macchina e il PC.
 - Per caricare dal telefono con il cavo, **un cavo USB-C → micro-USB** (oppure un adattatore OTG).
 
@@ -34,6 +35,26 @@ Il pulsante va tra il pin **20 (GP15)** e il pin **18 (GND)**. Guardando il Pico
 - Non servono resistenze: la chiavetta usa quella interna verso l'alto. È il collegamento consigliato per l'RP2350, perché le resistenze interne verso il basso hanno un difetto noto (erratum E9).
 - Il LED è quello già montato sul Pico.
 
+### Oppure tre tasti
+
+Con tre tasti ognuno fa una cosa sola, e nell'uso normale non ci sono tempi da ricordare. Scrivi è il pulsante di sopra; si aggiungono Ferma e Ricomincia. Ogni tasto va tra il suo pin e il comune **GND (pin 18)**:
+
+```
+            USB
+        ┌───┴┴───┐
+  pin 1 │●      ●│ pin 40
+   ...  │        │  ...
+ pin 17 │● GP13  │  Ricomincia
+ pin 18 │● GND   │  comune
+ pin 19 │● GP14  │  Ferma
+ pin 20 │● GP15  │  Scrivi
+        └────────┘
+```
+
+- Anche qui niente resistenze.
+- I tasti non collegati non danno fastidio: con il solo pulsante tutto funziona come prima.
+- Con i tre tasti, Scrivi conserva anche le pressioni lunghe del pulsante.
+
 ## Installare il firmware
 
 1. Scarica [chiavetta.uf2](https://alberico7.github.io/compilatore-misure/chiavetta.uf2), oppure il link nella scheda Chiavetta del sito.
@@ -54,7 +75,7 @@ Per aggiornare il firmware si ripete la stessa cosa. I valori e il codice Blueto
 1. Collega la chiavetta al telefono o al PC **tenendo premuto il pulsante**.
 2. Sul sito apri **Chiavetta → Codice Bluetooth e firmware**, premi **Genera** (oppure scrivi 6 cifre) e poi **Imposta con il cavo**. **Annota il codice.**
 3. Scollega la chiavetta e ricollegala **senza** premere il pulsante.
-4. Tieni premuto il pulsante per **5 secondi**: il LED fa due lampi ripetuti e l'abbinamento resta aperto per un minuto.
+4. Tieni premuto il pulsante (o **Ricomincia**, se hai i tre tasti) per **5 secondi**: il LED fa due lampi ripetuti e l'abbinamento resta aperto per un minuto.
 5. Sul telefono premi **Invia via Bluetooth**, scegli "Chiavetta misure" e inserisci il codice quando il telefono lo chiede.
 
 **Il telefono abbinato è uno solo:** un nuovo abbinamento sostituisce il precedente. Se cambi il codice, gli abbinamenti vengono cancellati. Finché il codice non è impostato, il Bluetooth resta spento.
@@ -64,10 +85,10 @@ Per aggiornare il firmware si ripete la stessa cosa. I valori e il codice Blueto
 1. Carica i valori dal sito: scegli **Bluetooth** o **Cavo** e premi **Invia i valori**. Il sito controlla che il **codice di controllo** della chiavetta sia uguale al suo.
 2. Collega la chiavetta alla macchina **senza** premere il pulsante: il LED fa due lampi e poi resta acceso fisso (pronta).
 3. Metti il cursore sul campo **Angolo 1** della maschera.
-4. **Premi il pulsante:** dopo 1 secondo inizia a scrivere.
+4. **Premi il pulsante** (o Scrivi): dopo 1 secondo inizia a scrivere.
 5. Controlla i valori sullo schermo della macchina **prima** di avviare la tastatura.
 
-<!-- Le tabelle "Pulsante" e "LED" finiscono anche nella guida del sito (src/build.js): si cambiano solo qui. -->
+<!-- Le tabelle "Pulsante", "Tasti" e "LED" finiscono anche nella guida del sito (src/build.js): si cambiano solo qui. -->
 
 | Pulsante | Effetto |
 |---|---|
@@ -76,6 +97,14 @@ Per aggiornare il firmware si ripete la stessa cosa. I valori e il codice Blueto
 | Tenuto da 2 a 5 secondi | Torna all'inizio; poi una pressione breve scrive dal primo valore |
 | Tenuto più di 5 secondi | Apre l'abbinamento Bluetooth per un minuto |
 | Pressione breve quando ha finito | Niente: per riscrivere tutto, prima tenere premuto 2–5 secondi |
+
+| Tasti | Effetto |
+|---|---|
+| **Scrivi** | Come il pulsante, pressioni lunghe comprese |
+| **Ferma** | Durante la scrittura o il secondo di attesa: si ferma dopo il valore in corso, mai a metà numero. A chiavetta ferma non fa niente |
+| **Ricomincia**, pressione breve | Torna alla prima coppia (tre lampi); poi Scrivi scrive dal primo valore |
+| **Ricomincia** tenuto 5 secondi | Apre l'abbinamento Bluetooth per un minuto. Quando lo puoi lasciare, il LED fa già il doppio lampo |
+| **Ricomincia** mentre scrive | Niente: prima premi Ferma, così non perdi il segno |
 
 Con "Coppie per pressione" diverso da 0, ogni pressione scrive quel numero di coppie e poi si ferma. Serve se la maschera cambia pagina.
 
@@ -106,7 +135,7 @@ Via Bluetooth funziona anche con la chiavetta collegata alla macchina: non cambi
 - **Il segno meno non arriva:** la chiavetta manda il "−" del **tastierino numerico**. Verifica che la maschera lo accetti, provando con una tastiera vera.
 - **Il telefono non trova la chiavetta:** dev'essere collegata senza premere il pulsante, con il codice impostato. Usa Chrome su Android (Web Bluetooth). Su Vanadium, se non funziona, prova Chrome.
 - **"Collegamento perso" al primo invio:** apri l'abbinamento (pulsante tenuto 5 secondi) e riprova entro un minuto.
-- **La chiavetta rifiuta i dati mentre scrive:** aspetta che finisca, oppure fermala con una pressione.
+- **La chiavetta rifiuta i dati mentre scrive:** aspetta che finisca, oppure fermala con una pressione (o con Ferma).
 
 ## Per sviluppatori
 
@@ -115,7 +144,7 @@ Il firmware è in C, con l'[SDK ufficiale Raspberry Pi](https://github.com/raspb
 | File | Cosa contiene |
 |---|---|
 | `src/dati.c` | Parte pura: lettura e controllo del testo, CRC-32, tasti, protocollo |
-| `src/motore.c` | Parte pura: scrittura, pulsante, LED |
+| `src/motore.c` | Parte pura: scrittura, pulsante e tasti, LED |
 | `src/protocollo.c` | Parte pura: cosa fare con ogni pacchetto ricevuto |
 | `src/main.c`, `src/usb.c`, `src/ble.c`, `src/memoria.c`, `src/chiavetta.gatt` | Le parti che usano l'hardware |
 | `test/test_dati.c` | Test della parte pura (con `npm test`, oppure da solo) |

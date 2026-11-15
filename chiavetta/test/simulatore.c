@@ -7,9 +7,13 @@
 //                         -> "R <risposta>" per ogni risposta, poi "."
 //   BT <esadecimale>      un pacchetto Bluetooth -> "R <risposta>" oppure "R"
 //   MODO caricamento|tastiera
-//   PREMI <ms>            tiene premuto il pulsante per <ms>, poi lascia lavorare
-//                         la chiavetta finche' non si ferma -> "K <testo scritto>"
+//   PREMI <ms>            tiene premuto il pulsante (Scrivi) per <ms>, poi lascia
+//                         lavorare la chiavetta finche' non si ferma -> "K <testo scritto>"
 //                         (INVIO = "\n", scritto come \n)
+//   PREMI <TASTO> <da>-<a> [<TASTO> <da>-<a> ...]
+//                         come sopra, con i tre tasti (SCRIVI, FERMA, RICOMINCIA) premuti
+//                         negli intervalli dati, in ms dall'inizio del comando.
+//                         Es. "PREMI SCRIVI 0-100 FERMA 1700-1800"
 //   STATO                 -> "S <stato> <pos> <n>"
 #include "../src/dati.h"
 #include "../src/motore.h"
@@ -63,14 +67,49 @@ static char car_de(uint8_t t) {
     return '?';
 }
 
-static void premi(uint32_t durata) {
+#define MAX_PRESSIONI 16
+typedef struct { int tasto; uint32_t da, a; } pressione_t;   // tasto: -1 = Scrivi, altrimenti motore_tasto_t
+
+static bool premuto(const pressione_t *p, size_t np, int tasto, uint32_t t) {
+    for (size_t i = 0; i < np; i++) if (p[i].tasto == tasto && t >= p[i].da && t < p[i].a) return true;
+    return false;
+}
+
+// "100" oppure "SCRIVI 0-100 FERMA 1700-1800": false se la riga non si capisce
+static bool leggi_pressioni(char *s, pressione_t *p, size_t *np) {
+    *np = 0;
+    char *fine;
+    unsigned long ms = strtoul(s, &fine, 10);
+    if (fine != s && *fine == 0) {
+        p[0] = (pressione_t){ -1, 0, (uint32_t)ms };
+        *np = 1;
+        return true;
+    }
+    for (char *nome = strtok(s, " "); nome; nome = strtok(NULL, " ")) {
+        char *intervallo = strtok(NULL, " ");
+        unsigned da, a;
+        if (!intervallo || sscanf(intervallo, "%u-%u", &da, &a) != 2 || a <= da || *np >= MAX_PRESSIONI) return false;
+        int tasto;
+        if (strcmp(nome, "SCRIVI") == 0) tasto = -1;
+        else if (strcmp(nome, "FERMA") == 0) tasto = MT_FERMA;
+        else if (strcmp(nome, "RICOMINCIA") == 0) tasto = MT_RICOMINCIA;
+        else return false;
+        p[(*np)++] = (pressione_t){ tasto, da, a };
+    }
+    return *np > 0;
+}
+
+static void premi(const pressione_t *p, size_t np) {
     static char testo[DATI_MAX_TESTO * 2];
     size_t n = 0;
-    uint32_t fine_pressione = ora + durata;
-    uint32_t limite = ora + durata + 600000u;   // al massimo 10 minuti simulati
+    uint32_t inizio = ora, fine_pressione = ora;
+    for (size_t i = 0; i < np; i++) if (inizio + p[i].a > fine_pressione) fine_pressione = inizio + p[i].a;
+    uint32_t limite = fine_pressione + 600000u;   // al massimo 10 minuti simulati
     bool partito = false;
     for (; ora < limite; ora++) {
-        motore_pulsante(&motore, ora < fine_pressione, ora);
+        uint32_t t = ora - inizio;
+        motore_pulsante(&motore, premuto(p, np, -1, t), ora);
+        for (int k = 0; k < MT_NUMERO; k++) motore_tasto(&motore, (motore_tasto_t)k, premuto(p, np, k, t), ora);
         uint8_t tasto;
         motore_azione_t az = motore_passo(&motore, ora, true, &tasto);
         if (az == AZ_PREMI) {
@@ -116,7 +155,10 @@ int main(void) {
             sistema.caricamento = strcmp(riga + 5, "caricamento") == 0;
             printf("OK\n");
         } else if (strncmp(riga, "PREMI ", 6) == 0) {
-            premi((uint32_t)strtoul(riga + 6, NULL, 10));
+            static pressione_t p[MAX_PRESSIONI];
+            size_t np;
+            if (leggi_pressioni(riga + 6, p, &np)) premi(p, np);
+            else printf("? %s\n", riga);
         } else if (strcmp(riga, "STATO") == 0) {
             printf("S %s %u %u\n", motore_nome_stato(motore.stato), (unsigned)motore.pos, (unsigned)dati.n);
         } else {

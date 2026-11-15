@@ -56,6 +56,28 @@ static void prepara_valore(motore_t *m) {
     m->tasto_giu = false;
 }
 
+// Durante l'attesa annulla; mentre scrive si ferma dopo il valore in corso.
+// false se la chiavetta era gia' ferma.
+static bool ferma(motore_t *m) {
+    if (m->stato == ST_ATTESA) {
+        stato_fermo(m);
+        return true;
+    }
+    if (m->stato == ST_SCRIVE) {
+        m->ferma_richiesto = true;
+        return true;
+    }
+    return false;
+}
+
+// Torna alla prima coppia (tre lampi). Senza valori non fa niente.
+static void ricomincia(motore_t *m, uint32_t ora) {
+    if (m->dati == NULL || m->dati->n == 0) return;
+    m->pos = 0;
+    stato_fermo(m);
+    motore_lampi(m, 3, ora);
+}
+
 motore_evento_t motore_pulsante(motore_t *m, bool premuto, uint32_t ora) {
     if (premuto != m->liv_grezzo) {
         m->liv_grezzo = premuto;
@@ -67,14 +89,7 @@ motore_evento_t motore_pulsante(motore_t *m, bool premuto, uint32_t ora) {
 
     if (m->liv) {   // appena premuto
         m->t_premuto = ora;
-        m->consumata = false;
-        if (m->stato == ST_ATTESA) {          // annulla prima di iniziare
-            stato_fermo(m);
-            m->consumata = true;
-        } else if (m->stato == ST_SCRIVE) {   // ferma dopo il valore in corso
-            m->ferma_richiesto = true;
-            m->consumata = true;
-        }
+        m->consumata = ferma(m);
         return EV_NIENTE;
     }
 
@@ -90,11 +105,38 @@ motore_evento_t motore_pulsante(motore_t *m, bool premuto, uint32_t ora) {
     }
     if (motore_occupato(m)) return EV_NIENTE;
     if (durata < MOTORE_ABBINA_MS) {
-        if (m->dati && m->dati->n > 0) {
-            m->pos = 0;
-            stato_fermo(m);
-            motore_lampi(m, 3, ora);
+        ricomincia(m, ora);
+        return EV_NIENTE;
+    }
+    return EV_ABBINA;
+}
+
+motore_evento_t motore_tasto(motore_t *m, motore_tasto_t t, bool premuto, uint32_t ora) {
+    if (t >= MT_NUMERO) return EV_NIENTE;
+    motore_tasto_stato_t *s = &m->tasto[t];
+    if (premuto != s->liv_grezzo) {
+        s->liv_grezzo = premuto;
+        s->t_cambio_grezzo = ora;
+    }
+    if (s->liv_grezzo == s->liv || !arrivato(ora, s->t_cambio_grezzo + MOTORE_RIMBALZO_MS))
+        return EV_NIENTE;
+    s->liv = s->liv_grezzo;
+
+    if (s->liv) {   // appena premuto
+        s->t_premuto = ora;
+        if (t == MT_FERMA) {
+            ferma(m);   // a chiavetta ferma non fa niente
+            s->consumata = true;
+        } else {
+            s->consumata = motore_occupato(m);   // Ricomincia mentre scrive: niente, prima si ferma
         }
+        return EV_NIENTE;
+    }
+
+    // appena rilasciato (solo Ricomincia arriva qui)
+    if (s->consumata || motore_occupato(m)) return EV_NIENTE;
+    if (ora - s->t_premuto < MOTORE_ABBINA_MS) {
+        ricomincia(m, ora);
         return EV_NIENTE;
     }
     return EV_ABBINA;
@@ -143,6 +185,12 @@ bool motore_led(const motore_t *m, uint32_t ora) {
         uint32_t d = ora - m->t_premuto;
         if (d < MOTORE_LUNGA_MS) return true;
         if (d < MOTORE_ABBINA_MS) return onda(d, 200, 100);
+        return onda(d, 1000, 100) || (d % 1000 >= 200 && d % 1000 < 300);
+    }
+    const motore_tasto_stato_t *r = &m->tasto[MT_RICOMINCIA];
+    if (r->liv && !r->consumata) {   // Ricomincia tenuto: fisso, poi doppio lampo da 5 s (abbinamento)
+        uint32_t d = ora - r->t_premuto;
+        if (d < MOTORE_ABBINA_MS) return true;
         return onda(d, 1000, 100) || (d % 1000 >= 200 && d % 1000 < 300);
     }
     if (m->abbina_fino && !arrivato(ora, m->abbina_fino))
