@@ -13,7 +13,9 @@ Il progetto è in [docs/2026-11-15-case-chiavetta.md](../docs/2026-11-15-case-ch
 
 ![Anteprima del case](anteprima.png)
 
-Misure: circa 43 × 62 × 16 mm, più i pulsanti che sporgono di circa 2,5 mm.
+Misure: circa 38 × 62 × 16 mm, più i pulsanti che sporgono di circa 2,5 mm.
+
+Sul coperchio ogni tasto ha il suo simbolo inciso: **▶ Scrivi**, **⏸ Ferma**, **↻ Ricomincia**.
 
 ## Cosa serve
 
@@ -27,7 +29,7 @@ Misure: circa 43 × 62 × 16 mm, più i pulsanti che sporgono di circa 2,5 mm.
 
 - Senza supporti:
   - il fondo dritto;
-  - il coperchio capovolto, con le scritte sul piatto, come negli STL.
+  - il coperchio capovolto, con i simboli sul piatto, come negli STL.
 - **PETG** consigliato: regge caldo e olio, e le linguette si piegano senza rompersi. Va bene anche il PLA.
 - Strato 0,2 mm, riempimento 20 %, 3 perimetri.
 - Le sedi delle calamite sono sotto il fondo: il loro tetto si stampa a ponte. Se esce un po' cadente non importa.
@@ -47,9 +49,9 @@ Misure: circa 43 × 62 × 16 mm, più i pulsanti che sporgono di circa 2,5 mm.
 
    | Tasto | Pin del Pico |
    |---|---|
-   | SCRIVI | 20 (GP15) |
-   | FERMA | 19 (GP14) |
-   | RICOMINCIA | 17 (GP13) |
+   | ▶ Scrivi (in alto) | 20 (GP15) |
+   | ⏸ Ferma (al centro) | 19 (GP14) |
+   | ↻ Ricomincia (in basso) | 17 (GP13) |
 
    - In un pulsantino 6 × 6 i due piedini dello stesso lato sono separati, quelli uno di fronte all'altro sono uniti: usa **due piedini in diagonale** e vai sul sicuro.
    - Lascia i fili lunghi circa 6 cm, così il coperchio si apre senza strapparli.

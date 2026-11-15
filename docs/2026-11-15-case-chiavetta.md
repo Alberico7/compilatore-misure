@@ -2,6 +2,7 @@
 
 Data: 2026-11-15
 Stato: **confermato dall'utente** (misure dei pulsantini, prese d'aria e chiusura a incastro).
+Il 2026-11-15, dopo la prima versione, l'utente ha chiesto i **simboli** ▶ ⏸ ↻ al posto delle scritte, per un case più stretto: 38 mm invece di 43.
 
 ## Cosa si fa
 
@@ -20,13 +21,15 @@ Scelte dell'utente:
 
 ## Forma
 
-Misure: **circa 43 × 62 × 16 mm**, più i pulsanti che sporgono di 2–3 mm.
+Misure: **circa 38 × 62 × 16 mm**, più i pulsanti che sporgono di 2–3 mm.
 
 Visto dall'alto, con la presa USB in alto:
 
 - **a sinistra**, la colonna dei tre tasti, vicina ai pin 17–20 del Pico, così i fili sono corti;
 - **a destra**, il Pico;
-- le **scritte** stanno accanto ai tasti, sopra il Pico.
+- i **simboli** stanno accanto ai tasti, sopra il Pico.
+
+La colonna dei tasti è stretta e vicina alla parete. Per questo le linguette dell'incastro stanno **tra un tasto e l'altro**, così piegandosi non toccano le guide dei pulsantini.
 
 In fondo c'è un margine vuoto di 5 mm davanti all'antenna, che lì non vuole niente vicino. Angoli arrotondati.
 
@@ -54,7 +57,9 @@ In fondo c'è un margine vuoto di 5 mm davanti all'antenna, che lì non vuole ni
   - i lati con le zampine restano liberi per saldare i fili;
   - il pulsante esce di circa 2,5 mm da un foro da Ø 4,1 mm;
   - un punto di colla a caldo lo tiene fermo.
-- **Scritte e anelli incisi:** SCRIVI, FERMA, RICOMINCIA accanto ai tasti, più un anello inciso intorno a ogni pulsante, per trovarlo anche al tatto.
+- **Simboli e anelli incisi:**
+  - ▶ Scrivi, ⏸ Ferma e ↻ Ricomincia accanto ai tasti, disegnati come forme e non con un carattere, così non dipendono dai font;
+  - un anello inciso intorno a ogni pulsante, per trovarlo anche al tatto.
 - **Tubetto sopra il LED** del Pico, per vedere i lampi.
 - **Tubetto sopra il tasto BOOTSEL**, da premere con una graffetta. Serve solo in caso di emergenza.
 
@@ -62,7 +67,7 @@ In fondo c'è un margine vuoto di 5 mm davanti all'antenna, che lì non vuole ni
 
 - Senza supporti:
   - fondo stampato dritto;
-  - coperchio stampato capovolto, con le scritte sul piatto. Gli STL sono già orientati così.
+  - coperchio stampato capovolto, con i simboli sul piatto. Gli STL sono già orientati così.
 - PETG consigliato: regge meglio caldo e olio, e le linguette si piegano senza rompersi. Va bene anche PLA.
 - Strato 0,2 mm, riempimento 20 %.
 - Pezzi da comprare:

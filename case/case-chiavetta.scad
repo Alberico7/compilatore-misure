@@ -23,17 +23,12 @@ interno_h    = 12;     // altezza interna (dal fondo al coperchio)
 tasto_lato   = 6;      // lato del corpo
 tasto_corpo  = 3.5;    // altezza del solo corpo (senza pulsante)
 tasto_d      = 3.5;    // diametro del pulsante
-tasto_x      = 7.5;    // centro della colonna dei tasti
+tasto_x      = 6;      // centro della colonna dei tasti
 tasti_y      = [38, 23, 8];                    // dall'alto: Scrivi, Ferma, Ricomincia
-tasti_nome   = ["SCRIVI", "FERMA", "RICOMINCIA"];
-scritta_h    = 3.2;    // altezza delle lettere
-incisione    = 0.6;    // profondita' di scritte e anelli
-carattere    = "Liberation Sans:style=Bold";
-
-// Calamite
-calamita_d   = 10;
-calamita_h   = 3;
-calamite     = [[7.5, 48], [7.5, 9.5], [25.5, 40], [25.5, 22]];
+tasti_simbolo = ["play", "pausa", "ripeti"];   // incisi accanto ai tasti
+simbolo_lato = 5;      // grandezza dei simboli
+incisione    = 0.6;    // profondita' di simboli e anelli
+carattere    = "Liberation Sans:style=Bold";   // solo per la scritta LED
 
 // Viti del Pico (autofilettanti M2)
 colonnina_h  = 4;
@@ -44,9 +39,9 @@ foro_vite    = 1.6;
 labbro_h     = 4;      // bordo interno del coperchio
 labbro_sp    = 1.2;
 linguetta_l  = 9;      // lunghezza delle linguette elastiche
-linguetta_w  = 9;
+linguetta_w  = 7;
 dentino      = 0.7;    // quanto sporge il dentino
-linguette_y  = [14.5, 43.3];
+linguette_y  = [15.5, 30.5];   // tra un tasto e l'altro: le guide dei tasti sono vicine alla parete
 
 // ===================== Pico 2 W (datasheet, figura 3) =====================
 // [px, py]: px dal lato dei pin 1-20, py dal lato della presa USB.
@@ -60,7 +55,7 @@ usb_sporgenza = 1.3;    // la presa sporge oltre il bordo della scheda
 usb_alta      = 2.9;
 gap_usb       = usb_sporgenza + 0.5;
 gap_antenna   = 5;      // aria davanti all'antenna
-pico_x0       = 15;     // bordo sinistro del Pico
+pico_x0       = 10;     // bordo sinistro del Pico (subito dopo la colonna dei tasti)
 
 // ===================== Misure derivate =====================
 
@@ -70,6 +65,11 @@ alto_fondo = fondo_sp + interno_h;           // dove finisce il fondo e appoggia
 pico_z = fondo_sp + colonnina_h;             // sotto della scheda
 usb_z = pico_z + pico_sp + usb_alta / 2;     // centro della presa
 function P(p) = [pico_x0 + p[0], interno_l - gap_usb - p[1]];
+
+// Calamite: due sotto la colonna dei tasti, due sotto il Pico (lontano dall'antenna)
+calamita_d   = 10;
+calamita_h   = 3;
+calamite     = [[tasto_x, 48], [tasto_x, 9.5], [pico_x0 + pico_w / 2, 40], [pico_x0 + pico_w / 2, 22]];
 
 $fn = 48;
 e = 0.01;
@@ -96,7 +96,8 @@ module fondo() {
                 translate([0, 0, fondo_sp]) cube([interno_w, interno_l, interno_h + 1]);
             }
             for (f = pico_fori) translate([each P(f), fondo_sp - e]) cylinder(d = colonnina_d, h = colonnina_h + e);
-            for (c = calamite) translate([each c, fondo_sp - e]) cylinder(d = calamita_d + 2, h = calamita_h + 1 - fondo_sp + e);
+            // rialzi per le sedi delle calamite: vicino alla parete si fondono con lei (mai tangenti, se no il pezzo e' difettoso)
+            for (c = calamite) translate([each c, fondo_sp - e]) cylinder(d = calamita_d + 2.6, h = calamita_h + 1 - fondo_sp + e);
         }
         // fori delle viti
         for (f = pico_fori) translate([each P(f), fondo_sp]) cylinder(d = foro_vite, h = colonnina_h + 1);
@@ -109,12 +110,29 @@ module fondo() {
                        y - linguetta_w / 2 - 0.5,
                        alto_fondo - linguetta_l - 0.5])
                 cube([parete + 2, linguetta_w + 1, 3.2]);   // 0,2 mm di gioco sopra il dentino
-        // prese d'aria sui lati lunghi
-        for (y = [22 : 3.5 : 36], lato = [0, 1])
+        // prese d'aria sui lati lunghi, tra le finestrelle e la presa USB
+        for (y = [39 : 3.5 : 53], lato = [0, 1])
             translate([lato == 0 ? -parete - 1 : interno_w - 1, y - 0.8, fondo_sp + 2.5]) cube([parete + 2, 1.6, 6]);
         // prese d'aria in fondo, davanti all'antenna
-        for (x = [8 : 3.5 : 34])
+        for (x = [6 : 3.5 : interno_w - 5])
             translate([x - 0.8, -parete - 1, fondo_sp + 2.5]) cube([1.6, parete + 2, 6]);
+    }
+}
+
+// Simboli dei tasti, centrati e larghi circa "s" mm. Tratti di almeno 0,9 mm, stampabili.
+module simbolo(nome, s) {
+    if (nome == "play")          // Scrivi
+        polygon([[-s * 0.4, -s / 2], [-s * 0.4, s / 2], [s * 0.5, 0]]);
+    else if (nome == "pausa")    // Ferma
+        for (x = [-s * 0.3, s * 0.3]) translate([x - s * 0.14, -s / 2]) square([s * 0.28, s]);
+    else if (nome == "ripeti") { // Ricomincia: freccia in giro, in senso orario
+        r = s / 2; w = 0.9;
+        difference() {
+            circle(r = r);
+            circle(r = r - w);
+            translate([-0.01, -0.01]) square(r + 1);   // apertura in alto a destra
+        }
+        translate([0, r - w / 2]) polygon([[0, 1.4], [0, -1.4], [1.8, 0]]);   // punta verso destra
     }
 }
 
@@ -160,12 +178,11 @@ module coperchio() {
         for (y = tasti_y) translate([tasto_x, y, zl - 1]) cylinder(d = tasto_d + 0.6, h = coperchio_sp + 2);
         translate([each P(pico_led), 0]) cylinder(d = 3, h = 50);
         translate([each P(pico_bootsel), 0]) cylinder(d = 2.2, h = 50);
-        // anelli e scritte incisi
+        // anelli e simboli incisi
         zt = zl + coperchio_sp - incisione;
         for (i = [0 : len(tasti_y) - 1]) {
             translate([tasto_x, tasti_y[i], zt]) difference() { cylinder(d = 8.4, h = 1); translate([0, 0, -1]) cylinder(d = 7.2, h = 3); }
-            translate([tasto_x + 5.5, tasti_y[i], zt])
-                linear_extrude(1) text(tasti_nome[i], size = scritta_h, font = carattere, halign = "left", valign = "center");
+            translate([tasto_x + 8, tasti_y[i], zt]) linear_extrude(1) simbolo(tasti_simbolo[i], simbolo_lato);
         }
         translate([P(pico_led)[0] + 3, P(pico_led)[1], zt]) linear_extrude(1) text("LED", size = 2.2, font = carattere, valign = "center");
     }
