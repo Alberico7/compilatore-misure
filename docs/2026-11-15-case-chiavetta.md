@@ -3,13 +3,19 @@
 Data: 2026-11-15
 Stato: **confermato dall'utente** (misure dei pulsantini, prese d'aria e chiusura a incastro).
 Il 2026-11-15, dopo la prima versione, l'utente ha chiesto i **simboli** ▶ ⏸ ↻ al posto delle scritte, per un case più stretto: 38 mm invece di 43.
+Il 2026-11-16 ha chiesto **2 calamite** invece di 4, **simboli più grandi** (10 mm invece di 5) e un case ancora più stretto: 34 mm. Per stringerlo:
+
+- a sinistra il bordo del coperchio fa anche da guida ai pulsantini;
+- a destra niente linguette elastiche, che scendevano fino al Pico, ma **ganci fissi** in alto: la parete sta a 0,6 mm dal Pico.
+
+Sempre il 2026-11-16 l'utente ha chiesto di chiudere **con le viti** invece che con le linguette, che rischiano di spezzarsi. A sinistra ci sono due **viti M3 svasate** in **inserti filettati di ottone**, messi a caldo in due colonnine tra un tasto e l'altro. I tasti sono un po' più distanziati per fare spazio alle colonnine. A destra restano i ganci fissi, che non si piegano e quindi non si spezzano.
 
 ## Cosa si fa
 
 Un case in due pezzi da stampare in 3D, per il Pico 2 W e i tre tasti (Scrivi, Ferma, Ricomincia) di [2026-11-14-tastiera-3-tasti.md](2026-11-14-tastiera-3-tasti.md):
 
 - **fondo:** tiene il Pico, ha l'apertura per il cavo USB, le prese d'aria e le calamite sotto;
-- **coperchio:** tiene i tre pulsantini, con il nome di ogni tasto inciso accanto. Si chiude **a incastro**, senza viti.
+- **coperchio:** tiene i tre pulsantini, con il simbolo di ogni tasto inciso accanto. Si chiude con due ganci a destra e due viti M3 a sinistra.
 
 Scelte dell'utente:
 
@@ -17,11 +23,11 @@ Scelte dell'utente:
 - Pico **senza pin**, con i fili saldati direttamente;
 - fissaggio con **calamite**;
 - **prese d'aria**;
-- **chiusura a incastro**.
+- chiusura prima **a incastro**, poi (2026-11-16) **con viti M3 e inserti di ottone**.
 
 ## Forma
 
-Misure: **circa 38 × 62 × 16 mm**, più i pulsanti che sporgono di 2–3 mm.
+Misure: **circa 34 × 62 × 16 mm**, più i pulsanti che sporgono di 2–3 mm.
 
 Visto dall'alto, con la presa USB in alto:
 
@@ -29,7 +35,7 @@ Visto dall'alto, con la presa USB in alto:
 - **a destra**, il Pico;
 - i **simboli** stanno accanto ai tasti, sopra il Pico.
 
-La colonna dei tasti è stretta e vicina alla parete. Per questo le linguette dell'incastro stanno **tra un tasto e l'altro**, così piegandosi non toccano le guide dei pulsantini.
+La colonna dei tasti è stretta e vicina alla parete. Le due viti stanno **tra un tasto e l'altro** (tasti a 16 mm di distanza), lontane dalle zampine dei pulsantini.
 
 In fondo c'è un margine vuoto di 5 mm davanti all'antenna, che lì non vuole niente vicino. Angoli arrotondati.
 
@@ -39,28 +45,30 @@ In fondo c'è un margine vuoto di 5 mm davanti all'antenna, che lì non vuole ni
   - appoggia su **quattro colonnine** alte 4 mm, nei suoi fori da Ø 2,1 mm;
   - è fissato con viti autofilettanti **M2 × 5** (ne bastano due).
 - **Apertura per la micro-USB** nella parete corta, larga 12 mm: ci entra anche il guscio della spina.
-- **Quattro sedi per calamite Ø 10 × 3 mm**, aperte verso l'esterno: si incollano con una goccia di colla istantanea e toccano direttamente il metallo. Nessuna sta sotto l'antenna.
+- **Due sedi per calamite Ø 10 × 3 mm**, al centro e aperte verso l'esterno: si incollano con una goccia di colla istantanea e toccano direttamente il metallo. Nessuna sta sotto l'antenna.
 - **Prese d'aria:**
-  - feritoie verticali sui due lati lunghi;
+  - feritoie verticali per tutta la lunghezza dei due lati lunghi, tranne accanto alle viti e ai ganci;
   - feritoie sulla parete in fondo, davanti all'antenna.
   - Niente feritoie sul coperchio, così trucioli e olio non entrano dall'alto.
-- **Quattro finestrelle** nelle pareti lunghe per i ganci del coperchio.
+- **Due sedi per i ganci** del coperchio, scavate in alto sul lato interno della parete destra: da fuori non si vedono buchi (2026-11-16, al posto delle finestrelle).
+- **Due colonnine** sul lato sinistro, fuse con la parete, con il foro da Ø 4 mm per gli inserti M3 e sotto altro spazio per la punta della vite.
 
 ## Coperchio
 
-- **Incastro:**
+- **Chiusura:**
   - un bordo interno centra il coperchio nel fondo;
-  - quattro **linguette elastiche con dentino** scattano nelle finestrelle;
-  - per riaprire si spingono i dentini dalle finestrelle con un cacciavite piccolo.
+  - a destra due **ganci fissi** sul bordo; a sinistra due **viti M3 svasate**, a filo con il coperchio;
+  - si chiude agganciando prima il lato destro, poi abbassando il sinistro e avvitando;
+  - per riaprire si tolgono le viti, si solleva il lato sinistro e si sfila il coperchio.
 - **Tre sedi per i pulsantini**, sul lato interno:
-  - due guide tengono il corpo da 6 × 6 mm;
+  - due guide tengono il corpo da 6 × 6 mm; a sinistra la guida è il bordo del coperchio;
   - i lati con le zampine restano liberi per saldare i fili;
   - il pulsante esce di circa 2,5 mm da un foro da Ø 4,1 mm;
   - un punto di colla a caldo lo tiene fermo.
 - **Simboli e anelli incisi:**
-  - ▶ Scrivi, ⏸ Ferma e ↻ Ricomincia accanto ai tasti, disegnati come forme e non con un carattere, così non dipendono dai font;
+  - ▶ Scrivi, ⏸ Ferma e ↻ Ricomincia accanto ai tasti, grandi 10 mm, disegnati come forme e non con un carattere, così non dipendono dai font;
   - un anello inciso intorno a ogni pulsante, per trovarlo anche al tatto.
-- **Tubetto sopra il LED** del Pico, per vedere i lampi.
+- **Tubetto sopra il LED** del Pico, per vedere i lampi. Senza scritta accanto (tolta il 2026-11-16, su richiesta dell'utente).
 - **Tubetto sopra il tasto BOOTSEL**, da premere con una graffetta. Serve solo in caso di emergenza.
 
 ## Stampa
@@ -68,10 +76,12 @@ In fondo c'è un margine vuoto di 5 mm davanti all'antenna, che lì non vuole ni
 - Senza supporti:
   - fondo stampato dritto;
   - coperchio stampato capovolto, con i simboli sul piatto. Gli STL sono già orientati così.
-- PETG consigliato: regge meglio caldo e olio, e le linguette si piegano senza rompersi. Va bene anche PLA.
+- PETG consigliato: regge meglio caldo e olio. Va bene anche PLA.
 - Strato 0,2 mm, riempimento 20 %.
 - Pezzi da comprare:
-  - 4 calamite Ø 10 × 3 mm;
+  - 2 calamite Ø 10 × 3 mm;
+  - 2 inserti filettati in ottone M3 (foro Ø 4 mm, lunghi fino a 4 mm);
+  - 2 viti M3 × 6 o × 8 a testa svasata;
   - 2 o 4 viti M2 × 5 autofilettanti.
 
 ## Come è fatto il disegno
@@ -91,6 +101,7 @@ In fondo c'è un margine vuoto di 5 mm davanti all'antenna, che lì non vuole ni
 - Il cavo USB entra fino in fondo.
 - I pulsantini scattano bene e non si incastrano nel foro.
 - Il LED si vede dal tubetto.
-- Il coperchio scatta e si riapre.
+- Gli inserti entrano dritti e le viti chiudono il coperchio a filo.
+- I ganci a destra entrano nelle loro sedi senza forzare.
 - Il Bluetooth funziona con il coperchio chiuso.
 - Le calamite tengono il case sulla macchina anche premendo i tasti.

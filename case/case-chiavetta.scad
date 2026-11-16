@@ -23,25 +23,30 @@ interno_h    = 12;     // altezza interna (dal fondo al coperchio)
 tasto_lato   = 6;      // lato del corpo
 tasto_corpo  = 3.5;    // altezza del solo corpo (senza pulsante)
 tasto_d      = 3.5;    // diametro del pulsante
-tasto_x      = 6;      // centro della colonna dei tasti
-tasti_y      = [38, 23, 8];                    // dall'alto: Scrivi, Ferma, Ricomincia
+tasto_x      = 4.6;    // centro della colonna dei tasti: a sinistra la guida e' il bordo del coperchio
+tasti_y      = [39, 23, 7];                    // dall'alto: Scrivi, Ferma, Ricomincia (tra uno e l'altro le viti)
 tasti_simbolo = ["play", "pausa", "ripeti"];   // incisi accanto ai tasti
-simbolo_lato = 5;      // grandezza dei simboli
+simbolo_lato = 10;     // grandezza dei simboli
 incisione    = 0.6;    // profondita' di simboli e anelli
-carattere    = "Liberation Sans:style=Bold";   // solo per la scritta LED
 
 // Viti del Pico (autofilettanti M2)
 colonnina_h  = 4;
 colonnina_d  = 5;
 foro_vite    = 1.6;
 
-// Incastro del coperchio
+// Chiusura del coperchio: a destra ganci fissi, a sinistra due viti M3 in inserti filettati di ottone
+// (si aggancia prima il lato destro, poi si abbassa il sinistro e si avvita)
 labbro_h     = 4;      // bordo interno del coperchio
 labbro_sp    = 1.2;
-linguetta_l  = 9;      // lunghezza delle linguette elastiche
-linguetta_w  = 7;
-dentino      = 0.7;    // quanto sporge il dentino
-linguette_y  = [15.5, 30.5];   // tra un tasto e l'altro: le guide dei tasti sono vicine alla parete
+gancio_w     = 7;      // larghezza dei ganci
+gancio_sp    = 0.7;    // quanto sporgono i ganci
+viti_y       = [15, 31];       // tra un tasto e l'altro; i ganci a destra stanno alla stessa altezza
+vite_x       = 3;              // centro delle viti (la colonnina si fonde con la parete)
+inserto_foro = 4.0;    // foro per l'inserto: quello consigliato dal venditore (di solito 4,0 per gli M3)
+inserto_l    = 4;      // lunghezza dell'inserto
+colonna_d    = 7.2;    // colonnina che tiene l'inserto: almeno 1,6 mm di plastica intorno
+vite_foro    = 3.4;    // passaggio della vite M3 nel coperchio
+vite_testa   = 6.2;    // testa svasata M3 (DIN 7991 / ISO 10642: 6 mm)
 
 // ===================== Pico 2 W (datasheet, figura 3) =====================
 // [px, py]: px dal lato dei pin 1-20, py dal lato della presa USB.
@@ -55,21 +60,23 @@ usb_sporgenza = 1.3;    // la presa sporge oltre il bordo della scheda
 usb_alta      = 2.9;
 gap_usb       = usb_sporgenza + 0.5;
 gap_antenna   = 5;      // aria davanti all'antenna
-pico_x0       = 10;     // bordo sinistro del Pico (subito dopo la colonna dei tasti)
+pico_x0       = 8.6;    // bordo sinistro del Pico (subito dopo la colonna dei tasti)
+gap_destra    = 0.6;    // aria tra il Pico e la parete destra
 
 // ===================== Misure derivate =====================
 
-interno_w = pico_x0 + pico_w + 3;
+interno_w = pico_x0 + pico_w + gap_destra;
 interno_l = gap_usb + pico_l + gap_antenna;
 alto_fondo = fondo_sp + interno_h;           // dove finisce il fondo e appoggia il coperchio
 pico_z = fondo_sp + colonnina_h;             // sotto della scheda
 usb_z = pico_z + pico_sp + usb_alta / 2;     // centro della presa
 function P(p) = [pico_x0 + p[0], interno_l - gap_usb - p[1]];
 
-// Calamite: due sotto la colonna dei tasti, due sotto il Pico (lontano dall'antenna)
+// Calamite: due al centro, lontano dall'antenna
 calamita_d   = 10;
 calamita_h   = 3;
-calamite     = [[tasto_x, 48], [tasto_x, 9.5], [pico_x0 + pico_w / 2, 40], [pico_x0 + pico_w / 2, 22]];
+calamite     = [[interno_w / 2, 46], [interno_w / 2, 22]];
+gancio_z     = alto_fondo - labbro_h + 0.3;    // sotto dei ganci fissi
 
 $fn = 48;
 e = 0.01;
@@ -98,21 +105,27 @@ module fondo() {
             for (f = pico_fori) translate([each P(f), fondo_sp - e]) cylinder(d = colonnina_d, h = colonnina_h + e);
             // rialzi per le sedi delle calamite: vicino alla parete si fondono con lei (mai tangenti, se no il pezzo e' difettoso)
             for (c = calamite) translate([each c, fondo_sp - e]) cylinder(d = calamita_d + 2.6, h = calamita_h + 1 - fondo_sp + e);
+            // colonnine per gli inserti delle viti del coperchio, fuse con la parete sinistra
+            for (y = viti_y) translate([vite_x, y, fondo_sp - e]) cylinder(d = colonna_d, h = interno_h + e);
+        }
+        // fori per gli inserti, e sotto un po' di spazio per la punta della vite
+        for (y = viti_y) {
+            translate([vite_x, y, alto_fondo - inserto_l - 1]) cylinder(d = inserto_foro, h = inserto_l + 2);
+            translate([vite_x, y, alto_fondo - inserto_l - 5]) cylinder(d = vite_foro, h = 5);
         }
         // fori delle viti
         for (f = pico_fori) translate([each P(f), fondo_sp]) cylinder(d = foro_vite, h = colonnina_h + 1);
         // sedi delle calamite, aperte sotto
         for (c = calamite) translate([each c, -e]) cylinder(d = calamita_d + 0.3, h = calamita_h + 0.2 + e);
         apertura_usb();
-        // finestrelle per i dentini delle linguette
-        for (y = linguette_y, lato = [0, 1])
-            translate([lato == 0 ? -parete - 1 : interno_w - 1,
-                       y - linguetta_w / 2 - 0.5,
-                       alto_fondo - linguetta_l - 0.5])
-                cube([parete + 2, linguetta_w + 1, 3.2]);   // 0,2 mm di gioco sopra il dentino
-        // prese d'aria sui lati lunghi, tra le finestrelle e la presa USB
-        for (y = [39 : 3.5 : 53], lato = [0, 1])
-            translate([lato == 0 ? -parete - 1 : interno_w - 1, y - 0.8, fondo_sp + 2.5]) cube([parete + 2, 1.6, 6]);
+        // sedi dei ganci: scavate nel lato interno della parete destra, da fuori non si vedono
+        for (y = viti_y)
+            translate([interno_w - 1, y - gancio_w / 2 - 0.5, gancio_z - 0.3])
+                cube([1 + gancio_sp + 0.2, gancio_w + 1, 2.5]);   // 0,2 mm di gioco intorno al gancio
+        // prese d'aria su tutti e due i lati lunghi, tranne accanto a viti e ganci
+        for (y = [4 : 3.5 : 53], lato = [0, 1])
+            if (min([for (v = viti_y) abs(y - v)]) > 5)
+                translate([lato == 0 ? -parete - 1 : interno_w - 1, y - 0.8, fondo_sp + 2.5]) cube([parete + 2, 1.6, 6]);
         // prese d'aria in fondo, davanti all'antenna
         for (x = [6 : 3.5 : interno_w - 5])
             translate([x - 0.8, -parete - 1, fondo_sp + 2.5]) cube([1.6, parete + 2, 6]);
@@ -126,20 +139,20 @@ module simbolo(nome, s) {
     else if (nome == "pausa")    // Ferma
         for (x = [-s * 0.3, s * 0.3]) translate([x - s * 0.14, -s / 2]) square([s * 0.28, s]);
     else if (nome == "ripeti") { // Ricomincia: freccia in giro, in senso orario
-        r = s / 2; w = 0.9;
+        r = s / 2; w = max(0.9, s * 0.14);
         difference() {
             circle(r = r);
             circle(r = r - w);
             translate([-0.01, -0.01]) square(r + 1);   // apertura in alto a destra
         }
-        translate([0, r - w / 2]) polygon([[0, 1.4], [0, -1.4], [1.8, 0]]);   // punta verso destra
+        translate([0, r - w / 2]) polygon([[0, w * 1.5], [0, -w * 1.5], [w * 2, 0]]);   // punta verso destra
     }
 }
 
-module dentino_profilo() {
-    // sezione del dentino (x verso l'esterno, z verso l'alto, a coperchio montato):
-    // scivolo in basso per entrare, faccia piana in alto che aggancia la finestrella
-    polygon([[0, 0], [dentino, 1.5], [dentino, 2], [0, 2]]);
+module gancio_profilo() {
+    // sezione del gancio (x verso l'esterno, z verso l'alto, a coperchio montato):
+    // smusso in basso per entrare, faccia piana in alto che aggancia la finestrella
+    polygon([[0, 0], [gancio_sp, 1.5], [gancio_sp, 2], [0, 2]]);
 }
 
 module coperchio() {
@@ -147,25 +160,22 @@ module coperchio() {
     difference() {
         union() {
             translate([-parete, -parete, zl]) blocco(interno_w + 2 * parete, interno_l + 2 * parete, coperchio_sp, raggio);
-            // bordo interno, interrotto accanto alle linguette e davanti alla presa USB
+            // bordo interno, interrotto accanto alle colonnine delle viti e davanti alla presa USB.
+            // A destra resta sopra il bordo del Pico, piu' in alto dei suoi componenti.
             difference() {
                 translate([tolleranza, tolleranza, zl - labbro_h])
                     cube([interno_w - 2 * tolleranza, interno_l - 2 * tolleranza, labbro_h + e]);
                 translate([tolleranza + labbro_sp, tolleranza + labbro_sp, zl - labbro_h - 1])
                     cube([interno_w - 2 * (tolleranza + labbro_sp), interno_l - 2 * (tolleranza + labbro_sp), labbro_h + 2]);
-                for (y = linguette_y, lato = [0, 1])
-                    translate([lato == 0 ? -1 : interno_w - 3, y - linguetta_w / 2 - 1, zl - labbro_h - 1])
-                        cube([4, linguetta_w + 2, labbro_h + 1]);
+                for (y = viti_y)
+                    translate([vite_x, y, zl - labbro_h - 1]) cylinder(d = colonna_d + 2 * tolleranza, h = labbro_h + 1);
                 apertura_usb(1, 3);
             }
-            // linguette elastiche con dentino
-            for (y = linguette_y, lato = [0, 1]) {
-                xs = lato == 0 ? tolleranza : interno_w - tolleranza - labbro_sp;
-                translate([xs, y - linguetta_w / 2, zl - linguetta_l]) cube([labbro_sp, linguetta_w, linguetta_l + e]);
-                translate([lato == 0 ? tolleranza : interno_w - tolleranza, y - linguetta_w / 2, zl - linguetta_l + 0.5])
-                    mirror([lato == 0 ? 1 : 0, 0, 0]) rotate([90, 0, 0]) mirror([0, 0, 1])
-                        linear_extrude(linguetta_w) dentino_profilo();
-            }
+            // a destra: ganci fissi sul bordo
+            for (y = viti_y)
+                translate([interno_w - tolleranza - e, y - gancio_w / 2, gancio_z])
+                    rotate([90, 0, 0]) mirror([0, 0, 1])
+                        linear_extrude(gancio_w) gancio_profilo();
             // guide dei pulsantini: tengono il corpo sui due lati senza zampine
             for (y = tasti_y, s = [-1, 1])
                 translate([tasto_x + s * (tasto_lato / 2 + 0.15) + (s < 0 ? -1.2 : 0), y - tasto_lato / 2, zl - tasto_corpo + 0.5])
@@ -178,13 +188,18 @@ module coperchio() {
         for (y = tasti_y) translate([tasto_x, y, zl - 1]) cylinder(d = tasto_d + 0.6, h = coperchio_sp + 2);
         translate([each P(pico_led), 0]) cylinder(d = 3, h = 50);
         translate([each P(pico_bootsel), 0]) cylinder(d = 2.2, h = 50);
+        // fori svasati per le viti
+        for (y = viti_y) {
+            translate([vite_x, y, zl - 1]) cylinder(d = vite_foro, h = coperchio_sp + 2);
+            translate([vite_x, y, zl + coperchio_sp - (vite_testa - vite_foro) / 2])
+                cylinder(d1 = vite_foro, d2 = vite_testa, h = (vite_testa - vite_foro) / 2 + e);
+        }
         // anelli e simboli incisi
         zt = zl + coperchio_sp - incisione;
         for (i = [0 : len(tasti_y) - 1]) {
             translate([tasto_x, tasti_y[i], zt]) difference() { cylinder(d = 8.4, h = 1); translate([0, 0, -1]) cylinder(d = 7.2, h = 3); }
-            translate([tasto_x + 8, tasti_y[i], zt]) linear_extrude(1) simbolo(tasti_simbolo[i], simbolo_lato);
+            translate([tasto_x + 5.8 + simbolo_lato / 2, tasti_y[i], zt]) linear_extrude(1) simbolo(tasti_simbolo[i], simbolo_lato);
         }
-        translate([P(pico_led)[0] + 3, P(pico_led)[1], zt]) linear_extrude(1) text("LED", size = 2.2, font = carattere, valign = "center");
     }
 }
 
