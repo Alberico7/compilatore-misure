@@ -8,7 +8,10 @@ Strumento d'officina: le coppie **Angolo / Altezza** da inserire nella maschera 
 
 - Tabella Angolo | Altezza: INVIO e frecce come in macchina, incolla da Excel, anteprima "In macchina: 20.00" sotto ogni casella.
 - Valori scritti come in macchina (`2000`) o con il separatore (`20.00` / `20,00`); decimali di angolo e altezza impostabili.
-- Controllo dei dati: caselle vuote, valori non numerici, troppi decimali; avviso per i negativi. I codici si generano solo con tutti i dati corretti.
+- Controllo dei dati: caselle vuote, valori non numerici, troppi decimali. I codici si generano solo con tutti i dati corretti.
+- **Valori da controllare**, segnalati ma senza bloccare: negativi, angoli oltre 360, altezze almeno 5 volte diverse da tutte e due le vicine (la virgola sbagliata), coppie con angolo e altezza uguali alla precedente.
+- **Liste salvate** con un nome (per esempio il codice del pezzo), da riaprire quando serve; **Esporta / Importa** in un file per passarle da un dispositivo all'altro.
+- **Confronta con la macchina**: la lista a caratteri grandi, da spuntare riga per riga mentre si controllano i valori sullo schermo della macchina.
 - Uscita: un **Code 128 per valore** (lettore 1D), anche "uno alla volta" a tutto schermo per leggerli dal telefono, oppure **QR a blocchi** di N coppie separate da INVIO (lettore 2D).
 - **Prova del lettore**: confronta quello che il lettore digita con i valori attesi (layout di tastiera, INVIO doppi, valori attaccati).
 - **Dettatura** con Vosk, solo dal sito: "duecentoquattordici virgola nove quattro" → `214,94`. Un valore tenendo premuto 🎤, oppure più valori di seguito con un tocco. Il riconoscimento avviene nel dispositivo: l'audio non esce. La prima volta scarica il modello italiano (circa 50 MB).
@@ -17,9 +20,10 @@ Strumento d'officina: le coppie **Angolo / Altezza** da inserire nella maschera 
 
 **Sicurezza:** lo strumento compila solo i campi, non avvia cicli. Prima di avviare la tastatura controllare sempre i valori sullo schermo della macchina.
 
-## Uso senza internet sul PC
+## Uso senza internet
 
-Scaricare `compilatore-misure.html` e aprirlo con il browser: funziona tutto tranne la dettatura.
+- **Dal sito:** aperto una volta con la rete, il sito resta salvato nel browser (service worker) e poi si apre anche senza. La dettatura funziona senza rete se il modello è già stato scaricato.
+- **Sul PC:** si può anche scaricare `compilatore-misure.html` e aprirlo con il browser: funziona tutto tranne la dettatura.
 
 ## Sviluppo
 
@@ -33,7 +37,7 @@ npm run build      # crea compilatore-misure.html e sito/
 npm run firmware   # solo Windows: compila chiavetta/build/chiavetta.uf2 (strumenti dell'estensione Pico per VS Code)
 ```
 
-- Sorgenti in `src/`: `template.html`, `logica.js` (conversione, validazione, Code 128, QR, prova lettore), `dettato.js` (parole → valori), `voce.js` (Vosk), `chiavetta.js` (protocollo, Web Bluetooth, WebUSB), `app-chiavetta.js` (scheda Chiavetta), `tabelle-md.js` (tabelle del LEGGIMI nella guida), `app.js` (pagina).
+- Sorgenti in `src/`: `template.html`, `logica.js` (conversione, validazione, Code 128, QR, prova lettore), `dettato.js` (parole → valori), `voce.js` (Vosk), `chiavetta.js` (protocollo, Web Bluetooth, WebUSB), `app-chiavetta.js` (scheda Chiavetta), `tabelle-md.js` (tabelle del LEGGIMI nella guida), `app.js` (pagina, liste salvate, confronto), `sw.js` (service worker per l'uso senza rete: `build.js` ci scrive l'elenco dei file e la loro impronta).
 - Firmware della chiavetta in `chiavetta/` (C, pico-sdk 2.3.1).
 - Documenti di progetto in `docs/`.
 - A ogni push su `main`, GitHub Actions compila il firmware, esegue i test e pubblica `sito/` (con `chiavetta.uf2`) su GitHub Pages.

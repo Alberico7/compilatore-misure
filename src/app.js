@@ -2,6 +2,7 @@
   'use strict';
 
   var CHIAVE = 'compilatore-misure-v1';
+  var CHIAVE_LISTE = 'compilatore-misure-liste-v1';   // liste salvate con un nome
   var MAX_RIGHE = 500;
   var RIGHE_INIZIALI = 5;   // le altre si aggiungono da sole con INVIO / Avanti sull'ultima casella
 
@@ -18,6 +19,7 @@
       coppieBlocco: 10, invioFinale: false, scheda: schedaPredefinita(), blocco: 0, confronto: 'tutti',
       tema: 'scuro', lettura: 0, voceModo: 'premi', voceSeparatore: 'pausa',
       chRitCar: 30, chRitInv: 200, chCoppie: 0, chMezzo: 'bluetooth',
+      listaNome: '',     // lista salvata aperta nella tabella ('' = nessuna)
       impAperte: true,   // riquadro delle impostazioni aperto al primo uso
       schedaChiavetta: true   // segno: lo spostamento una tantum sulla Chiavetta è già fatto
     };
@@ -186,6 +188,7 @@
     var imp = { modo: stato.modo, decAng: stato.decAng, decAlt: stato.decAlt };
     analisi = Logica.analizza(usate, imp);
     blocchi = analisi.valido ? Logica.blocchiQR(analisi.valori, stato.coppieBlocco, stato.invioFinale) : [];
+    var segni = segniAvvisi();
 
     for (var i = 0; i < stato.righe.length; i++) {
       for (var c = 0; c < 2; c++) {
@@ -199,13 +202,16 @@
           inp.classList.add('errore'); ant.classList.add('errore');
           ant.textContent = r.messaggio;
         } else {
-          if (r.negativo) { inp.classList.add('avviso'); ant.classList.add('avviso'); }
+          var note = segni[i + ',' + c];
+          if (note) { inp.classList.add('avviso'); ant.classList.add('avviso'); }
           ant.innerHTML = 'In macchina: <b>' + esc(r.display) + '</b>' +
             (r.cifre !== stato.righe[i][c].trim() ? ' · cifre: ' + esc(r.cifre) : '') +
-            (r.negativo ? ' · negativo!' : '');
+            (note ? ' · ' + esc(note.join(' · ')) : '');
         }
       }
     }
+    mostraListaAttuale();
+    if (!$('verifica').hidden) mostraVerifica();
     mostraRiepilogo(usate.length);
     riepilogoImpostazioni();
     mostraBarre();
@@ -214,6 +220,19 @@
     aggiornaConfronto();
     if (!$('lettura').hidden) mostraLettura();
     salva();
+  }
+
+  /* Note brevi degli avvisi per casella: { "riga,col": ["oltre 360!", ...] }. La coppia uguale segna tutte e due le caselle. */
+  var NOTE_AVVISI = { negativo: 'negativo!', angolo360: 'oltre 360!', altezza: 'molto diversa dalle vicine!', uguale: 'uguale alla coppia sopra!' };
+  function segniAvvisi() {
+    var segni = {};
+    analisi.avvisi.forEach(function (a) {
+      (a.tipo === 'uguale' ? [0, 1] : [a.col]).forEach(function (c) {
+        var k = a.riga + ',' + c;
+        (segni[k] = segni[k] || []).push(NOTE_AVVISI[a.tipo] || a.testo);
+      });
+    });
+    return segni;
   }
 
   function listaMessaggi(lista, max) {
@@ -239,9 +258,18 @@
       h += '<div class="messaggio ok">Valori corretti: ' + nUsate + (nUsate === 1 ? ' coppia' : ' coppie') + ' (' + nUsate * 2 + ' valori).' +
         (nUsate < stato.righe.length ? ' Le righe vuote in fondo non vengono usate.' : '') + '</div>';
     }
-    if (nUsate > 0 && analisi.avvisi.length) {
+    var negativi = analisi.avvisi.filter(function (a) { return a.tipo === 'negativo'; });
+    var sospetti = analisi.avvisi.filter(function (a) { return a.tipo !== 'negativo'; });
+    if (nUsate > 0 && sospetti.length) {
+      h += '<div class="messaggio avviso" id="da-controllare"><b>Da controllare:</b> potrebbero essere errori di battitura. I codici si generano lo stesso.' +
+        listaMessaggi(sospetti, 8) + '</div>';
+    }
+    if (nUsate > 0 && negativi.length) {
       h += '<div class="messaggio avviso"><b>Valori negativi:</b> non sappiamo ancora se la maschera accetta il segno meno. Verificalo in macchina.' +
-        listaMessaggi(analisi.avvisi, 8) + '</div>';
+        listaMessaggi(negativi, 8) + '</div>';
+    }
+    if (analisi.valido) {
+      h += '<div class="pulsanti azioni-riepilogo"><button type="button" id="btn-verifica">Confronta con la macchina</button></div>';
     }
     $('riepilogo').innerHTML = h;
   }
@@ -367,6 +395,275 @@
     stato.lettura = nuovo;
     mostraLettura();
     salva();
+  }
+
+  /* ---------- confronta con la macchina (docs/2026-11-18-offline-liste-avvisi.md) ---------- */
+  /* Spunte delle coppie controllate: restano finché i valori non cambiano ("firma" = cifre di tutti i valori). */
+  var spunte = { firma: '', fatte: {} };
+  function firmaValori() { return analisi.valido ? analisi.valori.map(function (v) { return v.cifre; }).join(' ') : ''; }
+  function apriVerifica() {
+    if (!analisi.valido) return;
+    $('verifica').hidden = false;
+    document.body.style.overflow = 'hidden';
+    tieniAcceso();
+    mostraVerifica();
+    $('verifica-chiudi').focus();
+  }
+  function chiudiVerifica() {
+    $('verifica').hidden = true;
+    document.body.style.overflow = '';
+    if (wakeLock) { try { wakeLock.release(); } catch (e) {} wakeLock = null; }
+    var b = $('btn-verifica');
+    if (b) b.focus();
+  }
+  function mostraVerifica() {
+    if (!analisi.valido) { chiudiVerifica(); return; }
+    var firma = firmaValori();
+    if (firma !== spunte.firma) spunte = { firma: firma, fatte: {} };
+    var segni = segniAvvisi(), n = analisi.celle.length, fatte = 0, h = [];
+    for (var i = 0; i < n; i++) {
+      var note = (segni[i + ',0'] || []).concat(segni[i + ',1'] || []).filter(function (x, k, a) { return a.indexOf(x) === k; });
+      var si = !!spunte.fatte[i];
+      if (si) fatte++;
+      h.push('<li><button type="button" class="riga-verifica' + (note.length ? ' avviso' : '') + '" data-i="' + i + '" aria-pressed="' + si + '"' +
+        ' aria-label="Coppia ' + (i + 1) + ': angolo ' + esc(analisi.celle[i][0].display) + ', altezza ' + esc(analisi.celle[i][1].display) + (note.length ? ', da controllare' : '') + '">' +
+        '<span class="n">' + (i + 1) + '</span><span class="val">' + esc(analisi.celle[i][0].display) + '</span><span class="val">' + esc(analisi.celle[i][1].display) + '</span>' +
+        '<span class="spunta" aria-hidden="true">' + (si ? '✓' : '') + '</span>' +
+        (note.length ? '<span class="nota-avviso">⚠ ' + esc(note.join(' · ')) + '</span>' : '') + '</button></li>');
+    }
+    var elenco = $('verifica-elenco'), html = h.join('');
+    if (elenco.dataset.html !== html) { elenco.innerHTML = html; elenco.dataset.html = html; }
+    $('verifica-conto').textContent = fatte + ' di ' + n + (n === 1 ? ' controllata' : ' controllate');
+  }
+
+  /* ---------- liste salvate (docs/2026-11-18-offline-liste-avvisi.md) ---------- */
+  /* In memoria, così "modifiche non salvate" non rilegge tutto a ogni tasto; un'altra scheda che salva la svuota. */
+  var listeLette = null;
+  window.addEventListener('storage', function (e) { if (e.key === CHIAVE_LISTE || e.key === null) { listeLette = null; mostraListaAttuale(); } });
+  function leggiListe() {
+    if (!listeLette) {
+      try {
+        var l = JSON.parse(localStorage.getItem(CHIAVE_LISTE) || '[]');
+        listeLette = Array.isArray(l) ? l.filter(listaValida) : [];
+      } catch (e) { listeLette = []; }
+    }
+    return listeLette.slice();
+  }
+  function scriviListe(l) {
+    try { localStorage.setItem(CHIAVE_LISTE, JSON.stringify(l)); listeLette = l.slice(); return true; }
+    catch (e) { listeLette = null; esitoListe('errore', 'Non riesco a salvare le liste in questo browser (memoria piena o non disponibile).'); return false; }
+  }
+  function listaValida(l) {
+    return l && typeof l.nome === 'string' && l.nome.trim() && Array.isArray(l.righe) && l.righe.length <= MAX_RIGHE &&
+      l.righe.every(function (r) { return Array.isArray(r) && r.length === 2 && typeof r[0] === 'string' && typeof r[1] === 'string'; }) &&
+      (l.modo === 'separatore' || l.modo === 'macchina') &&
+      [l.decAng, l.decAlt].every(function (d) { return d === (d | 0) && d >= 0 && d <= 6; });
+  }
+  /* Quello che si salva di una lista: coppie (senza righe vuote in fondo, senza spazi), modo e decimali. */
+  function contenutoAttuale() {
+    return {
+      righe: righeUsate().map(function (r) { return [r[0].trim(), r[1].trim()]; }),
+      modo: stato.modo, decAng: stato.decAng, decAlt: stato.decAlt
+    };
+  }
+  function stessoContenuto(a, b) {
+    return a.modo === b.modo && a.decAng === b.decAng && a.decAlt === b.decAlt && JSON.stringify(a.righe) === JSON.stringify(b.righe);
+  }
+  function trovaLista(liste, nome) {
+    var k = nome.trim().toLowerCase();
+    for (var i = 0; i < liste.length; i++) if (liste[i].nome.trim().toLowerCase() === k) return i;
+    return -1;
+  }
+  function esitoListe(tipo, testo) {
+    $('esito-liste').innerHTML = testo ? '<div class="messaggio ' + tipo + '">' + esc(testo) + '</div>' : '';
+  }
+  function plurale(n, uno, tanti) { return n + ' ' + (n === 1 ? uno : tanti); }
+  function dataBreve(iso) {
+    var d = new Date(iso);
+    if (isNaN(d)) return '';
+    function due(x) { return (x < 10 ? '0' : '') + x; }
+    return due(d.getDate()) + '/' + due(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + due(d.getHours()) + ':' + due(d.getMinutes());
+  }
+
+  /* Nome della lista aperta sopra la tabella, con "modifiche non salvate". */
+  function mostraListaAttuale() {
+    var p = $('lista-attuale');
+    if (!stato.listaNome) { p.hidden = true; return; }
+    var liste = leggiListe(), i = trovaLista(liste, stato.listaNome);
+    if (i < 0) { stato.listaNome = ''; p.hidden = true; return; }
+    var modificata = !stessoContenuto(liste[i], contenutoAttuale());
+    p.innerHTML = 'Lista: <b>' + esc(liste[i].nome) + '</b>' + (modificata ? ' <span class="modificata">· modifiche non salvate</span>' : '');
+    p.hidden = false;
+  }
+
+  function mostraListe() {
+    var liste = leggiListe(), cerca = $('lista-cerca');
+    cerca.hidden = liste.length <= 8;
+    var filtro = cerca.hidden ? '' : cerca.value.trim().toLowerCase();
+    var visibili = liste.filter(function (l) { return !filtro || l.nome.toLowerCase().indexOf(filtro) >= 0; });
+    var h = visibili.map(function (l) {
+      var n = l.righe.length;
+      var aperta = stato.listaNome && l.nome.toLowerCase() === stato.listaNome.toLowerCase();
+      return '<li><div class="info"><div class="nome">' + esc(l.nome) + (aperta ? ' <span class="aperta">· aperta</span>' : '') + '</div>' +
+        '<div class="dettagli">' + plurale(n, 'coppia', 'coppie') + ' · ' + esc(dataBreve(l.salvata)) + '</div></div>' +
+        '<button type="button" data-apri="' + esc(l.nome) + '">Apri</button>' +
+        '<button type="button" class="pericolo" data-elimina="' + esc(l.nome) + '">Elimina</button></li>';
+    }).join('');
+    if (!liste.length) h = '<li class="vuoto">Nessuna lista salvata. Scrivi i valori e premi "Salva come…".</li>';
+    else if (!visibili.length) h = '<li class="vuoto">Nessuna lista con questo nome.</li>';
+    $('elenco-liste').innerHTML = h;
+  }
+
+  /* Riquadro per scrivere il nome. Ritorna una Promise<string|null>. */
+  function chiediNome(testo, iniziale) {
+    return new Promise(function (risolvi) {
+      var velo = $('nome-lista'), campo = $('nome-lista-campo'), form = $('nome-lista-form');
+      var prima = document.activeElement;
+      $('nome-lista-testo').textContent = testo;
+      campo.value = iniziale || '';
+      velo.hidden = false;
+      campo.focus(); campo.select();
+      function fine(v) {
+        velo.hidden = true;
+        form.onsubmit = $('nome-lista-no').onclick = velo.onkeydown = null;
+        if (prima && prima.focus) prima.focus();
+        risolvi(v);
+      }
+      form.onsubmit = function (e) {
+        e.preventDefault();
+        var v = campo.value.trim();
+        if (!v) { campo.focus(); return; }
+        fine(v.slice(0, 60));
+      };
+      $('nome-lista-no').onclick = function () { fine(null); };
+      velo.onkeydown = function (e) { if (e.key === 'Escape') fine(null); };
+    });
+  }
+
+  function salvaCon(nome, chiediSeEsiste) {
+    var c = contenutoAttuale();
+    if (!c.righe.length) { esitoListe('avviso', 'La tabella è vuota: non c\'è niente da salvare.'); return Promise.resolve(); }
+    var liste = leggiListe(), i = trovaLista(liste, nome);
+    var ok = i >= 0 && chiediSeEsiste
+      ? chiedi('Esiste già una lista "' + liste[i].nome + '".\nSostituirla con i valori attuali?', 'Sostituisci')
+      : Promise.resolve(true);
+    return ok.then(function (si) {
+      if (!si) return;
+      liste = leggiListe(); i = trovaLista(liste, nome);
+      if (i >= 0) { nome = liste[i].nome; liste.splice(i, 1); }
+      liste.unshift({ nome: nome, righe: c.righe, modo: c.modo, decAng: c.decAng, decAlt: c.decAlt, salvata: new Date().toISOString() });
+      if (!scriviListe(liste)) return;
+      stato.listaNome = nome;
+      salva();
+      esitoListe('ok', 'Salvata "' + nome + '": ' + plurale(c.righe.length, 'coppia', 'coppie') + '.');
+      mostraListe(); mostraListaAttuale();
+    });
+  }
+  function salvaComeLista() {
+    return chiediNome('Nome della lista (per esempio il codice del pezzo)', stato.listaNome).then(function (nome) {
+      if (nome) return salvaCon(nome, true);
+    });
+  }
+  function salvaLista() {
+    if (stato.listaNome && trovaLista(leggiListe(), stato.listaNome) >= 0) return salvaCon(stato.listaNome, false);
+    return salvaComeLista();
+  }
+
+  function apriLista(nome) {
+    var liste = leggiListe(), i = trovaLista(liste, nome);
+    if (i < 0) { mostraListe(); return Promise.resolve(); }
+    var l = liste[i], c = contenutoAttuale();
+    var salvati = !c.righe.length || liste.some(function (x) { return stessoContenuto(x, c); });
+    var ok = salvati ? Promise.resolve(true)
+      : chiedi('Sostituire i valori attuali con la lista "' + l.nome + '"?\nI valori attuali non sono salvati in nessuna lista.', 'Sostituisci');
+    return ok.then(function (si) {
+      if (!si) return;
+      stato.righe = l.righe.map(function (r) { return [r[0], r[1]]; });
+      if (!stato.righe.length) stato.righe.push(['', '']);
+      stato.modo = l.modo; stato.decAng = l.decAng; stato.decAlt = l.decAlt;
+      stato.listaNome = l.nome;
+      stato.blocco = 0; stato.lettura = 0;
+      avvisoIncolla = '';
+      applicaImpostazioni();
+      costruisciTabella();
+      aggiorna();
+      esitoListe('ok', 'Aperta "' + l.nome + '": ' + plurale(l.righe.length, 'coppia', 'coppie') + '.');
+      mostraListe();
+    });
+  }
+
+  function eliminaLista(nome) {
+    var liste = leggiListe(), i = trovaLista(liste, nome);
+    if (i < 0) { mostraListe(); return Promise.resolve(); }
+    return chiedi('Eliminare la lista "' + liste[i].nome + '"?\nI valori nella tabella restano.', 'Elimina').then(function (si) {
+      if (!si) return;
+      liste = leggiListe(); i = trovaLista(liste, nome);
+      if (i < 0) return;
+      var tolta = liste.splice(i, 1)[0];
+      if (!scriviListe(liste)) return;
+      if (stato.listaNome && stato.listaNome.toLowerCase() === tolta.nome.toLowerCase()) { stato.listaNome = ''; salva(); }
+      esitoListe('ok', 'Eliminata "' + tolta.nome + '".');
+      mostraListe(); mostraListaAttuale();
+    });
+  }
+
+  function esportaListe() {
+    var liste = leggiListe();
+    if (!liste.length) { esitoListe('avviso', 'Non ci sono liste da esportare.'); return; }
+    var dati = JSON.stringify({ formato: 'compilatore-misure-liste', versione: 1, liste: liste }, null, 1);
+    var d = new Date(), due = function (x) { return (x < 10 ? '0' : '') + x; };
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([dati], { type: 'application/json' }));
+    a.download = 'liste-misure-' + d.getFullYear() + '-' + due(d.getMonth() + 1) + '-' + due(d.getDate()) + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 10000);
+    esitoListe('ok', 'Esportate ' + plurale(liste.length, 'lista', 'liste') + ' nel file ' + a.download + '.');
+  }
+
+  /* Aggiunge le liste del file senza cancellare niente: le uguali si saltano, quelle con lo stesso nome
+     ma coppie diverse prendono " (2)", " (3)"... */
+  function importaListe(testo) {
+    var dati;
+    try { dati = JSON.parse(testo); } catch (e) { dati = null; }
+    var nuove = dati && dati.formato === 'compilatore-misure-liste' && Array.isArray(dati.liste) ? dati.liste : null;
+    if (!nuove) { esitoListe('errore', 'Questo file non contiene liste del Compilatore misure.'); return; }
+    var liste = leggiListe(), aggiunte = 0, saltate = 0, scartate = 0;
+    nuove.forEach(function (l) {
+      if (!listaValida(l)) { scartate++; return; }
+      var pulita = { nome: l.nome.trim().slice(0, 60), righe: l.righe, modo: l.modo, decAng: l.decAng, decAlt: l.decAlt,
+        salvata: isNaN(new Date(l.salvata)) ? new Date().toISOString() : l.salvata };
+      var i = trovaLista(liste, pulita.nome);
+      // già presente: stesse coppie con lo stesso nome, o con il nome già cambiato da un'importazione ("Flangia (2)")
+      var stessoNome = function (n) {
+        n = n.toLowerCase(); var b = pulita.nome.toLowerCase();
+        return n === b || (n.indexOf(b + ' (') === 0 && /^\d+\)$/.test(n.slice(b.length + 2)));
+      };
+      if (liste.some(function (x) { return stessoNome(x.nome) && stessoContenuto(x, pulita); })) { saltate++; return; }
+      if (i >= 0) {
+        var base = pulita.nome, k = 2;
+        while (trovaLista(liste, base + ' (' + k + ')') >= 0) k++;
+        pulita.nome = base + ' (' + k + ')';
+      }
+      liste.push(pulita);
+      aggiunte++;
+    });
+    liste.sort(function (a, b) { return String(b.salvata).localeCompare(String(a.salvata)); });
+    if (aggiunte && !scriviListe(liste)) return;
+    esitoListe(aggiunte ? 'ok' : 'avviso', 'Importate ' + plurale(aggiunte, 'lista', 'liste') +
+      (saltate ? ', ' + plurale(saltate, 'saltata perché già presente', 'saltate perché già presenti') : '') +
+      (scartate ? ', ' + plurale(scartate, 'scartata perché non valida', 'scartate perché non valide') : '') + '.');
+    mostraListe(); mostraListaAttuale();
+  }
+
+  /* ---------- senza rete (service worker, solo dal sito) ---------- */
+  function registraSenzaRete() {
+    if (!('serviceWorker' in navigator) || location.protocol === 'file:') return;
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') return;
+    function registra() { navigator.serviceWorker.register('sw.js').catch(function () {}); }
+    if (document.readyState === 'complete') registra(); else window.addEventListener('load', registra);
+    navigator.serviceWorker.ready.then(function () {
+      $('stato-offline').textContent = 'La pagina funziona anche senza rete.';
+    }).catch(function () {});
   }
 
   /* ---------- prova lettore ---------- */
@@ -785,6 +1082,7 @@
     $('mob-segno').addEventListener('click', function () { if (cellaAttiva) cambiaSegno(cellaAttiva.r, cellaAttiva.c); });
 
     $('riepilogo').addEventListener('click', function (e) {
+      if (e.target.closest('#btn-verifica')) { apriVerifica(); return; }
       var a = e.target.closest('[data-vai]');
       if (!a) return;
       e.preventDefault();
@@ -806,6 +1104,7 @@
       chiedi('Cancellare tutti i valori della tabella?\nLe impostazioni restano.', 'Svuota').then(function (si) {
         if (!si) return;
         stato.righe = stato.righe.map(function () { return ['', '']; });
+        stato.listaNome = '';   // la lista resta salvata: si chiude soltanto
         stato.blocco = 0;
         stato.lettura = 0;
         avvisoIncolla = '';
@@ -864,7 +1163,49 @@
       if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) spostaLettura(dx < 0 ? 1 : -1);
     });
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'visible' && !$('lettura').hidden) tieniAcceso();
+      if (document.visibilityState === 'visible' && (!$('lettura').hidden || !$('verifica').hidden)) tieniAcceso();
+    });
+
+    /* confronta con la macchina */
+    $('verifica-chiudi').addEventListener('click', chiudiVerifica);
+    $('verifica-azzera').addEventListener('click', function () { spunte.fatte = {}; mostraVerifica(); });
+    $('verifica-elenco').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-i]');
+      if (!b) return;
+      var i = +b.dataset.i;
+      if (spunte.fatte[i]) delete spunte.fatte[i]; else spunte.fatte[i] = true;
+      mostraVerifica();
+      var dopo = $('verifica-elenco').querySelector('[data-i="' + i + '"]');
+      if (dopo) dopo.focus();
+    });
+    $('verifica').addEventListener('keydown', function (e) { if (e.key === 'Escape') chiudiVerifica(); });
+
+    /* liste salvate */
+    $('btn-liste').addEventListener('click', function () {
+      var p = $('liste'), apri = p.hidden;
+      p.hidden = !apri;
+      this.setAttribute('aria-expanded', String(apri));
+      if (apri) { esitoListe('', ''); mostraListe(); }
+    });
+    $('lista-salva').addEventListener('click', salvaLista);
+    $('lista-salva-come').addEventListener('click', salvaComeLista);
+    $('lista-cerca').addEventListener('input', mostraListe);
+    $('elenco-liste').addEventListener('click', function (e) {
+      var b = e.target.closest('button');
+      if (!b) return;
+      if (b.dataset.apri !== undefined) apriLista(b.dataset.apri);
+      else if (b.dataset.elimina !== undefined) eliminaLista(b.dataset.elimina);
+    });
+    $('lista-esporta').addEventListener('click', esportaListe);
+    $('lista-importa').addEventListener('click', function () { $('lista-file').value = ''; $('lista-file').click(); });
+    $('lista-file').addEventListener('change', function () {
+      var f = this.files && this.files[0];
+      if (!f) return;
+      if (f.size > 5 * 1024 * 1024) { esitoListe('errore', 'Il file è troppo grande per essere un file di liste.'); return; }
+      var r = new FileReader();
+      r.onload = function () { importaListe(String(r.result)); };
+      r.onerror = function () { esitoListe('errore', 'Non riesco a leggere il file.'); };
+      r.readAsText(f);
     });
 
     var timerRidim = null;
@@ -913,4 +1254,5 @@
   collegaVoce();
   aggiorna();
   mostraScheda();
+  registraSenzaRete();
 })();

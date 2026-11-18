@@ -60,6 +60,45 @@ var Logica = (function () {
     };
   }
 
+  /* Valori sospetti (docs/2026-11-18-offline-liste-avvisi.md): avvisi, non errori.
+     - angolo oltre 360;
+     - altezza almeno SOSPETTO volte più grande (o più piccola) di tutte e due le vicine, che invece
+       sono simili tra loro: il caso tipico della virgola sbagliata (2000 tra 200 e 205);
+     - coppia con angolo E altezza uguali alla coppia sopra. */
+  var SOSPETTO = 5;
+  function sospetti(celle, imp) {
+    var avvisi = [];
+    var ok = function (r) { return r && r.stato === 'ok'; };
+    var limite = 360 * Math.pow(10, imp.decAng);
+    celle.forEach(function (c, i) {
+      if (ok(c[0]) && Number(c[0].cifre) > limite) {
+        avvisi.push({ riga: i, col: 0, tipo: 'angolo360', testo: 'Angolo ' + (i + 1) + ': ' + c[0].display + ' è oltre 360' });
+      }
+      var p = celle[i - 1];
+      if (p && ok(c[0]) && ok(c[1]) && ok(p[0]) && ok(p[1]) && c[0].cifre === p[0].cifre && c[1].cifre === p[1].cifre) {
+        avvisi.push({ riga: i, col: 0, tipo: 'uguale', testo: 'Coppia ' + (i + 1) + ' uguale alla ' + i });
+      }
+    });
+    // altezze compilate, nell'ordine: le vicine sono quella prima e quella dopo (agli estremi, le due più vicine)
+    var alt = [];
+    celle.forEach(function (c, i) { if (ok(c[1])) alt.push({ riga: i, v: Math.abs(Number(c[1].cifre)), r: c[1] }); });
+    if (alt.length < 3) return avvisi;
+    alt.forEach(function (a, k) {
+      var n = alt.length;
+      var vic = k === 0 ? [alt[1], alt[2]] : k === n - 1 ? [alt[n - 2], alt[n - 3]] : [alt[k - 1], alt[k + 1]];
+      var x = vic[0].v, y = vic[1].v;
+      if (!a.v || !x || !y) return;                                   // con uno zero il rapporto non ha senso
+      if (Math.max(x, y) >= SOSPETTO * Math.min(x, y)) return;          // vicine diverse tra loro: salto vero di misura
+      var grande = a.v >= SOSPETTO * x && a.v >= SOSPETTO * y, piccola = a.v * SOSPETTO <= x && a.v * SOSPETTO <= y;
+      if (grande || piccola) {
+        var ord = vic.slice().sort(function (u, w) { return u.riga - w.riga; });
+        avvisi.push({ riga: a.riga, col: 1, tipo: 'altezza', testo: 'Altezza ' + (a.riga + 1) + ': ' + a.r.display +
+          ' è molto diversa dalle vicine (' + ord[0].r.display + ' e ' + ord[1].r.display + '): controlla la virgola' });
+      }
+    });
+    return avvisi;
+  }
+
   /* Analizza tutta la tabella. righe: [[angolo, altezza], ...]
      imp: { modo, decAng, decAlt } */
   function analizza(righe, imp) {
@@ -75,11 +114,12 @@ var Logica = (function () {
           errori.push({ riga: i, col: x[2], testo: nome + ': ' + r.messaggio });
           if (/separatore/.test(r.messaggio)) separatoriInMacchina++;
         } else {
-          if (r.negativo) avvisi.push({ riga: i, col: x[2], testo: nome + ': valore negativo (' + r.display + ')' });
+          if (r.negativo) avvisi.push({ riga: i, col: x[2], tipo: 'negativo', testo: nome + ': valore negativo (' + r.display + ')' });
           valori.push({ etichetta: nome, tipo: x[1], coppia: i + 1, cifre: r.cifre, display: r.display });
         }
       });
     }
+    avvisi = avvisi.concat(sospetti(celle, imp)).sort(function (a, b) { return a.riga - b.riga || a.col - b.col; });
     return {
       celle: celle,
       errori: errori,

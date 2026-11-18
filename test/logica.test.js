@@ -54,6 +54,52 @@ test('analisi tabella: ordine, errori, avvisi', () => {
   assert.deepEqual(b.valori, []);
 });
 
+/* docs/2026-11-18-offline-liste-avvisi.md: angolo oltre 360, altezza molto diversa dalle vicine, coppia uguale */
+test('avvisi sui valori sospetti', () => {
+  const IMP = { modo: 'separatore', decAng: 2, decAlt: 2 };
+  const tipi = (righe, imp = IMP) => L.analizza(righe, imp).avvisi.filter((a) => a.tipo !== 'negativo').map((a) => a.tipo + ' ' + (a.riga + 1));
+
+  // angolo: 360 no, 360.01 sì; anche con altri decimali e nel modo "come in macchina"
+  assert.deepEqual(tipi([['360', '1'], ['360.01', '2']]), ['angolo360 2']);
+  assert.deepEqual(tipi([['361', '1']], { modo: 'separatore', decAng: 0, decAlt: 2 }), ['angolo360 1']);
+  assert.deepEqual(tipi([['36000', '1'], ['36001', '2']], { modo: 'macchina', decAng: 2, decAlt: 2 }), ['angolo360 2']);
+  const a = L.analizza([['1', '1'], ['370', '2']], IMP).avvisi[0];
+  assert.equal(a.col, 0);
+  assert.equal(a.testo, 'Angolo 2: 370.00 è oltre 360');
+  // l'avviso non blocca niente
+  assert.equal(L.analizza([['370', '1']], IMP).valido, true);
+
+  // altezza isolata 5 volte più grande o più piccola di tutte e due le vicine, che sono simili tra loro
+  assert.deepEqual(tipi([['1', '200'], ['2', '2000'], ['3', '205']]), ['altezza 2']);
+  assert.deepEqual(tipi([['1', '200'], ['2', '20'], ['3', '205']]), ['altezza 2']);
+  assert.deepEqual(tipi([['1', '200'], ['2', '999'], ['3', '205']]), [], 'meno di 5 volte');
+  assert.deepEqual(tipi([['1', '20'], ['2', '200'], ['3', '2000']]), [], 'vicine diverse tra loro: salto vero');
+  assert.deepEqual(tipi([['1', '200'], ['2', '2000']]), [], 'servono almeno 3 altezze');
+  // prima e ultima riga: le due più vicine
+  assert.deepEqual(tipi([['1', '2000'], ['2', '200'], ['3', '205'], ['4', '210']]), ['altezza 1']);
+  assert.deepEqual(tipi([['1', '200'], ['2', '205'], ['3', '210'], ['4', '21']]), ['altezza 4']);
+  // zeri: niente confronto; negativi: conta la grandezza
+  assert.deepEqual(tipi([['1', '0'], ['2', '2000'], ['3', '200'], ['4', '205']]), []);
+  assert.deepEqual(tipi([['1', '200'], ['2', '0'], ['3', '205']]), []);
+  assert.deepEqual(tipi([['1', '-200'], ['2', '-2000'], ['3', '-205']]), ['altezza 2']);
+  // le righe con errori si saltano: le vicine sono le altezze valide più vicine
+  assert.deepEqual(tipi([['1', '200'], ['2', 'x'], ['3', '2000'], ['4', '205']]), ['altezza 3']);
+  const h = L.analizza([['1', '200'], ['2', '2000'], ['3', '205']], IMP).avvisi[0];
+  assert.equal(h.col, 1);
+  assert.equal(h.testo, 'Altezza 2: 2000.00 è molto diversa dalle vicine (200.00 e 205.00): controlla la virgola');
+
+  // coppia uguale: solo con angolo E altezza uguali alla coppia sopra (confronto sulle cifre: 20 = 20,00)
+  assert.deepEqual(tipi([['20', '15'], ['20,00', '15.0']]), ['uguale 2']);
+  assert.deepEqual(tipi([['20', '15'], ['20', '16']]), [], 'solo angolo uguale');
+  assert.deepEqual(tipi([['20', '15'], ['21', '15']]), [], 'solo altezza uguale');
+  assert.deepEqual(tipi([['20', '15'], ['21', '16'], ['20', '15']]), [], 'uguale ma non di seguito');
+  assert.equal(L.analizza([['20', '15'], ['20', '15']], IMP).avvisi[0].testo, 'Coppia 2 uguale alla 1');
+
+  // i negativi restano, con il loro tipo; tutti in ordine di riga
+  const tutti = L.analizza([['-1', '200'], ['400', '210'], ['400', '210'], ['5', '205']], IMP).avvisi.map((x) => x.tipo + ' ' + (x.riga + 1));
+  assert.deepEqual(tutti, ['negativo 1', 'angolo360 2', 'angolo360 3', 'uguale 3']);
+});
+
 test('Code 128: checksum e struttura', () => {
   // "2000" in set C: start C(105), 20, 00 -> checksum (105 + 1*20 + 2*0) % 103 = 22
   assert.deepEqual(L.code128Simboli('2000'), [105, 20, 0, 22, 106]);

@@ -261,6 +261,36 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
 .finestra { background: var(--carta); border: 1px solid var(--bordo); border-radius: 12px; padding: 20px; max-width: 440px; width: 100%; box-shadow: 0 10px 40px var(--ombra); }
 .finestra p { margin: 0 0 16px; font-size: 18px; white-space: pre-line; }
 .finestra .pulsanti { justify-content: flex-end; }
+.finestra input[type=text] { width: 100%; margin-bottom: 16px; font-size: 18px; }
+
+/* liste salvate */
+.liste { border: 1px solid var(--bordo); border-radius: 10px; background: var(--campo); padding: 12px 14px; margin-bottom: 12px; }
+.liste input[type=search] { width: 100%; margin-top: 10px; padding: 8px 10px; border: 1px solid var(--bordo); border-radius: 8px; background: var(--carta); min-height: 44px; }
+.elenco-liste { list-style: none; margin: 10px 0; padding: 0; }
+.elenco-liste li { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--riga); flex-wrap: wrap; }
+.elenco-liste li.vuoto { color: var(--tenue); border-bottom: 0; }
+.elenco-liste .info { flex: 1 1 180px; min-width: 0; }
+.elenco-liste .nome { font-weight: 700; overflow-wrap: anywhere; }
+.elenco-liste .dettagli { color: var(--tenue); font-size: 14px; }
+.elenco-liste .aperta { color: var(--accento); font-weight: 600; font-size: 14px; }
+.esito-liste:empty { display: none; }
+.lista-attuale { margin: 0 0 8px; font-weight: 600; overflow-wrap: anywhere; }
+.lista-attuale .modificata { color: var(--avviso); }
+
+/* confronta con la macchina */
+.verifica .testa .pulsanti { flex-wrap: nowrap; }
+.verifica .nota { margin: 8px 0 4px; }
+.verifica-intestazione, .riga-verifica { display: grid; grid-template-columns: 2.4em 1fr 1fr 1.4em; gap: 8px; align-items: center; }
+.verifica-intestazione { color: var(--tenue); font-weight: 600; font-size: 15px; padding: 4px 13px; }
+.verifica-lista { flex: 1; overflow-y: auto; min-height: 0; }
+.elenco-verifica { list-style: none; margin: 0; padding: 0; }
+.riga-verifica { width: 100%; text-align: left; font-size: clamp(19px, 5.6vw, 30px); font-variant-numeric: tabular-nums; padding: 8px 12px; margin-bottom: 6px; min-height: 58px; }
+.riga-verifica .n { font-size: 16px; color: var(--tenue); }
+.riga-verifica .val { overflow-wrap: anywhere; }
+.riga-verifica .spunta { color: var(--ok); text-align: center; }
+.riga-verifica[aria-pressed=true] { background: var(--ok-chiaro); border-color: var(--ok); }
+.riga-verifica.avviso { border-color: var(--bordo-avviso); }
+.riga-verifica .nota-avviso { grid-column: 2 / -1; font-size: 14px; font-weight: 600; color: var(--avviso); }
 
 .solo-stretto { display: none; }
 @media (max-width: 640px) {
@@ -294,7 +324,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
 @media print {
   :root { --sfondo: #fff; --carta: #fff; --testo: #000; --tenue: #333; --bordo: #999; --accento: #000; --altezza: #000; color-scheme: light; }
   body { font-size: 12pt; }
-  nav.indice, #sez-dati, #sez-prova, #sez-guida, .schede, .barra-qr, .pulsanti, footer, header.testata .sottotitolo, #btn-tema, .barra-mobile, .lettura, .nota { display: none !important; }
+  nav.indice, #sez-dati, #sez-prova, #sez-guida, .schede, .barra-qr, .pulsanti, footer, header.testata .sottotitolo, #btn-tema, .barra-mobile, .lettura, .nota, .velo { display: none !important; }
   section.blocco { border: 0; padding: 0; margin: 0; }
   .sicurezza { border: 1px solid #000; background: #fff; }
 }
@@ -363,7 +393,22 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
       <div class="voce" id="voce" hidden>
         <button type="button" class="voce-btn" id="btn-voce"><span aria-hidden="true">🎤</span> <span id="btn-voce-testo">Detta</span></button>
       </div>
+      <button type="button" id="btn-liste" aria-expanded="false" aria-controls="liste">Liste</button>
       <button type="button" class="pericolo" id="btn-svuota">Svuota tutto</button>
+    </div>
+    <div class="liste" id="liste" hidden>
+      <div class="pulsanti">
+        <button type="button" class="primario" id="lista-salva">Salva</button>
+        <button type="button" id="lista-salva-come">Salva come…</button>
+      </div>
+      <input type="search" id="lista-cerca" placeholder="Cerca per nome" aria-label="Cerca tra le liste" autocomplete="off" hidden>
+      <ul class="elenco-liste" id="elenco-liste"></ul>
+      <div class="pulsanti">
+        <button type="button" id="lista-esporta">Esporta</button>
+        <button type="button" id="lista-importa">Importa</button>
+        <input type="file" id="lista-file" accept=".json,application/json" hidden>
+      </div>
+      <div class="esito-liste" id="esito-liste" aria-live="polite"></div>
     </div>
     <div class="voce-stato" id="voce-stato" aria-live="polite"></div>
     <div class="voce-ultimi" id="voce-ultimi"></div>
@@ -371,8 +416,9 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
       <span class="solo-largo"><kbd>Invio</kbd> passa da Angolo ad Altezza e poi alla riga dopo, come in macchina. <kbd>↑</kbd> <kbd>↓</kbd> cambiano riga.
       Da Excel: seleziona le due colonne, copia, clicca su <b>Angolo 1</b> e incolla con <kbd>Ctrl</kbd>+<kbd>V</kbd>.</span>
       <span class="solo-stretto">Tocca una casella: in basso compaiono <b>Indietro</b>, <b>±</b> (segno) e <b>Avanti</b> (come INVIO in macchina).</span>
-      <span id="stato-salvataggio"></span>
+      <span id="stato-salvataggio"></span> <span id="stato-offline"></span>
     </p>
+    <p class="lista-attuale" id="lista-attuale" hidden></p>
     <div class="contenitore-tabella">
       <table class="misure">
         <thead><tr><th>N°</th><th>Angolo</th><th>Altezza</th></tr></thead>
@@ -482,11 +528,11 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
       <ol>
         <li>Nel riquadro in alto (<b>Cambia</b>) scegli come scrivi i valori: <b>con separatore</b> (20.00 o 20,00) oppure <b>come in macchina</b> (2000, senza punto), e i decimali di angolo e altezza come in macchina. Si sceglie una volta: poi resta il riepilogo.</li>
         <li>Scrivi i valori nella tabella oppure incolla due colonne da Excel: INVIO (o Avanti) sull'ultima casella aggiunge una riga. Sotto ogni casella vedi il valore come apparirà in macchina: controllalo.</li>
-        <li>Correggi le caselle in rosso. I codici compaiono solo quando tutti i valori sono corretti.</li>
+        <li>Correggi le caselle in rosso. I codici compaiono solo quando tutti i valori sono corretti. Le caselle in arancione sono <b>da controllare</b> (negativi, angoli oltre 360, altezze molto diverse dalle vicine, coppie ripetute): i codici si generano lo stesso.</li>
         <li>Scegli il metodo: <b>Chiavetta</b> (consigliata, vedi la guida <b>Chiavetta</b> qui sotto), <b>Codici a barre</b> (lettore 1D, un codice per valore) o <b>QR a blocchi</b> (lettore 2D, più coppie per codice).</li>
         <li>Con i codici: in macchina posiziona il cursore sul campo <b>Angolo 1</b> della maschera.</li>
         <li>Con i codici: leggili nell'ordine. Con i QR usa <b>Successivo</b> dopo ogni blocco: il riquadro dice da quale coppia riparte.</li>
-        <li><b>Controlla tutti i valori sullo schermo della macchina prima di avviare la tastatura.</b></li>
+        <li><b>Controlla tutti i valori sullo schermo della macchina prima di avviare la tastatura.</b> <b>Confronta con la macchina</b>, sotto la tabella, mostra la lista a caratteri grandi: tocca ogni riga quando l'hai controllata.</li>
       </ol>
       <p>Se si salta un campo o un valore è sbagliato: fermati, correggi a mano in macchina, poi riparti dal codice giusto (le etichette "Angolo n" / "Altezza n" dicono dove sei).</p>
     </details>
@@ -511,7 +557,24 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
         <li>Per leggere i codici dal telefono in macchina: <b>Leggi uno alla volta</b>. Un codice per schermata, con <b>Successivo</b> o scorrendo col dito. Se lo schermo si spegne, riparti da dove eri.</li>
         <li>Luminosità dello schermo al massimo, telefono fermo e dritto davanti al lettore.</li>
         <li>Alcuni lettori 1D <b>laser</b> non leggono da uno schermo; quelli a fotocamera ("imager") sì. Provalo prima con il vostro lettore.</li>
-        <li>I valori salvati restano su quel telefono: non passano dal PC al telefono.</li>
+        <li>I valori salvati restano su quel telefono: non passano da soli dal PC al telefono. Per passarli usa <b>Liste → Esporta</b> e <b>Importa</b>.</li>
+      </ul>
+    </details>
+    <details>
+      <summary>Liste salvate</summary>
+      <ul>
+        <li><b>Liste</b>, accanto a "Svuota tutto", salva la tabella con un nome (per esempio il codice del pezzo) e la riapre quando serve. Con le coppie si salvano anche il modo di scrivere i valori e i decimali.</li>
+        <li><b>Salva</b> aggiorna la lista aperta; <b>Salva come…</b> chiede un nome nuovo. Sopra la tabella vedi quale lista è aperta e se hai modifiche non salvate.</li>
+        <li><b>Esporta</b> scarica tutte le liste in un file; <b>Importa</b> le aggiunge su un altro dispositivo, senza cancellare niente. Le liste stanno nella memoria del browser: esportale ogni tanto, come copia di sicurezza.</li>
+      </ul>
+    </details>
+    <details>
+      <summary>Senza rete</summary>
+      <ul>
+        <li>Aperto una volta con la rete, il sito resta salvato nel browser e poi si apre anche senza: tabella, liste, codici, chiavetta e prova del lettore. Lo dice la riga "La pagina funziona anche senza rete." sopra la tabella.</li>
+        <li>Con la rete si apre sempre la versione più recente.</li>
+        <li>La dettatura funziona senza rete solo se il riconoscimento vocale è già stato scaricato una volta.</li>
+        <li>Sul PC si può anche scaricare il file <code>compilatore-misure.html</code> e aprirlo con il browser (senza dettatura).</li>
       </ul>
     </details>
     <details>
@@ -539,7 +602,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     <details>
       <summary>Note</summary>
       <ul>
-        <li>I valori e le impostazioni si salvano da soli in questo browser, su questo dispositivo. "Svuota tutto" cancella i valori, non le impostazioni.</li>
+        <li>I valori e le impostazioni si salvano da soli in questo browser, su questo dispositivo. "Svuota tutto" cancella i valori, non le impostazioni né le liste salvate.</li>
         <li>I valori negativi sono permessi ma segnalati: non è ancora verificato se la maschera accetta il segno meno.</li>
         <li>I codici restano neri su bianco anche con il tema scuro: i lettori non leggono codici invertiti.</li>
       </ul>
@@ -570,6 +633,30 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     <button type="button" id="lettura-prec">◀ Precedente</button>
     <button type="button" class="primario" id="lettura-succ">Successivo ▶</button>
   </div>
+</div>
+
+<div class="lettura verifica" id="verifica" role="dialog" aria-modal="true" aria-label="Confronta con la macchina" hidden>
+  <div class="testa">
+    <span class="avanzamento" id="verifica-conto"></span>
+    <div class="pulsanti">
+      <button type="button" id="verifica-azzera">Azzera spunte</button>
+      <button type="button" id="verifica-chiudi">✕ Chiudi</button>
+    </div>
+  </div>
+  <p class="nota">Tocca una riga quando l'hai controllata sullo schermo della macchina.</p>
+  <div class="verifica-intestazione" aria-hidden="true"><span>N°</span><span>Angolo</span><span>Altezza</span><span></span></div>
+  <div class="verifica-lista"><ol class="elenco-verifica" id="verifica-elenco"></ol></div>
+</div>
+
+<div class="velo" id="nome-lista" hidden>
+  <form class="finestra" role="dialog" aria-modal="true" aria-labelledby="nome-lista-testo" id="nome-lista-form">
+    <p id="nome-lista-testo">Nome della lista</p>
+    <input type="text" id="nome-lista-campo" maxlength="60" autocomplete="off" enterkeyhint="done" aria-labelledby="nome-lista-testo">
+    <div class="pulsanti">
+      <button type="button" id="nome-lista-no">Annulla</button>
+      <button type="submit" class="primario">Salva</button>
+    </div>
+  </form>
 </div>
 
 <div class="velo" id="conferma" hidden>

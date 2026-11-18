@@ -1,7 +1,8 @@
 // Crea, a partire dai sorgenti in src/:
 //  - compilatore-misure.html   file unico completo, da aprire offline sul PC (senza dettatura)
-//  - sito/                      il sito per GitHub Pages: index.html (stessa pagina) e voce/ con le
-//                               librerie della dettatura, caricate solo al primo uso del microfono
+//  - sito/                      il sito per GitHub Pages: index.html (stessa pagina), voce/ con le
+//                               librerie della dettatura, caricate solo al primo uso del microfono,
+//                               e sw.js, il service worker per l'uso senza rete
 // Uso: npm run build
 'use strict';
 const fs = require('fs');
@@ -69,6 +70,21 @@ const moduli = path.join(radice, 'node_modules');
 scrivi(path.join(sito, 'voce', 'vosk.js'), fs.readFileSync(path.join(moduli, 'vosk-browser', 'dist', 'vosk.js')));
 scrivi(path.join(sito, 'voce', 'fflate.js'), fs.readFileSync(path.join(moduli, 'fflate', 'umd', 'index.js')));
 fs.writeFileSync(path.join(sito, '.nojekyll'), '');
+
+// Service worker (docs/2026-11-18-offline-liste-avvisi.md): elenco dei file da tenere per l'uso senza rete e
+// impronta del loro contenuto, così a ogni pubblicazione con file diversi il browser aggiorna la copia.
+// Il firmware non si salva: per aggiornarlo serve comunque un PC.
+// Le librerie della dettatura si salvano solo al primo uso del microfono (servono solo con il modello già scaricato).
+const FILE_SENZA_RETE = {
+  subito: ['./', 'index.html', 'manifest.webmanifest', 'icona-180.png', 'icona-192.png', 'icona-ritagliabile-192.png', 'icona-ritagliabile-512.png'],
+  alBisogno: ['voce/vosk.js', 'voce/fflate.js'],
+};
+const impronta = require('crypto').createHash('sha256');
+for (const f of FILE_SENZA_RETE.subito.slice(1).concat(FILE_SENZA_RETE.alBisogno)) impronta.update(fs.readFileSync(path.join(sito, f)));
+const sw = leggi('sw.js');
+impronta.update(sw);
+for (const s of ['__VERSIONE__', '__FILE__']) if (sw.split(s).length !== 2) throw new Error('Segnaposto ' + s + ' assente o ripetuto in sw.js');
+scrivi(path.join(sito, 'sw.js'), sw.replace('__VERSIONE__', impronta.digest('hex').slice(0, 16)).replace('__FILE__', JSON.stringify(FILE_SENZA_RETE)));
 
 // Firmware della chiavetta, se compilato (in GitHub Actions: CHIAVETTA_UF2)
 const uf2 = process.env.CHIAVETTA_UF2 || path.join(radice, 'chiavetta', 'build', 'chiavetta.uf2');
