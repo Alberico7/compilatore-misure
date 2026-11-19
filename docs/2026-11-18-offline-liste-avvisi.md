@@ -122,7 +122,8 @@ Dopo la scrittura bisogna confrontare i valori sullo schermo della macchina con 
 **Come:** sotto il riepilogo della sezione 1, quando i valori sono corretti, un pulsante **"Confronta con la macchina"** apre una vista a tutto schermo, come "uno alla volta":
 
 - una riga per coppia: **N°, Angolo, Altezza**, a caratteri grandi, scritti **come in macchina** ("20.00");
-- **toccando una riga** la si spunta come controllata (✓ e sfondo verde); toccandola di nuovo si toglie la spunta;
+- in fondo a ogni riga una **casella vuota**, così si capisce che si può spuntare (aggiunta il 2026-11-19, richiesta dell'utente);
+- **toccando una riga** la si spunta come controllata (✓ nella casella e sfondo verde); toccandola di nuovo si toglie la spunta;
 - in alto **"12 di 40 controllate"**, **Azzera spunte** e **Chiudi**;
 - le righe con un avviso (negativo, oltre 360, altezza sospetta, coppia uguale) sono segnate anche qui;
 - lo **schermo resta acceso** finché la vista è aperta, come in "uno alla volta".

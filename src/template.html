@@ -280,14 +280,16 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
 /* confronta con la macchina */
 .verifica .testa .pulsanti { flex-wrap: nowrap; }
 .verifica .nota { margin: 8px 0 4px; }
-.verifica-intestazione, .riga-verifica { display: grid; grid-template-columns: 2.4em 1fr 1fr 1.4em; gap: 8px; align-items: center; }
+.verifica-intestazione, .riga-verifica { display: grid; grid-template-columns: 2.4em 1fr 1fr 1.5em; gap: 8px; align-items: center; }
 .verifica-intestazione { color: var(--tenue); font-weight: 600; font-size: 15px; padding: 4px 13px; }
 .verifica-lista { flex: 1; overflow-y: auto; min-height: 0; }
 .elenco-verifica { list-style: none; margin: 0; padding: 0; }
 .riga-verifica { width: 100%; text-align: left; font-size: clamp(19px, 5.6vw, 30px); font-variant-numeric: tabular-nums; padding: 8px 12px; margin-bottom: 6px; min-height: 58px; }
 .riga-verifica .n { font-size: 16px; color: var(--tenue); }
 .riga-verifica .val { overflow-wrap: anywhere; }
-.riga-verifica .spunta { color: var(--ok); text-align: center; }
+/* casella da spuntare: vuota finché la riga non è controllata */
+.riga-verifica .spunta { box-sizing: border-box; width: 1.25em; height: 1.25em; border: 3px solid var(--tenue); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: .9em; font-weight: 700; line-height: 1; color: var(--su-accento); }
+.riga-verifica[aria-pressed=true] .spunta { background: var(--ok); border-color: var(--ok); }
 .riga-verifica[aria-pressed=true] { background: var(--ok-chiaro); border-color: var(--ok); }
 .riga-verifica.avviso { border-color: var(--bordo-avviso); }
 .riga-verifica .nota-avviso { grid-column: 2 / -1; font-size: 14px; font-weight: 600; color: var(--avviso); }
@@ -645,7 +647,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
       <button type="button" id="verifica-chiudi">✕ Chiudi</button>
     </div>
   </div>
-  <p class="nota">Tocca una riga quando l'hai controllata sullo schermo della macchina.</p>
+  <p class="nota">Tocca una riga quando l'hai controllata sullo schermo della macchina: la casella a destra si spunta.</p>
   <div class="verifica-intestazione" aria-hidden="true"><span>N°</span><span>Angolo</span><span>Altezza</span><span></span></div>
   <div class="verifica-lista"><ol class="elenco-verifica" id="verifica-elenco"></ol></div>
 </div>
