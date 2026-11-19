@@ -14,7 +14,7 @@ Strumento d'officina: le coppie **Angolo / Altezza** da inserire nella maschera 
 - **Confronta con la macchina**: la lista a caratteri grandi, da spuntare riga per riga mentre si controllano i valori sullo schermo della macchina.
 - Uscita: un **Code 128 per valore** (lettore 1D), anche "uno alla volta" a tutto schermo per leggerli dal telefono, oppure **QR a blocchi** di N coppie separate da INVIO (lettore 2D).
 - **Prova del lettore**: confronta quello che il lettore digita con i valori attesi (layout di tastiera, INVIO doppi, valori attaccati).
-- **Dettatura** con Vosk, solo dal sito: "duecentoquattordici virgola nove quattro" → `214,94`. Un valore tenendo premuto 🎤, oppure più valori di seguito con un tocco. Il riconoscimento avviene nel dispositivo: l'audio non esce. La prima volta scarica il modello italiano (circa 50 MB).
+- **Dettatura** con Vosk, solo dal sito: "duecentoquattordici virgola nove quattro" → `214,94`. Un valore tenendo premuto 🎤, oppure più valori di seguito con un tocco. Il riconoscimento avviene nel dispositivo: l'audio non esce. La prima volta scarica il modello italiano (circa 50 MB); dopo, si prepara da sola all'apertura della pagina, così il 🎤 parte subito.
 - **Chiavetta-tastiera** (Raspberry Pi Pico 2 W) per quando lettore e codici non bastano. Si carica dal sito via Bluetooth o con il cavo; in macchina è una tastiera USB e scrive i valori quando premi il suo pulsante. Vedi [chiavetta/LEGGIMI.md](chiavetta/LEGGIMI.md).
 - Tema scuro (predefinito) e chiaro, usabile da smartphone, salvataggio automatico nel browser.
 

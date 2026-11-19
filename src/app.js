@@ -17,7 +17,7 @@
     return {
       modo: 'separatore', decAng: 2, decAlt: 2, righe: righe,
       coppieBlocco: 10, invioFinale: false, scheda: schedaPredefinita(), blocco: 0, confronto: 'tutti',
-      tema: 'scuro', lettura: 0, voceModo: 'premi', voceSeparatore: 'pausa',
+      tema: 'scuro', lettura: 0, voceModo: 'premi', voceSeparatore: 'pausa', vocePrepara: true,
       chRitCar: 30, chRitInv: 200, chCoppie: 0, chMezzo: 'bluetooth',
       listaNome: '',     // lista salvata aperta nella tabella ('' = nessuna)
       impAperte: true,   // riquadro delle impostazioni aperto al primo uso
@@ -749,6 +749,9 @@
   var motore = null, statoVoce = 'spento'; // spento | caricamento | pronto | ascolto
   var ascoltoContinuo = false, tastoPremuto = false, bufferAvanti = '', appenaScritto = false;
   var ultimaDettata = null, ultimiValori = [], timerSilenzio = null, avvisoLentezza = false;
+  var preparazione = null;   // preparazione del motore in corso (Promise<boolean>)
+  var attesaTocco = false;   // un tocco del 🎤 aspetta la fine della preparazione
+  var MSG_PREPARA = 'Preparazione della dettatura…';
   var SEPARATORI = ['avanti', 'poi', 'prossimo'];
 
   function mostraStatoVoce(html) { $('voce-stato').innerHTML = html; }
@@ -874,29 +877,54 @@
     mostraStatoVoce('<span class="provvisorio">' + esc((bufferAvanti ? bufferAvanti + ' ' : '') + testo) + '…</span>');
   }
 
-  /* Prepara il motore; la prima volta chiede di scaricare il modello. Restituisce true se è pronto. */
-  function preparaVoce() {
+  /* Prepara il motore; la prima volta chiede di scaricare il modello. Restituisce true se è pronto.
+     silenzioso: preparazione all'apertura (docs/2026-11-19-dettatura-pronta.md): solo con il modello già
+     nel dispositivo, senza domande né errori a schermo. Un tocco durante la preparazione aspetta la stessa;
+     se quella silenziosa non riesce, il tocco riprova mostrando l'errore. */
+  function preparaVoce(silenzioso) {
     if (statoVoce === 'pronto' || statoVoce === 'ascolto') return Promise.resolve(true);
-    if (statoVoce === 'caricamento') return Promise.resolve(false);
-    return Voce.modelloScaricato().then(function (gia) {
-      return gia ? true : chiedi('Scaricare il riconoscimento vocale?\nCirca 50 MB, una volta sola: poi resta in questo dispositivo.', 'Scarica');
+    if (preparazione) {
+      var eraSilenziosa = preparazione.silenziosa;
+      return preparazione.then(function (ok) { return ok || silenzioso || !eraSilenziosa ? ok : preparaVoce(false); });
+    }
+    var mio = function () { return !$('voce-stato').textContent || $('voce-stato').textContent === MSG_PREPARA; };
+    var p = Voce.modelloScaricato().then(function (gia) {
+      if (gia) return true;
+      return silenzioso ? false : chiedi('Scaricare il riconoscimento vocale?\nCirca 50 MB, una volta sola: poi resta in questo dispositivo.', 'Scarica');
     }).then(function (si) {
       if (!si) return false;
       motore = motore || Voce.creaMotore();
       statoVoce = 'caricamento'; aggiornaPulsanteVoce();
+      if (silenzioso && mio()) mostraStatoVoce('<span class="info">' + MSG_PREPARA + '</span>');
       return motore.prepara(function (testo, frazione) {
+        if (silenzioso) return;
         mostraStatoVoce('<span class="info">' + esc(testo) + '</span>' +
           (frazione !== undefined ? '<progress max="1" value="' + frazione + '"></progress>' : ''));
       }).then(function () {
         statoVoce = 'pronto'; aggiornaPulsanteVoce();
-        mostraStatoVoce('<span class="info">Riconoscimento pronto.</span>');
+        if (!silenzioso) mostraStatoVoce('<span class="info">Riconoscimento pronto.</span>');
+        else if (mio()) mostraStatoVoce('<span class="info">Dettatura pronta.</span>');
         return true;
       }, function (e) {
         statoVoce = 'spento'; aggiornaPulsanteVoce();
-        mostraStatoVoce('<span class="non-capito">Riconoscimento non disponibile: ' + esc(e && e.message || e) + '</span>');
+        if (!silenzioso) mostraStatoVoce('<span class="non-capito">Riconoscimento non disponibile: ' + esc(e && e.message || e) + '</span>');
+        else if (mio()) mostraStatoVoce('');
         return false;
       });
-    });
+    }).catch(function () { return false; });
+    p.silenziosa = !!silenzioso;
+    preparazione = p;
+    p.then(function () { preparazione = null; }); // prima delle attese dei tocchi: chi riprova non la ritrova
+    return p;
+  }
+
+  /* All'apertura della pagina, se il modello è già nel dispositivo e la pagina è in primo piano. */
+  var preparazioneRimandata = false;
+  function preparaInAnticipo() {
+    if (!stato.vocePrepara || statoVoce !== 'spento' || preparazione) return;
+    if (document.visibilityState === 'hidden') { preparazioneRimandata = true; return; }
+    preparazioneRimandata = false;
+    preparaVoce(true);
   }
 
   function erroreMicrofono(e) {
@@ -911,7 +939,10 @@
     if (tastoPremuto) return;
     tastoPremuto = true;
     nascondiTastiera();
+    if (attesaTocco) return; // la preparazione in corso vedrà il tasto premuto
+    attesaTocco = true;
     preparaVoce().then(function (pronto) {
+      attesaTocco = false;
       if (!pronto) { tastoPremuto = false; return; }
       if (!tastoPremuto) { mostraStatoVoce('<span class="info">Pronto: tieni premuto 🎤 e parla.</span>'); return; }
       return motore.avvia({ onParziale: parziale, onRisultato: function () {} }).then(function () {
@@ -940,8 +971,11 @@
   /* Modo "più valori". */
   function avviaContinuo() {
     nascondiTastiera();
+    if (attesaTocco) return;
+    attesaTocco = true;
     preparaVoce().then(function (pronto) {
-      if (!pronto) return;
+      attesaTocco = false;
+      if (!pronto || ascoltoContinuo || stato.voceModo !== 'continuo') return;
       bufferAvanti = ''; appenaScritto = false;
       var p = cellaDestinazione();
       return motore.avvia({ onParziale: parziale, onRisultato: risultatoContinuo }).then(function () {
@@ -970,7 +1004,7 @@
   function premiVoce() {
     if (stato.voceModo === 'continuo') {
       if (ascoltoContinuo) fermaContinuo('Dettatura finita.');
-      else if (statoVoce !== 'caricamento') avviaContinuo();
+      else avviaContinuo();
     } else iniziaPremi();
   }
 
@@ -1003,6 +1037,7 @@
       stato.voceModo = this.value; aggiornaPulsanteVoce(); salva();
     });
     $('voce-separatore').addEventListener('change', function () { stato.voceSeparatore = this.value; salva(); });
+    $('voce-prepara').addEventListener('change', function () { stato.vocePrepara = this.checked; salva(); preparaInAnticipo(); });
     /* barra spaziatrice tenuta premuta nella tabella (modo "tieni premuto", sul PC) */
     $('corpo-tabella').addEventListener('keydown', function (e) {
       if (e.key === ' ' && stato.voceModo === 'premi') { e.preventDefault(); if (!e.repeat) iniziaPremi(); }
@@ -1015,14 +1050,18 @@
       if (tastieraNascosta && !ascoltoContinuo) { tastieraNascosta = false; aggiornaModoInput(); }
     });
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState !== 'hidden') return;
+      if (document.visibilityState !== 'hidden') { if (preparazioneRimandata) preparaInAnticipo(); return; }
       if (ascoltoContinuo) fermaContinuo('Fermata: la pagina è andata in secondo piano.');
       else if (tastoPremuto) finisciPremi();
       else if (motore) motore.chiudiMicrofono();
     });
     $('voce-modo').value = stato.voceModo;
     $('voce-separatore').value = stato.voceSeparatore;
+    $('voce-prepara').checked = stato.vocePrepara;
     aggiornaPulsanteVoce();
+    /* un paio di secondi dopo l'apertura, così prima si disegna la pagina */
+    var dopoApertura = function () { setTimeout(preparaInAnticipo, 2000); };
+    if (document.readyState === 'complete') dopoApertura(); else window.addEventListener('load', dopoApertura);
   }
 
   /* ---------- eventi ---------- */

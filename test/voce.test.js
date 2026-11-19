@@ -16,12 +16,18 @@ test.after(async () => { await browser.close(); await server.chiudi(); });
 /* Motore simulato: stessa interfaccia del motore Vosk (prepara, avvia, ferma, chiudiMicrofono).
    Il test detta con window.__voce.dici(testo) (frase chiusa da una pausa) e window.__voce.finale = testo
    (quello che Vosk restituisce quando si lascia il pulsante). */
-function simulatore(modelloGiaScaricato) {
+function simulatore([modelloGiaScaricato, opzioni]) {
   window.__modelloSimulatoScaricato = modelloGiaScaricato;
-  window.__voce = { preparato: 0, avviato: 0, attivo: false, finale: '' };
+  // tentativi: chiamate a prepara; ritardo: ms di preparazione; fallisci: la prossima preparazione non riesce
+  window.__voce = Object.assign({ preparato: 0, tentativi: 0, ritardo: 0, fallisci: false, avviato: 0, attivo: false, finale: '' }, opzioni);
   window.__motoreVoceSimulato = () => {
     const m = {
-      prepara: async (avanzamento) => { avanzamento('Scaricamento: 25,0 di 49,7 MB', 0.5); window.__voce.preparato++; },
+      prepara: async (avanzamento) => {
+        window.__voce.tentativi++;
+        if (window.__voce.ritardo) await new Promise((ok) => setTimeout(ok, window.__voce.ritardo));
+        if (window.__voce.fallisci) { window.__voce.fallisci = false; throw new Error('memoria insufficiente'); }
+        avanzamento('Scaricamento: 25,0 di 49,7 MB', 0.5); window.__voce.preparato++;
+      },
       avvia: async (g) => { m.g = g; window.__voce.avviato++; window.__voce.attivo = true; },
       ferma: async () => {
         window.__voce.attivo = false;
@@ -36,11 +42,12 @@ function simulatore(modelloGiaScaricato) {
   };
 }
 
-async function nuovaPagina({ telefono = false, giaScaricato = true, simulato = true } = {}) {
+async function nuovaPagina({ telefono = false, giaScaricato = true, simulato = true, voce = {}, prima = null } = {}) {
   const ctx = await browser.newContext(telefono
     ? { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, reducedMotion: 'reduce' }
     : { viewport: { width: 1200, height: 900 }, reducedMotion: 'reduce' });
-  if (simulato) await ctx.addInitScript(simulatore, giaScaricato);
+  if (simulato) await ctx.addInitScript(simulatore, [giaScaricato, voce]);
+  if (prima) await ctx.addInitScript(prima);
   const page = await ctx.newPage();
   page.erroriJs = [];
   page.on('pageerror', (e) => page.erroriJs.push(e.message));
@@ -231,4 +238,122 @@ test('screenshot della dettatura sul PC', async () => {
   await page.evaluate(() => { window.__voce.dici('duecentoquattordici virgola nove quattro'); window.__voce.dici('ventisei virgola nove quattro'); window.__voce.parziale('trecentotredici virgola'); });
   await page.locator('#sez-dati').screenshot({ path: path.join(__dirname, 'screenshot', 'pc-scuro-7-dettatura.png') });
   await page.context().close();
+});
+
+/* docs/2026-11-19-dettatura-pronta.md: con il modello già nel dispositivo, la dettatura si prepara all'apertura */
+const preparando = (page) => page.waitForFunction(() => document.getElementById('btn-voce').classList.contains('caricamento'));
+
+test('dettatura pronta all\'apertura: senza toccare 🎤 e senza aprire il microfono', async () => {
+  const page = await nuovaPagina();
+  await page.waitForFunction(() => window.__voce.preparato === 1);
+  await page.waitForFunction(() => /Dettatura pronta/.test(document.getElementById('voce-stato').textContent));
+  assert.equal(await page.evaluate(() => window.__voce.avviato), 0, 'il microfono non si apre');
+  assert.equal(await page.locator('#conferma').isVisible(), false);
+  await page.click('#cella-0-0');
+  await tieniPremutoEDici(page, 'venti virgola cinque');
+  assert.equal(await valore(page, 0, 0), '20,5');
+  assert.equal(await page.evaluate(() => window.__voce.tentativi), 1, 'non si prepara una seconda volta');
+  assert.deepEqual(page.erroriJs, []);
+  await page.context().close();
+});
+
+test('dettatura pronta all\'apertura: niente senza modello, con l\'impostazione spenta o con la pagina nascosta', async () => {
+  // senza modello: nessuna preparazione e nessuna domanda
+  let page = await nuovaPagina({ giaScaricato: false });
+  await page.waitForTimeout(3000);
+  assert.equal(await page.evaluate(() => window.__voce.tentativi), 0);
+  assert.equal(await page.locator('#conferma').isVisible(), false);
+  assert.equal(await statoVoce(page), '');
+  await page.context().close();
+
+  // impostazione spenta: si salva e vale alla riapertura
+  page = await nuovaPagina();
+  assert.equal(await page.locator('#voce-prepara').isChecked(), true, 'attiva in partenza');
+  await page.locator('#voce-prepara').uncheck();
+  await page.reload();
+  await page.waitForTimeout(3000);
+  assert.equal(await page.locator('#voce-prepara').isChecked(), false);
+  assert.equal(await page.evaluate(() => window.__voce.tentativi), 0);
+  // riaccesa: si prepara subito
+  await page.locator('#voce-prepara').check();
+  await page.waitForFunction(() => window.__voce.preparato === 1);
+  await page.context().close();
+
+  // pagina aperta in secondo piano: aspetta che torni visibile
+  page = await nuovaPagina({ prima: () => {
+    window.__visibile = 'hidden';
+    Object.defineProperty(Document.prototype, 'visibilityState', { configurable: true, get: () => window.__visibile });
+  } });
+  await page.waitForTimeout(3000);
+  assert.equal(await page.evaluate(() => window.__voce.tentativi), 0);
+  await page.evaluate(() => { window.__visibile = 'visible'; document.dispatchEvent(new Event('visibilitychange')); });
+  await page.waitForFunction(() => window.__voce.preparato === 1);
+  assert.equal(await page.evaluate(() => window.__voce.avviato), 0);
+  await page.context().close();
+});
+
+test('tocco durante la preparazione: "tieni premuto" parte alla fine, una volta sola', async () => {
+  const page = await nuovaPagina({ voce: { ritardo: 1500 } });
+  await page.click('#cella-0-0');
+  await preparando(page);
+  // tenuto premuto: l'ascolto parte quando è pronto
+  await tieniPremutoEDici(page, 'trenta virgola due');
+  assert.equal(await valore(page, 0, 0), '30,2');
+  assert.equal(await page.evaluate(() => window.__voce.avviato), 1);
+  assert.equal(await page.evaluate(() => window.__voce.tentativi), 1);
+  await page.context().close();
+
+  // lasciato prima che sia pronto (anche due tocchi): niente ascolto, solo "Pronto"
+  const p2 = await nuovaPagina({ voce: { ritardo: 1500 } });
+  await preparando(p2);
+  const b = await p2.locator('#btn-voce').boundingBox();
+  await p2.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+  await p2.mouse.down(); await p2.mouse.up();
+  await p2.mouse.down(); await p2.mouse.up();
+  await p2.waitForFunction(() => window.__voce.preparato === 1);
+  await p2.waitForFunction(() => /Pronto: tieni premuto/.test(document.getElementById('voce-stato').textContent));
+  assert.equal(await p2.evaluate(() => window.__voce.avviato), 0);
+  assert.deepEqual(p2.erroriJs, []);
+  await p2.context().close();
+});
+
+test('tocco durante la preparazione: "più valori" parte alla fine, una volta sola', async () => {
+  const page = await nuovaPagina({ voce: { ritardo: 1500 } });
+  await page.selectOption('#voce-modo', 'continuo');
+  await page.reload();
+  await preparando(page);
+  await page.click('#btn-voce');
+  await page.click('#btn-voce'); // il secondo tocco durante l'attesa non apre un altro ascolto
+  await page.waitForFunction(() => window.__voce.attivo);
+  await page.waitForTimeout(300);
+  assert.equal(await page.evaluate(() => window.__voce.avviato), 1);
+  await page.evaluate(() => window.__voce.dici('dodici'));
+  assert.equal(await valore(page, 0, 0), '12');
+  await page.click('#btn-voce');
+  await page.waitForFunction(() => !window.__voce.attivo);
+  assert.deepEqual(page.erroriJs, []);
+  await page.context().close();
+});
+
+test('preparazione all\'apertura non riuscita: nessun errore a schermo, il tocco riprova', async () => {
+  const page = await nuovaPagina({ voce: { fallisci: true } });
+  await page.waitForFunction(() => window.__voce.tentativi === 1);
+  await page.waitForFunction(() => !document.getElementById('btn-voce').classList.contains('caricamento'));
+  assert.equal(await statoVoce(page), '');
+  await page.click('#cella-0-0');
+  await tieniPremutoEDici(page, 'sette');
+  assert.equal(await valore(page, 0, 0), '7');
+  assert.equal(await page.evaluate(() => window.__voce.tentativi), 2);
+
+  // tocco durante una preparazione all'apertura che poi fallisce: riprova subito
+  const p2 = await nuovaPagina({ voce: { fallisci: true, ritardo: 1500 } });
+  await p2.click('#cella-0-0');
+  await preparando(p2);
+  await tieniPremutoEDici(p2, 'otto');
+  assert.equal(await valore(p2, 0, 0), '8');
+  assert.equal(await p2.evaluate(() => window.__voce.tentativi), 2);
+  assert.deepEqual(page.erroriJs, []);
+  assert.deepEqual(p2.erroriJs, []);
+  await page.context().close();
+  await p2.context().close();
 });
