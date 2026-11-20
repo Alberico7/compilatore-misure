@@ -55,7 +55,7 @@
   function salva() {
     try { localStorage.setItem(CHIAVE, JSON.stringify(stato)); salvataggioOk = true; }
     catch (e) { salvataggioOk = false; }
-    $('stato-salvataggio').textContent = salvataggioOk ? 'I valori si salvano da soli su questo dispositivo.' : 'Attenzione: salvataggio automatico non disponibile in questo browser.';
+    $('stato-salvataggio').textContent = salvataggioOk ? 'Salvataggio automatico.' : 'Attenzione: salvataggio automatico non disponibile in questo browser.';
   }
 
   /* ---------- utilità ---------- */
@@ -205,7 +205,6 @@
           var note = segni[i + ',' + c];
           if (note) { inp.classList.add('avviso'); ant.classList.add('avviso'); }
           ant.innerHTML = 'In macchina: <b>' + esc(r.display) + '</b>' +
-            (r.cifre !== stato.righe[i][c].trim() ? ' · cifre: ' + esc(r.cifre) : '') +
             (note ? ' · ' + esc(note.join(' · ')) : '');
         }
       }
@@ -662,7 +661,7 @@
     function registra() { navigator.serviceWorker.register('sw.js').catch(function () {}); }
     if (document.readyState === 'complete') registra(); else window.addEventListener('load', registra);
     navigator.serviceWorker.ready.then(function () {
-      $('stato-offline').textContent = 'La pagina funziona anche senza rete.';
+      $('stato-offline').textContent = 'Funziona anche senza rete.';
     }).catch(function () {});
   }
 
@@ -680,6 +679,7 @@
       return '<option value="' + o[0] + '"' + (o[0] === stato.confronto ? ' selected' : '') + '>' + esc(o[1]) + '</option>';
     }).join('');
     sel.disabled = !analisi.valido;
+    $('prova-scelte').hidden = !analisi.valido; // senza valori corretti la tendina sarebbe vuota
     valutaProva();
   }
 
@@ -1135,10 +1135,6 @@
     $('dec-ang').addEventListener('change', function () { stato.decAng = intero(this.value, 0, 6, 2); this.value = stato.decAng; aggiorna(); });
     $('dec-alt').addEventListener('change', function () { stato.decAlt = intero(this.value, 0, 6, 2); this.value = stato.decAlt; aggiorna(); });
     $('num-righe').addEventListener('change', function () { impostaRighe(this.value, true); });
-    $('btn-aggiungi').addEventListener('click', function () {
-      impostaRighe(stato.righe.length + 1, false).then(function () { vai(stato.righe.length - 1, 0); });
-    });
-    $('btn-togli').addEventListener('click', function () { impostaRighe(stato.righe.length - 1, true); });
     $('btn-svuota').addEventListener('click', function () {
       chiedi('Cancellare tutti i valori della tabella?\nLe impostazioni restano.', 'Svuota').then(function (si) {
         if (!si) return;
@@ -1162,7 +1158,7 @@
     document.querySelectorAll('.schede button').forEach(function (b) {
       b.addEventListener('click', function () { stato.scheda = b.dataset.scheda; mostraScheda(); salva(); });
     });
-    /* "Lettore 1D → Codici a barre · ...": apre la scheda (il link porta già alla sezione) */
+    /* link che aprono una scheda (il link porta già alla sezione) */
     document.querySelectorAll('[data-apri-scheda]').forEach(function (a) {
       a.addEventListener('click', function () { stato.scheda = a.dataset.apriScheda; mostraScheda(); salva(); });
     });

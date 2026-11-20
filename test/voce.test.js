@@ -103,7 +103,7 @@ test('primo uso: conferma dello scaricamento, poi "tieni premuto" scrive e passa
   await tieniPremutoEDici(page, 'buongiorno');
   assert.match(await statoVoce(page), /Non ho capito: «buongiorno»/);
   assert.equal(await attivo(page), 'Angolo 2', 'parole non capite: la casella non cambia');
-  assert.equal(await page.locator('#ant-0-0').innerText(), 'In macchina: 214.94 · cifre: 21494');
+  assert.equal(await page.locator('#ant-0-0').innerText(), 'In macchina: 214.94');
   assert.deepEqual(page.erroriJs, []);
   await page.context().close();
 });

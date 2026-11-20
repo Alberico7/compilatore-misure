@@ -396,7 +396,7 @@ test('smartphone: tastierino e barra Indietro / ± / Avanti come INVIO', async (
   assert.equal(await attivo(), 'Altezza 1');
   await page.tap('#mob-indietro');
   assert.equal(await attivo(), 'Angolo 1');
-  assert.equal(await page.locator('#ant-0-0').innerText(), 'In macchina: 20.50 · cifre: 2050');
+  assert.equal(await page.locator('#ant-0-0').innerText(), 'In macchina: 20.50');
   // nel modo "come in macchina" il tastierino è solo numerico
   await page.tap('#modo-macchina');
   assert.equal(await page.getAttribute('#cella-0-0', 'inputmode'), 'numeric');

@@ -299,7 +299,7 @@ test('senza rete: la pagina si apre dalla copia salvata, anche con la rete lenta
   fs.cpSync(SITO, cartella, { recursive: true, filter: (f) => !f.endsWith('.uf2') });
   const srv = await serverConInterruttore(cartella);
   const page = await apri(srv.url);
-  await page.waitForFunction(() => document.getElementById('stato-offline').textContent === 'La pagina funziona anche senza rete.', null, { timeout: 15000 });
+  await page.waitForFunction(() => document.getElementById('stato-offline').textContent === 'Funziona anche senza rete.', null, { timeout: 15000 });
   await page.evaluate(async () => { const c = await caches.open('compilatore-misure-voce'); await c.put('/finto-modello', new Response('x')); });
   const cacheSito = async () => (await page.evaluate(() => caches.keys())).filter((k) => k.startsWith('compilatore-sito-'));
   const prima = await cacheSito();

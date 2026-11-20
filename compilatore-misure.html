@@ -139,7 +139,8 @@ details.riquadro > :last-child { margin-bottom: 14px; }
 
 /* tabella */
 .contenitore-tabella { overflow-x: auto; }
-table.misure { border-collapse: collapse; width: 100%; max-width: 640px; }
+table.misure { border-collapse: collapse; width: 100%; max-width: 640px; table-layout: fixed; } /* Angolo e Altezza larghe uguali */
+table.misure th:first-child { width: 48px; }
 table.misure th { text-align: left; font-size: 15px; color: var(--tenue); padding: 6px 8px; border-bottom: 2px solid var(--bordo); }
 table.misure td { padding: 4px 8px; vertical-align: top; border-bottom: 1px solid var(--riga); }
 table.misure td.n { font-weight: 700; color: var(--tenue); padding-top: 13px; width: 48px; text-align: right; }
@@ -216,6 +217,11 @@ textarea#prova:focus { outline: none; border-color: var(--accento); }
 .guida ol, .guida ul { padding-left: 22px; }
 .guida li { margin: 4px 0; }
 details summary { cursor: pointer; font-weight: 700; font-size: 18px; min-height: 44px; display: flex; align-items: center; }
+/* freccia sulle voci apribili (i riquadri "Cambia" hanno la loro): senza, sembrano titoli normali */
+details:not(.riquadro) > summary { list-style: none; }
+details:not(.riquadro) > summary::-webkit-details-marker { display: none; }
+details:not(.riquadro) > summary::before { content: "▶"; flex: none; width: 26px; font-size: 14px; color: var(--accento); }
+details:not(.riquadro)[open] > summary::before { content: "▼"; }
 footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
 
 /* dettatura */
@@ -295,6 +301,11 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
 .riga-verifica .nota-avviso { grid-column: 2 / -1; font-size: 14px; font-weight: 600; color: var(--avviso); }
 
 .solo-stretto { display: none; }
+.solo-tocco { display: none; }
+@media (hover: none) and (pointer: coarse) {
+  #sez-prova, .solo-mouse { display: none !important; }
+  .solo-tocco { display: inline; }
+}
 @media (max-width: 640px) {
   body { font-size: 16px; }
   h1 { font-size: 24px; }
@@ -319,6 +330,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
   .radio { flex-direction: column; }
   table.misure td { padding: 4px 4px; }
   table.misure td.n { width: 30px; padding-left: 0; }
+  table.misure th:first-child { width: 30px; }
   .pulsanti > button { flex: 1 1 auto; }
   .navigazione .stato { order: -1; flex-basis: 100%; }
   .navigazione button { flex: 1; }
@@ -342,17 +354,15 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     </div>
     <button type="button" id="btn-tema" aria-pressed="false"></button>
     <div class="sicurezza" role="note">
-      <strong>Sicurezza:</strong> lo strumento compila solo i campi, non avvia cicli.
-      Prima di avviare la tastatura controlla sempre i valori sullo schermo della macchina:
-      un valore sbagliato può mandare il tastatore contro l'utensile.
+      <strong>Sicurezza:</strong> prima di avviare la tastatura controlla sempre i valori sullo schermo della macchina.
     </div>
   </header>
 
   <nav class="indice" aria-label="Sezioni">
     <a href="#sez-dati"><span class="solo-largo">1 · Valori</span><span class="solo-stretto">1 Valori</span></a>
     <a href="#sez-codici"><span class="solo-largo">2 · In macchina</span><span class="solo-stretto">2 Macchina</span></a>
-    <a href="#sez-prova"><span class="solo-largo">3 · Prova del lettore</span><span class="solo-stretto">3 Prova</span></a>
-    <a href="#sez-guida"><span class="solo-largo">4 · Guida</span><span class="solo-stretto">4 Guida</span></a>
+    <a href="#sez-prova" class="solo-mouse"><span class="solo-largo">3 · Prova del lettore</span><span class="solo-stretto">3 Prova</span></a>
+    <a href="#sez-guida"><span class="solo-mouse"><span class="solo-largo">4 · Guida</span><span class="solo-stretto">4 Guida</span></span><span class="solo-tocco"><span class="solo-largo">3 · Guida</span><span class="solo-stretto">3 Guida</span></span></a>
   </nav>
 
   <!-- 1. VALORI -->
@@ -371,10 +381,6 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
         <label class="campo"><span>Decimali angolo</span><input type="number" class="piccolo" id="dec-ang" min="0" max="6" step="1" inputmode="numeric"></label>
         <label class="campo"><span>Decimali altezza</span><input type="number" class="piccolo" id="dec-alt" min="0" max="6" step="1" inputmode="numeric"></label>
         <label class="campo"><span>Righe</span><input type="number" class="piccolo" id="num-righe" min="1" max="500" step="1" inputmode="numeric"></label>
-      </div>
-      <div class="pulsanti">
-        <button type="button" id="btn-aggiungi">+ Aggiungi riga</button>
-        <button type="button" id="btn-togli">− Elimina ultima riga</button>
       </div>
       <div class="impostazioni voce-impostazioni" id="voce-impostazioni" hidden>
         <label class="campo"><span>Dettatura</span>
@@ -418,7 +424,6 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     <p class="nota">
       <span class="solo-largo"><kbd>Invio</kbd> passa da Angolo ad Altezza e poi alla riga dopo, come in macchina. <kbd>↑</kbd> <kbd>↓</kbd> cambiano riga.
       Da Excel: seleziona le due colonne, copia, clicca su <b>Angolo 1</b> e incolla con <kbd>Ctrl</kbd>+<kbd>V</kbd>.</span>
-      <span class="solo-stretto">Tocca una casella: in basso compaiono <b>Indietro</b>, <b>±</b> (segno) e <b>Avanti</b> (come INVIO in macchina).</span>
       <span id="stato-salvataggio"></span> <span id="stato-offline"></span>
     </p>
     <p class="lista-attuale" id="lista-attuale" hidden></p>
@@ -434,9 +439,6 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
   <!-- 2. CODICI -->
   <section class="blocco" id="sez-codici">
     <h2><span class="num">2</span>In macchina: chiavetta o codici</h2>
-    <p class="nota metodi"><a href="#sez-codici" data-apri-scheda="chiavetta">Chiavetta</a> (consigliata) ·
-      Lettore 1D → <a href="#sez-codici" data-apri-scheda="barre">Codici a barre</a> ·
-      Lettore 2D → <a href="#sez-codici" data-apri-scheda="qr">QR</a></p>
     <div class="schede" role="tablist">
       <button type="button" role="tab" id="tab-chiavetta" data-scheda="chiavetta">Chiavetta</button>
       <button type="button" role="tab" id="tab-barre" data-scheda="barre">Codici a barre</button>
@@ -444,6 +446,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     </div>
 
     <div id="pannello-barre" role="tabpanel">
+      <p class="nota">Per il <b>lettore 1D</b>: un codice per ogni valore.</p>
       <div class="pulsanti" style="margin-bottom:10px">
         <button type="button" class="primario" id="btn-lettura">Leggi uno alla volta</button>
         <button type="button" id="btn-stampa" hidden>Stampa codici</button>
@@ -454,6 +457,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     </div>
 
     <div id="pannello-qr" role="tabpanel" hidden>
+      <p class="nota">Per il <b>lettore 2D</b>: più coppie in ogni codice.</p>
       <div class="barra-qr">
         <label class="campo"><span>Coppie per blocco</span>
           <select id="coppie-blocco">
@@ -467,7 +471,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     </div>
 
     <div id="pannello-chiavetta" role="tabpanel" hidden>
-      <p class="nota">La <b>chiavetta</b> scrive i valori in macchina come una tastiera, quando premi il suo pulsante.</p>
+      <p class="nota">La <b>chiavetta</b> (consigliata) scrive i valori in macchina come una tastiera, quando premi il suo pulsante.</p>
       <fieldset id="ch-mezzo">
         <legend>Collegamento</legend>
         <div class="radio">
@@ -513,7 +517,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     <h2><span class="num">3</span>Prova del lettore</h2>
     <p class="nota">Collega il lettore a <b>questo PC</b>, clicca nella casella e leggi i codici: lo strumento confronta quello che arriva con i valori attesi.
       La prova vale per la macchina solo se il layout di tastiera di questo PC è uguale a quello della macchina.</p>
-    <div class="impostazioni">
+    <div class="impostazioni" id="prova-scelte">
       <label class="campo"><span>Confronta con</span>
         <select id="confronto"></select>
       </label>
@@ -525,17 +529,17 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
 
   <!-- 4. GUIDA -->
   <section class="blocco guida" id="sez-guida">
-    <h2><span class="num">4</span>Guida</h2>
+    <h2><span class="num"><span class="solo-mouse">4</span><span class="solo-tocco">3</span></span>Guida</h2>
     <details open>
       <summary>Come si usa</summary>
       <ol>
         <li>Nel riquadro in alto (<b>Cambia</b>) scegli come scrivi i valori: <b>con separatore</b> (20.00 o 20,00) oppure <b>come in macchina</b> (2000, senza punto), e i decimali di angolo e altezza come in macchina. Si sceglie una volta: poi resta il riepilogo.</li>
-        <li>Scrivi i valori nella tabella oppure incolla due colonne da Excel: INVIO (o Avanti) sull'ultima casella aggiunge una riga. Sotto ogni casella vedi il valore come apparirà in macchina: controllalo.</li>
+        <li>Scrivi i valori nella tabella oppure incolla due colonne da Excel: INVIO (o Avanti) sull'ultima casella aggiunge una riga; per avere subito più righe, o per toglierne in fondo, cambia <b>Righe</b> nel riquadro <b>Cambia</b>. Sotto ogni casella vedi il valore come apparirà in macchina: controllalo.</li>
         <li>Correggi le caselle in rosso. I codici compaiono solo quando tutti i valori sono corretti. Le caselle in arancione sono <b>da controllare</b> (negativi, angoli oltre 360, altezze molto diverse dalle vicine, coppie ripetute): i codici si generano lo stesso.</li>
         <li>Scegli il metodo: <b>Chiavetta</b> (consigliata, vedi la guida <b>Chiavetta</b> qui sotto), <b>Codici a barre</b> (lettore 1D, un codice per valore) o <b>QR a blocchi</b> (lettore 2D, più coppie per codice).</li>
         <li>Con i codici: in macchina posiziona il cursore sul campo <b>Angolo 1</b> della maschera.</li>
         <li>Con i codici: leggili nell'ordine. Con i QR usa <b>Successivo</b> dopo ogni blocco: il riquadro dice da quale coppia riparte.</li>
-        <li><b>Controlla tutti i valori sullo schermo della macchina prima di avviare la tastatura.</b> <b>Confronta con la macchina</b>, sotto la tabella, mostra la lista a caratteri grandi: tocca ogni riga quando l'hai controllata.</li>
+        <li><b>Controlla tutti i valori sullo schermo della macchina prima di avviare la tastatura.</b> Lo strumento compila solo i campi, non avvia cicli: un valore sbagliato può mandare il tastatore contro l'utensile. <b>Confronta con la macchina</b>, sotto la tabella, mostra la lista a caratteri grandi: tocca ogni riga quando l'hai controllata.</li>
       </ol>
       <p>Se si salta un campo o un valore è sbagliato: fermati, correggi a mano in macchina, poi riparti dal codice giusto (le etichette "Angolo n" / "Altezza n" dicono dove sei).</p>
     </details>
@@ -4260,7 +4264,7 @@ var AppChiavetta = (function () {
   function salva() {
     try { localStorage.setItem(CHIAVE, JSON.stringify(stato)); salvataggioOk = true; }
     catch (e) { salvataggioOk = false; }
-    $('stato-salvataggio').textContent = salvataggioOk ? 'I valori si salvano da soli su questo dispositivo.' : 'Attenzione: salvataggio automatico non disponibile in questo browser.';
+    $('stato-salvataggio').textContent = salvataggioOk ? 'Salvataggio automatico.' : 'Attenzione: salvataggio automatico non disponibile in questo browser.';
   }
 
   /* ---------- utilità ---------- */
@@ -4410,7 +4414,6 @@ var AppChiavetta = (function () {
           var note = segni[i + ',' + c];
           if (note) { inp.classList.add('avviso'); ant.classList.add('avviso'); }
           ant.innerHTML = 'In macchina: <b>' + esc(r.display) + '</b>' +
-            (r.cifre !== stato.righe[i][c].trim() ? ' · cifre: ' + esc(r.cifre) : '') +
             (note ? ' · ' + esc(note.join(' · ')) : '');
         }
       }
@@ -4867,7 +4870,7 @@ var AppChiavetta = (function () {
     function registra() { navigator.serviceWorker.register('sw.js').catch(function () {}); }
     if (document.readyState === 'complete') registra(); else window.addEventListener('load', registra);
     navigator.serviceWorker.ready.then(function () {
-      $('stato-offline').textContent = 'La pagina funziona anche senza rete.';
+      $('stato-offline').textContent = 'Funziona anche senza rete.';
     }).catch(function () {});
   }
 
@@ -4885,6 +4888,7 @@ var AppChiavetta = (function () {
       return '<option value="' + o[0] + '"' + (o[0] === stato.confronto ? ' selected' : '') + '>' + esc(o[1]) + '</option>';
     }).join('');
     sel.disabled = !analisi.valido;
+    $('prova-scelte').hidden = !analisi.valido; // senza valori corretti la tendina sarebbe vuota
     valutaProva();
   }
 
@@ -5340,10 +5344,6 @@ var AppChiavetta = (function () {
     $('dec-ang').addEventListener('change', function () { stato.decAng = intero(this.value, 0, 6, 2); this.value = stato.decAng; aggiorna(); });
     $('dec-alt').addEventListener('change', function () { stato.decAlt = intero(this.value, 0, 6, 2); this.value = stato.decAlt; aggiorna(); });
     $('num-righe').addEventListener('change', function () { impostaRighe(this.value, true); });
-    $('btn-aggiungi').addEventListener('click', function () {
-      impostaRighe(stato.righe.length + 1, false).then(function () { vai(stato.righe.length - 1, 0); });
-    });
-    $('btn-togli').addEventListener('click', function () { impostaRighe(stato.righe.length - 1, true); });
     $('btn-svuota').addEventListener('click', function () {
       chiedi('Cancellare tutti i valori della tabella?\nLe impostazioni restano.', 'Svuota').then(function (si) {
         if (!si) return;
@@ -5367,7 +5367,7 @@ var AppChiavetta = (function () {
     document.querySelectorAll('.schede button').forEach(function (b) {
       b.addEventListener('click', function () { stato.scheda = b.dataset.scheda; mostraScheda(); salva(); });
     });
-    /* "Lettore 1D → Codici a barre · ...": apre la scheda (il link porta già alla sezione) */
+    /* link che aprono una scheda (il link porta già alla sezione) */
     document.querySelectorAll('[data-apri-scheda]').forEach(function (a) {
       a.addEventListener('click', function () { stato.scheda = a.dataset.apriScheda; mostraScheda(); salva(); });
     });

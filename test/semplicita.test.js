@@ -99,7 +99,7 @@ test('righe: INVIO e Avanti sull\'ultima Altezza aggiungono una riga; pagina mol
 test('indice e schede su una riga, senza scorrimento orizzontale della pagina', async () => {
   for (const l of [320, 360, 390, 1200]) {
     const page = await apri(l, { telefono: l < 1000, salvato: UTENTE_CHE_TORNA });
-    const righeIndice = await page.$$eval('nav.indice a', (as) => new Set(as.map((a) => Math.round(a.getBoundingClientRect().top))).size);
+    const righeIndice = await page.$$eval('nav.indice a', (as) => new Set(as.filter((a) => a.offsetParent).map((a) => Math.round(a.getBoundingClientRect().top))).size);
     assert.equal(righeIndice, 1, 'indice su una riga a ' + l + ' px');
     if (l >= 360) {
       const righeSchede = await page.$$eval('.schede button', (bs) => new Set(bs.map((b) => Math.round(b.getBoundingClientRect().top))).size);
@@ -107,19 +107,20 @@ test('indice e schede su una riga, senza scorrimento orizzontale della pagina', 
     }
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true, 'nessuno scorrimento orizzontale a ' + l);
     if (l < 1000) {
-      assert.deepEqual(await page.$$eval('nav.indice a', (as) => as.map((a) => a.innerText.trim())), ['1 Valori', '2 Macchina', '3 Prova', '4 Guida']);
+      assert.deepEqual(await page.$$eval('nav.indice a', (as) => as.filter((a) => a.offsetParent).map((a) => a.innerText.trim())), ['1 Valori', '2 Macchina', '3 Guida'], 'sul telefono niente Prova del lettore');
     }
     await page.context().close();
   }
 });
 
-test('"quale metodo": ogni nome apre la sua scheda; tema solo icona', async () => {
+test('schede della sezione 2: ognuna dice per cosa serve; tema solo icona', async () => {
   const page = await apri(1200, { telefono: false, salvato: UTENTE_CHE_TORNA });
-  assert.match(await page.locator('.metodi').innerText(), /Chiavetta \(consigliata\) · Lettore 1D → Codici a barre · Lettore 2D → QR/);
-  for (const [scheda, pannello] of [['chiavetta', 'pannello-chiavetta'], ['qr', 'pannello-qr'], ['barre', 'pannello-barre']]) {
-    await page.click(`.metodi a[data-apri-scheda="${scheda}"]`);
+  assert.equal(await page.locator('.metodi').count(), 0, 'niente riga che ripete le schede');
+  for (const [scheda, pannello, frase] of [['chiavetta', 'pannello-chiavetta', /La chiavetta \(consigliata\) scrive/], ['qr', 'pannello-qr', /^Per il lettore 2D: più coppie in ogni codice\./], ['barre', 'pannello-barre', /^Per il lettore 1D: un codice per ogni valore\./]]) {
+    await page.click('#tab-' + scheda);
     assert.equal(await page.locator('#' + pannello).isVisible(), true, scheda);
     assert.equal(await page.getAttribute('#tab-' + scheda, 'aria-selected'), 'true');
+    assert.match(await page.locator('#' + pannello + ' .nota').first().innerText(), frase);
   }
   assert.deepEqual(await page.$$eval('.schede button', (bs) => bs.map((b) => b.innerText.trim())), ['Chiavetta', 'Codici a barre', 'QR']);
   assert.equal(await page.locator('#btn-tema').innerText(), '☀');
@@ -223,4 +224,44 @@ test('manifest con icone ritagliabili; il pettirosso sta nella zona sicura', asy
   }, 'data:image/png;base64,' + fs.readFileSync(path.join(sito, 'icona-ritagliabile-512.png')).toString('base64'));
   assert.equal(fuori, 0, 'nessun pixel del disegno fuori dalla zona sicura');
   await page.close();
+});
+
+/* docs/2026-11-20-pagina-piu-semplice.md */
+test('pagina più semplice: frecce, caselle, sicurezza, prova del lettore', async () => {
+  // telefono, prima volta
+  let page = await apri(390);
+  assert.equal(await page.locator('#btn-aggiungi').count(), 0, 'niente "+ Aggiungi riga"');
+  assert.equal(await page.locator('#btn-togli').count(), 0, 'niente "− Elimina ultima riga"');
+  assert.equal(await page.locator('#sez-prova').isVisible(), false, 'sul telefono niente Prova del lettore');
+  assert.match(await page.locator('#sez-guida h2').innerText(), /^3\s*Guida$/);
+  assert.equal((await page.locator('.sicurezza').innerText()).trim(), 'Sicurezza: prima di avviare la tastatura controlla sempre i valori sullo schermo della macchina.');
+  assert.match(await page.locator('#sez-guida').innerText(), /non avvia cicli: un valore sbagliato può mandare il tastatore contro l'utensile/);
+  assert.doesNotMatch(await page.locator('#sez-dati .nota').first().innerText(), /Tocca una casella/);
+  assert.match(await page.locator('#stato-salvataggio').innerText(), /^Salvataggio automatico\.$/);
+  // freccia sulle voci apribili, che cambia quando si apre
+  const freccia = (sel) => page.evaluate((s) => getComputedStyle(document.querySelector(s), '::before').content, sel);
+  const voce = '#sez-guida details:nth-of-type(2) > summary';
+  assert.equal(await freccia(voce), '"▶"');
+  await page.click(voce);
+  assert.equal(await freccia(voce), '"▼"');
+  assert.equal(await freccia('#imp-valori > summary'), 'none', 'i riquadri "Cambia" hanno già la loro freccia');
+  // sotto la casella solo "In macchina"
+  await page.fill('#cella-0-1', '152,5');
+  assert.equal(await page.locator('#ant-0-1').innerText(), 'In macchina: 152.50');
+  assert.deepEqual(page.erroriJs, []);
+  await page.context().close();
+
+  // PC, anche con la finestra stretta: la Prova del lettore c'è; la tendina solo con i valori corretti
+  for (const l of [1200, 500]) {
+    page = await apri(l, { telefono: false });
+    assert.equal(await page.locator('#sez-prova').isVisible(), true, 'Prova del lettore sul PC a ' + l);
+    assert.match(await page.locator('#sez-guida h2').innerText(), /4\s*Guida/);
+    assert.equal(await page.locator('#confronto').isVisible(), false, 'senza valori niente tendina');
+    assert.match(await page.locator('#esito-prova').innerText(), /Prima completa e correggi/);
+    await page.fill('#cella-0-0', '20');
+    await page.fill('#cella-0-1', '15');
+    assert.equal(await page.locator('#confronto').isVisible(), true);
+    assert.deepEqual(page.erroriJs, []);
+    await page.context().close();
+  }
 });
