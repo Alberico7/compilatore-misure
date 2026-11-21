@@ -102,6 +102,14 @@ void telaio_azzera(telaio_t *t);
 bool telaio_aggiungi(telaio_t *t, const uint8_t *p, size_t n,
                      void (*cb)(const uint8_t *pacchetto, size_t n, void *ctx), void *ctx);
 
+// Nome della chiavetta: "Chiavetta misure 3F2A", con le ultime 4 cifre dell'ID del chip,
+// cosi' due chiavette si distinguono (docs/2026-11-21-nome-per-ogni-chiavetta.md).
+#define DATI_NOME_BASE "Chiavetta misure"
+#define DATI_NOME_MAX  29u   // ci sta nella risposta alla scansione Bluetooth (31 byte - 2)
+// id: l'ID del chip in esadecimale (pico_get_unique_board_id_string). Senza almeno 4 cifre
+// esadecimali il nome resta DATI_NOME_BASE. Restituisce la lunghezza (senza '\0').
+size_t dati_nome(char *out, size_t max, const char *id);
+
 // Risposte (terminate da '\0'; con il cavo il chiamante aggiunge '\n')
 size_t risposta_ok(char *out, size_t max, uint16_t n, uint32_t crc);
 size_t risposta_errore(char *out, size_t max, dati_errore_t e, uint32_t riga);

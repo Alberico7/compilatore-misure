@@ -76,6 +76,15 @@ test('sito: CRC-32, testo, pacchetti e risposte', () => {
   assert.match(Chiavetta.controlla(valori, Object.assign({}, IMP, { ritardoCarattere: 0 })), /tasti/);
 });
 
+test('sito: codice della chiavetta dal nome del dispositivo', () => {
+  assert.equal(Chiavetta.codiceDaNome('Chiavetta misure 3F2A'), '3F2A');
+  assert.equal(Chiavetta.codiceDaNome('Chiavetta misure 3F2A - caricamento'), '3F2A');
+  assert.equal(Chiavetta.codiceDaNome('Chiavetta misure'), null, 'firmware vecchio');
+  assert.equal(Chiavetta.codiceDaNome('Chiavetta misure - caricamento'), null);
+  assert.equal(Chiavetta.codiceDaNome(undefined), null);
+  assert.equal(Chiavetta.codiceDaNome('Altra tastiera 3F2A'), null);
+});
+
 test('sito e firmware usano le stesse costanti (UUID, USB, limiti, errori, stati)', () => {
   const fs = require('fs');
   const leggi = (f) => fs.readFileSync(path.join(CHIAVETTA, 'src', f), 'utf8');
@@ -97,6 +106,13 @@ test('sito e firmware usano le stesse costanti (UUID, USB, limiti, errori, stati
   const annuncio = /0x11, BLUETOOTH_DATA_TYPE_COMPLETE_LIST_OF_128_BIT_SERVICE_CLASS_UUIDS,[^\n]*\n[^\n]*\n\s*([^\n]*)/.exec(bleC)[1];
   const byteAnnuncio = annuncio.match(/0x[0-9a-f]{2}/g).map((x) => x.slice(2)).reverse().join('');
   assert.equal(byteAnnuncio, Chiavetta.SERVIZIO.replace(/-/g, ''));
+
+  // nome della chiavetta: stessa base; nel GATT lo dà il firmware (dinamico), uguale a quello annunciato
+  assert.equal(/#define DATI_NOME_BASE "([^"]+)"/.exec(datiH)[1], Chiavetta.NOME_BASE);
+  assert.match(gatt, /CHARACTERISTIC, GAP_DEVICE_NAME, READ \| DYNAMIC,/);
+  assert.ok(bleC.includes('H_NOME         ATT_CHARACTERISTIC_GAP_DEVICE_NAME_01_VALUE_HANDLE'));
+  const senzaCommenti = (c) => c.replace(/\/\/[^\n]*/g, '');
+  assert.ok(!/"Chiavetta misure/.test(senzaCommenti(usbC + bleC)), 'il nome si compone solo con dati_nome');
 
   // impostazioni: stessi nomi e limiti
   const impC = [...datiC.matchAll(/\{ "(\w+)",\s*(\d+), (\d+),/g)].map((m) => ({ nome: m[1], min: +m[2], max: +m[3] }));

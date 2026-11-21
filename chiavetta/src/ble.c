@@ -15,10 +15,12 @@
 #include "btstack.h"
 #include "chiavetta.h"   // generato da chiavetta.gatt
 #include "dati.h"
+#include "pico/unique_id.h"
 
 #define H_COMANDO      ATT_CHARACTERISTIC_0f600002_7d5c_4ab1_a5aa_df4e1c99d7c0_01_VALUE_HANDLE
 #define H_RISPOSTA     ATT_CHARACTERISTIC_0f600003_7d5c_4ab1_a5aa_df4e1c99d7c0_01_VALUE_HANDLE
 #define H_RISPOSTA_CCC ATT_CHARACTERISTIC_0f600003_7d5c_4ab1_a5aa_df4e1c99d7c0_01_CLIENT_CONFIGURATION_HANDLE
+#define H_NOME         ATT_CHARACTERISTIC_GAP_DEVICE_NAME_01_VALUE_HANDLE
 
 static const uint8_t dati_annuncio[] = {
     0x02, BLUETOOTH_DATA_TYPE_FLAGS, 0x06,
@@ -26,10 +28,11 @@ static const uint8_t dati_annuncio[] = {
     // 0f600001-7d5c-4ab1-a5aa-df4e1c99d7c0, al contrario (little endian)
     0xc0, 0xd7, 0x99, 0x1c, 0x4e, 0xdf, 0xaa, 0xa5, 0xb1, 0x4a, 0x5c, 0x7d, 0x01, 0x00, 0x60, 0x0f,
 };
-static const uint8_t dati_risposta_scansione[] = {
-    0x11, BLUETOOTH_DATA_TYPE_COMPLETE_LOCAL_NAME,
-    'C', 'h', 'i', 'a', 'v', 'e', 't', 't', 'a', ' ', 'm', 'i', 's', 'u', 'r', 'e',
-};
+// Risposta alla scansione: il nome "Chiavetta misure 3F2A", preparato all'avvio dall'ID del chip.
+// Lo stesso nome lo legge il telefono dal GATT (GAP_DEVICE_NAME, dinamico).
+static char nome[DATI_NOME_MAX + 1];
+static uint16_t lung_nome;
+static uint8_t dati_risposta_scansione[2 + DATI_NOME_MAX];
 
 static bool attivo;
 static ble_elabora_t elabora;
@@ -64,7 +67,7 @@ static void gestore_hci(uint8_t tipo, uint16_t canale, uint8_t *pacchetto, uint1
         bd_addr_t nullo = { 0 };
         gap_advertisements_set_params(160, 320, 0, 0, nullo, 0x07, 0x00);  // 100-200 ms
         gap_advertisements_set_data(sizeof(dati_annuncio), (uint8_t *)dati_annuncio);
-        gap_scan_response_set_data(sizeof(dati_risposta_scansione), (uint8_t *)dati_risposta_scansione);
+        gap_scan_response_set_data((uint8_t)(2 + lung_nome), dati_risposta_scansione);
         gap_advertisements_enable(1);
         break;
     }
@@ -136,6 +139,8 @@ static uint16_t leggi_att(hci_con_handle_t h, uint16_t att, uint16_t offset, uin
     (void)h;
     if (att == H_RISPOSTA)
         return att_read_callback_handle_blob((const uint8_t *)risposta, lung_risposta, offset, buf, dim);
+    if (att == H_NOME)
+        return att_read_callback_handle_blob((const uint8_t *)nome, lung_nome, offset, buf, dim);
     return 0;
 }
 
@@ -178,6 +183,13 @@ void ble_avvia(uint32_t codice, ble_elabora_t f) {
     if (!dati_codice_valido(codice)) return;
     elabora = f;
     lungo_ok = true;
+
+    char id[2 * PICO_UNIQUE_BOARD_ID_SIZE_BYTES + 1];
+    pico_get_unique_board_id_string(id, sizeof(id));
+    lung_nome = (uint16_t)dati_nome(nome, sizeof(nome), id);
+    dati_risposta_scansione[0] = (uint8_t)(1 + lung_nome);
+    dati_risposta_scansione[1] = BLUETOOTH_DATA_TYPE_COMPLETE_LOCAL_NAME;
+    memcpy(dati_risposta_scansione + 2, nome, lung_nome);
 
     l2cap_init();
     sm_init();

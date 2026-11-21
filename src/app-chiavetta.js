@@ -100,6 +100,9 @@ var AppChiavetta = (function () {
       });
     }
 
+    /* " <b>3F2A</b>": il codice della chiavetta collegata, dal suo nome; vuoto con un firmware vecchio */
+    function codice(c) { return c && c.codice ? ' <b>' + esc(c.codice) + '</b>' : ''; }
+
     function rispostaInattesa(r) {
       esito('errore', r.tipo === 'errore' ? esc(r.messaggio) : 'Risposta inattesa dalla chiavetta: ' + esc(r.testo || r.tipo));
     }
@@ -111,11 +114,11 @@ var AppChiavetta = (function () {
       conChiavetta(tipo, 'Invio in corso', function (c) {
         return c.invia(Chiavetta.pacchetti(x.byte, tipo === 'cavo' ? 1024 : 180)).then(function (r) {
           if (r.tipo === 'ok' && r.crc === x.crc && r.n === x.n) {
-            esito('ok', 'Chiavetta: ' + r.n + ' valori caricati, codice di controllo <span class="vis">' + esc(r.crc) +
+            esito('ok', 'Chiavetta' + codice(c) + ': ' + r.n + ' valori caricati, codice di controllo <span class="vis">' + esc(r.crc) +
               '</span> uguale a quello del sito.<br>In macchina: cursore su <b>Angolo 1</b>, poi premi il pulsante della chiavetta.' +
               (tipo === 'cavo' ? ' Prima scollegala e ricollegala <b>senza</b> premere il pulsante.' : ''));
           } else if (r.tipo === 'ok') {
-            esito('errore', 'La chiavetta ha ricevuto dati diversi (' + r.n + ' valori, controllo ' + esc(r.crc) + ' invece di ' +
+            esito('errore', 'La chiavetta' + codice(c) + ' ha ricevuto dati diversi (' + r.n + ' valori, controllo ' + esc(r.crc) + ' invece di ' +
               x.n + ', ' + x.crc + '). Non usarla: rinvia i valori.');
           } else rispostaInattesa(r);
         });
@@ -159,7 +162,7 @@ var AppChiavetta = (function () {
         return c.invia([Chiavetta.pacchettoStato()]).then(function (r) {
           if (r.tipo !== 'stato') { rispostaInattesa(r); return; }
           var s = descriviStato(r, dati());
-          esito(s.classe, s.html);
+          esito(s.classe, (c.codice ? 'Chiavetta' + codice(c) + '<br>' : '') + s.html);
         });
       });
     }

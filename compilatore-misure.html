@@ -550,6 +550,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
         <li>Con i tre tasti, facoltativi: <b>Ferma</b> si ferma dopo il valore in corso, <b>Ricomincia</b> torna alla prima coppia.</li>
         <li><b>Controlla la chiavetta</b> dice cosa contiene, a che punto è e se i valori sono uguali alla tabella. Via Bluetooth funziona anche con la chiavetta collegata alla macchina e non fa partire nessun tasto.</li>
         <li>Prima volta col Bluetooth: imposta il codice con il cavo, poi tieni premuto il pulsante <b>5 secondi</b> (doppio lampo) e invia dal telefono entro un minuto: il telefono chiede il codice. Si ricorda un solo telefono.</li>
+        <li>Più chiavette: ognuna ha un codice di 4 caratteri nel nome (<b>Chiavetta misure 3F2A</b>), che il sito mostra dopo Invia e Controlla. Scrivilo sul case.</li>
         <li>La chiavetta manda solo cifre, il "−" del tastierino numerico e INVIO: funziona con layout tedesco, italiano e inglese.</li>
         <li><b>Controlla tutti i valori sullo schermo della macchina prima di avviare la tastatura.</b></li>
       </ol>
@@ -3715,8 +3716,17 @@ var Chiavetta = (function () {
   var NESSUN_CODICE = 0xFFFFFFFF;
   var ATTESA_RISPOSTA_MS = 8000;
   /* Versione del firmware pubblicato sul sito: build.js la prende da chiavetta/CMakeLists.txt. */
-  var VERSIONE_PUBBLICATA = '1.3.0';
+  var VERSIONE_PUBBLICATA = '1.4.0';
   function versionePubblicata() { return /^\d+\.\d+\.\d+$/.test(VERSIONE_PUBBLICATA) ? VERSIONE_PUBBLICATA : null; }
+
+  /* Nome della chiavetta: "Chiavetta misure 3F2A" (Bluetooth e tastiera) o "... 3F2A - caricamento"
+     (cavo), con le ultime 4 cifre dell'ID del chip (dati_nome in chiavetta/src/dati.c).
+     Restituisce il codice ("3F2A"), o null con un firmware vecchio, che si chiama solo "Chiavetta misure". */
+  var NOME_BASE = 'Chiavetta misure';
+  function codiceDaNome(nome) {
+    var m = /^Chiavetta misure ([0-9A-F]{4})(?: - caricamento)?$/.exec(String(nome || '').trim());
+    return m ? m[1] : null;
+  }
 
   /* < 0 se a è più vecchia di b, 0 se uguali, > 0 se più nuova ("1.10.0" > "1.9.3"). */
   function confrontaVersioni(a, b) {
@@ -3888,6 +3898,7 @@ var Chiavetta = (function () {
       return {
         tipo: 'bluetooth',
         nome: dispositivo.name || 'chiavetta',
+        codice: codiceDaNome(dispositivo.name),
         /* Manda i pacchetti; l'ultimo produce una risposta. */
         invia: function (lista) {
           var attesa = new Promise(function (risolvi) { inAttesa = risolvi; });
@@ -3931,6 +3942,7 @@ var Chiavetta = (function () {
       return {
         tipo: 'cavo',
         nome: dispositivo.productName || 'chiavetta',
+        codice: codiceDaNome(dispositivo.productName),
         invia: function (lista) {
           var catena = Promise.resolve();
           lista.forEach(function (p) { catena = catena.then(function () { return dispositivo.transferOut(EP_OUT, telaio(p)); }); });
@@ -3958,6 +3970,7 @@ var Chiavetta = (function () {
     MAX_TESTO: MAX_TESTO, MAX_VALORI: MAX_VALORI, MAX_CIFRE: MAX_CIFRE, IMPOSTAZIONI: IMPOSTAZIONI,
     SERVIZIO: SERVIZIO, COMANDO: COMANDO, RISPOSTA: RISPOSTA, USB_VID: USB_VID, USB_PID_CARICAMENTO: USB_PID_CARICAMENTO,
     ERRORI: ERRORI, STATI: STATI, versionePubblicata: versionePubblicata, confrontaVersioni: confrontaVersioni,
+    NOME_BASE: NOME_BASE, codiceDaNome: codiceDaNome,
     crc32: crc32, esa: esa, codifica: codifica, controlla: controlla, testo: testo, pacchetti: pacchetti,
     pacchettoStato: pacchettoStato, pacchettoCodice: pacchettoCodice, telaio: telaio, risposta: risposta,
     bluetoothDisponibile: bluetoothDisponibile, usbDisponibile: usbDisponibile,
@@ -4071,6 +4084,9 @@ var AppChiavetta = (function () {
       });
     }
 
+    /* " <b>3F2A</b>": il codice della chiavetta collegata, dal suo nome; vuoto con un firmware vecchio */
+    function codice(c) { return c && c.codice ? ' <b>' + esc(c.codice) + '</b>' : ''; }
+
     function rispostaInattesa(r) {
       esito('errore', r.tipo === 'errore' ? esc(r.messaggio) : 'Risposta inattesa dalla chiavetta: ' + esc(r.testo || r.tipo));
     }
@@ -4082,11 +4098,11 @@ var AppChiavetta = (function () {
       conChiavetta(tipo, 'Invio in corso', function (c) {
         return c.invia(Chiavetta.pacchetti(x.byte, tipo === 'cavo' ? 1024 : 180)).then(function (r) {
           if (r.tipo === 'ok' && r.crc === x.crc && r.n === x.n) {
-            esito('ok', 'Chiavetta: ' + r.n + ' valori caricati, codice di controllo <span class="vis">' + esc(r.crc) +
+            esito('ok', 'Chiavetta' + codice(c) + ': ' + r.n + ' valori caricati, codice di controllo <span class="vis">' + esc(r.crc) +
               '</span> uguale a quello del sito.<br>In macchina: cursore su <b>Angolo 1</b>, poi premi il pulsante della chiavetta.' +
               (tipo === 'cavo' ? ' Prima scollegala e ricollegala <b>senza</b> premere il pulsante.' : ''));
           } else if (r.tipo === 'ok') {
-            esito('errore', 'La chiavetta ha ricevuto dati diversi (' + r.n + ' valori, controllo ' + esc(r.crc) + ' invece di ' +
+            esito('errore', 'La chiavetta' + codice(c) + ' ha ricevuto dati diversi (' + r.n + ' valori, controllo ' + esc(r.crc) + ' invece di ' +
               x.n + ', ' + x.crc + '). Non usarla: rinvia i valori.');
           } else rispostaInattesa(r);
         });
@@ -4130,7 +4146,7 @@ var AppChiavetta = (function () {
         return c.invia([Chiavetta.pacchettoStato()]).then(function (r) {
           if (r.tipo !== 'stato') { rispostaInattesa(r); return; }
           var s = descriviStato(r, dati());
-          esito(s.classe, s.html);
+          esito(s.classe, (c.codice ? 'Chiavetta' + codice(c) + '<br>' : '') + s.html);
         });
       });
     }

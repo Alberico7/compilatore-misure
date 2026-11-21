@@ -16,6 +16,15 @@ var Chiavetta = (function () {
   var VERSIONE_PUBBLICATA = '__VERSIONE_FIRMWARE__';
   function versionePubblicata() { return /^\d+\.\d+\.\d+$/.test(VERSIONE_PUBBLICATA) ? VERSIONE_PUBBLICATA : null; }
 
+  /* Nome della chiavetta: "Chiavetta misure 3F2A" (Bluetooth e tastiera) o "... 3F2A - caricamento"
+     (cavo), con le ultime 4 cifre dell'ID del chip (dati_nome in chiavetta/src/dati.c).
+     Restituisce il codice ("3F2A"), o null con un firmware vecchio, che si chiama solo "Chiavetta misure". */
+  var NOME_BASE = 'Chiavetta misure';
+  function codiceDaNome(nome) {
+    var m = /^Chiavetta misure ([0-9A-F]{4})(?: - caricamento)?$/.exec(String(nome || '').trim());
+    return m ? m[1] : null;
+  }
+
   /* < 0 se a è più vecchia di b, 0 se uguali, > 0 se più nuova ("1.10.0" > "1.9.3"). */
   function confrontaVersioni(a, b) {
     var x = a.split('.').map(Number), y = b.split('.').map(Number);
@@ -186,6 +195,7 @@ var Chiavetta = (function () {
       return {
         tipo: 'bluetooth',
         nome: dispositivo.name || 'chiavetta',
+        codice: codiceDaNome(dispositivo.name),
         /* Manda i pacchetti; l'ultimo produce una risposta. */
         invia: function (lista) {
           var attesa = new Promise(function (risolvi) { inAttesa = risolvi; });
@@ -229,6 +239,7 @@ var Chiavetta = (function () {
       return {
         tipo: 'cavo',
         nome: dispositivo.productName || 'chiavetta',
+        codice: codiceDaNome(dispositivo.productName),
         invia: function (lista) {
           var catena = Promise.resolve();
           lista.forEach(function (p) { catena = catena.then(function () { return dispositivo.transferOut(EP_OUT, telaio(p)); }); });
@@ -256,6 +267,7 @@ var Chiavetta = (function () {
     MAX_TESTO: MAX_TESTO, MAX_VALORI: MAX_VALORI, MAX_CIFRE: MAX_CIFRE, IMPOSTAZIONI: IMPOSTAZIONI,
     SERVIZIO: SERVIZIO, COMANDO: COMANDO, RISPOSTA: RISPOSTA, USB_VID: USB_VID, USB_PID_CARICAMENTO: USB_PID_CARICAMENTO,
     ERRORI: ERRORI, STATI: STATI, versionePubblicata: versionePubblicata, confrontaVersioni: confrontaVersioni,
+    NOME_BASE: NOME_BASE, codiceDaNome: codiceDaNome,
     crc32: crc32, esa: esa, codifica: codifica, controlla: controlla, testo: testo, pacchetti: pacchetti,
     pacchettoStato: pacchettoStato, pacchettoCodice: pacchettoCodice, telaio: telaio, risposta: risposta,
     bluetoothDisponibile: bluetoothDisponibile, usbDisponibile: usbDisponibile,

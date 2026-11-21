@@ -27,8 +27,9 @@ test.after(async () => {
 });
 
 /* Nel browser: navigator.usb e navigator.bluetooth finti che passano i byte a window.__sim
-   (il Pico simulato, in Node). opzioni: { senzaApi, senzaBt, senzaUsb, annullaScelta, rovina, versione }
-   versione: cambia la versione nelle risposte di stato ('nessuna' = firmware vecchio, senza versione). */
+   (il Pico simulato, in Node). opzioni: { senzaApi, senzaBt, senzaUsb, annullaScelta, rovina, versione, nomeVecchio }
+   versione: cambia la versione nelle risposte di stato ('nessuna' = firmware vecchio, senza versione).
+   nomeVecchio: la chiavetta si chiama solo "Chiavetta misure", senza codice (firmware prima della 1.4.0). */
 function dispositiviFinti(opzioni) {
   const hex = (u8) => Array.from(u8, (b) => b.toString(16).padStart(2, '0')).join('');
   const byteDi = (d) => new Uint8Array(d.buffer ? d.buffer.slice(d.byteOffset, d.byteOffset + d.byteLength) : d);
@@ -49,6 +50,7 @@ function dispositiviFinti(opzioni) {
     if (opzioni.versione === 'nessuna') p.pop(); else p[6] = opzioni.versione;
     return p.join(' ');
   }
+  const nome = opzioni.nomeVecchio ? 'Chiavetta misure' : 'Chiavetta misure 3F2A';
   let contatoreD = 0;
   function forse_rovina(u8) {
     if (opzioni.rovina && u8[0] === 0x44 && ++contatoreD === 1) { u8 = u8.slice(); u8[u8.length - 1] ^= 1; }
@@ -62,7 +64,7 @@ function dispositiviFinti(opzioni) {
       window.__finto.scelte.push('usb');
       let coda = '', inAttesa = null;
       return {
-        productName: 'Chiavetta misure - caricamento', configuration: null,
+        productName: nome + ' - caricamento', configuration: null,
         open: async () => {}, close: async () => {},
         selectConfiguration: async function () { this.configuration = { configurationValue: 1 }; },
         claimInterface: async () => {},
@@ -107,7 +109,7 @@ function dispositiviFinti(opzioni) {
       const servizio = { getCharacteristic: async (u) => (u.startsWith('0f600002') ? comando : risposta) };
       const gatt = { connected: false, connect: async () => { gatt.connected = true; return { getPrimaryService: async () => servizio }; },
         disconnect: () => { gatt.connected = false; } };
-      return { name: 'Chiavetta misure', gatt };
+      return { name: nome, gatt };
     },
   };
   Object.defineProperty(navigator, 'usb', { value: opzioni.senzaUsb ? undefined : usb, configurable: true });
@@ -164,7 +166,8 @@ test('Bluetooth: invio, conferma con lo stesso codice di controllo, poi la chiav
     await page.click('#btn-ch-invia');
     await page.locator('#esito-chiavetta .messaggio.ok').waitFor();
     const esito = await page.locator('#esito-chiavetta').innerText();
-    assert.match(esito, new RegExp('6 valori caricati, codice di controllo ' + crc + ' uguale a quello del sito'));
+    assert.match(esito, new RegExp('Chiavetta 3F2A: 6 valori caricati, codice di controllo ' + crc + ' uguale a quello del sito'));
+    assert.equal(await page.locator('#esito-chiavetta .messaggio.ok b').first().textContent(), '3F2A', 'il codice in grassetto');
     assert.deepEqual(await page.evaluate(() => window.__finto.filtri),
       [[{ services: ['0f600001-7d5c-4ab1-a5aa-df4e1c99d7c0'] }]]);
     assert.deepEqual(await sim.comando('PREMI 100'), [SCRITTO]);
@@ -189,7 +192,7 @@ test('cavo (WebUSB): invio con le impostazioni scelte, anche da telefono', { ski
     await page.locator('#ch-coppie').dispatchEvent('change');
     await premi(page, 'cavo', 'invia');
     await page.locator('#esito-chiavetta .messaggio.ok').waitFor();
-    assert.match(await page.locator('#esito-chiavetta').innerText(), /ricollegala senza premere il pulsante/);
+    assert.match(await page.locator('#esito-chiavetta').innerText(), /Chiavetta 3F2A: 6 valori caricati[^]*ricollegala senza premere il pulsante/);
     assert.deepEqual(await page.evaluate(() => window.__finto.filtri), [[{ vendorId: 0x1209, productId: 0x0006 }]]);
     await sim.comando('MODO tastiera');
     assert.deepEqual(await sim.comando('PREMI 100'), ['K 21494\\n2694\\n']);
@@ -305,7 +308,7 @@ test('Controlla la chiavetta: avanzamento, confronto con la tabella (valori e im
 
     await page.click('#btn-ch-controlla');
     let t = await esito(page, 'ok');
-    assert.match(t, /6 valori, pronta a scrivere dall'inizio/);
+    assert.match(t, /^Chiavetta 3F2A\n6 valori, pronta a scrivere dall'inizio/);
     assert.match(t, /Uguali ai valori e alle impostazioni della tabella/);
     assert.match(t, new RegExp('Firmware ' + versioneFirmware().replace(/\./g, '\\.') + '\\.'));
 
@@ -344,10 +347,15 @@ test('Controlla la chiavetta: avanzamento, confronto con la tabella (valori e im
 test('Controlla la chiavetta: firmware vecchio, con o senza versione', { skip: salta }, async () => {
   const sim = avviaSimulatore(eseguibile);
   try {
-    let page = await nuovaPagina(sim, { versione: 'nessuna' });
+    // firmware vecchio: niente versione e nome senza codice
+    let page = await nuovaPagina(sim, { versione: 'nessuna', nomeVecchio: true });
     await scrivi(page, COPPIE);
     await page.click('#btn-ch-controlla');
-    assert.match(await esito(page, 'avviso'), /versione precedente: aggiornalo/);
+    const vecchio = await esito(page, 'avviso');
+    assert.match(vecchio, /versione precedente: aggiornalo/);
+    assert.match(vecchio, /^Nessun valore caricato/, 'senza codice, nessuna riga "Chiavetta"');
+    await page.click('#btn-ch-invia');
+    assert.match(await esito(page, 'ok'), /^Chiavetta: 6 valori caricati/);
     await page.context().close();
 
     page = await nuovaPagina(sim, { versione: '0.9.0' });

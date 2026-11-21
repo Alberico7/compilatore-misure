@@ -242,3 +242,18 @@ size_t risposta_stato(char *out, size_t max, uint16_t n, uint16_t pos, uint32_t 
     return finisci(snprintf(out, max, "STATO %u %u %08lX %s %s %s", (unsigned)n, (unsigned)pos,
                             (unsigned long)crc, bluetooth ? "BT" : "NOBT", stato, versione), max);
 }
+
+size_t dati_nome(char *out, size_t max, const char *id) {
+    char cod[5] = { 0 };
+    size_t n = id ? strlen(id) : 0;
+    bool ok = n >= 4;
+    for (size_t i = 0; ok && i < 4; i++) {
+        char c = id[n - 4 + i];
+        if (c >= 'a' && c <= 'f') c = (char)(c - 'a' + 'A');
+        ok = (c >= '0' && c <= '9') || (c >= 'A' && c <= 'F');
+        cod[i] = c;
+    }
+    if (max == 0) return 0;
+    return finisci(ok ? snprintf(out, max, "%s %s", DATI_NOME_BASE, cod)
+                      : snprintf(out, max, "%s", DATI_NOME_BASE), max);
+}

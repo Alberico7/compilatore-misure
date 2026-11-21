@@ -76,9 +76,20 @@ Per aggiornare il firmware si ripete la stessa cosa. I valori e il codice Blueto
 2. Sul sito apri **Chiavetta → Codice Bluetooth e firmware**, premi **Genera** (oppure scrivi 6 cifre) e poi **Imposta con il cavo**. **Annota il codice.**
 3. Scollega la chiavetta e ricollegala **senza** premere il pulsante.
 4. Tieni premuto il pulsante (o **Ricomincia**, se hai i tre tasti) per **5 secondi**: il LED fa due lampi ripetuti e l'abbinamento resta aperto per un minuto.
-5. Sul telefono premi **Invia via Bluetooth**, scegli "Chiavetta misure" e inserisci il codice quando il telefono lo chiede.
+5. Sul telefono premi **Invia via Bluetooth**, scegli la tua chiavetta, cioè "Chiavetta misure" seguito dal suo codice (per esempio "Chiavetta misure 3F2A"), e inserisci il codice Bluetooth quando il telefono lo chiede.
 
 **Il telefono abbinato è uno solo:** un nuovo abbinamento sostituisce il precedente. Se cambi il codice, gli abbinamenti vengono cancellati. Finché il codice non è impostato, il Bluetooth resta spento.
+
+## Più chiavette
+
+Si possono usare più chiavette nello stesso momento, ognuna con il suo telefono e il suo PC.
+
+- **Ogni chiavetta ha un codice di 4 caratteri**, per esempio `3F2A`: sono le ultime cifre del numero del chip del Pico. Non si imposta: c'è già, ed è sempre lo stesso, anche dopo un aggiornamento del firmware.
+- Il codice è nel nome che vedi sul telefono, sul sito e in Windows: **"Chiavetta misure 3F2A"**. Dopo **Invia** e **Controlla la chiavetta** il sito scrive quale chiavetta ha usato.
+- **Scrivi il codice sul case**, con un pennarello o un'etichetta, così sai sempre quale prendere dalla lista.
+- Ogni chiavetta tiene **un solo telefono** abbinato. Un telefono si può abbinare a più chiavette.
+- Per il primo abbinamento, tieni aperta la finestra (5 secondi) su **una chiavetta alla volta**.
+- Un telefono già abbinato con un firmware precedente può mostrare ancora il nome vecchio, "Chiavetta misure". Funziona lo stesso; per vedere il nome nuovo, rifai l'abbinamento.
 
 ## Uso in macchina
 
@@ -121,6 +132,7 @@ Con "Coppie per pressione" diverso da 0, ogni pressione scrive quel numero di co
 ## Controllare la chiavetta
 
 Nella scheda Chiavetta del sito, **Controlla la chiavetta** chiede alla chiavetta cosa contiene e mostra:
+- quale chiavetta è, con il suo codice (vedi *Più chiavette*);
 - quanti valori ha e a che punto è ("pronta dall'inizio", "fermata dopo il valore 12 di 40", "ha finito");
 - se sono **uguali alla tabella** del sito, impostazioni comprese (pause, coppie per pressione);
 - la **versione del firmware**, con un avviso se sul sito ce n'è una più nuova;

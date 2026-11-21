@@ -334,6 +334,30 @@ static void test_risposte(void) {
     UGUALI_S(s, "STATO 0 0 00000000 NOBT VUOTO 12.3.45");
 }
 
+static void test_nome(void) {
+    printf("nome\n");
+    char s[DATI_NOME_MAX + 1];
+    // ultime 4 cifre dell'ID del chip, in maiuscolo
+    VERO(dati_nome(s, sizeof(s), "E6614103E7523F2A") == 21);
+    UGUALI_S(s, "Chiavetta misure 3F2A");
+    dati_nome(s, sizeof(s), "e6614103e752ab0c");
+    UGUALI_S(s, "Chiavetta misure AB0C");
+    VERO(strlen("Chiavetta misure ABCD") <= DATI_NOME_MAX);
+    // senza un ID valido: il nome di prima
+    dati_nome(s, sizeof(s), "");
+    UGUALI_S(s, "Chiavetta misure");
+    dati_nome(s, sizeof(s), "3F2");
+    UGUALI_S(s, "Chiavetta misure");
+    dati_nome(s, sizeof(s), "E6614103E7523F2G");
+    UGUALI_S(s, "Chiavetta misure");
+    dati_nome(s, sizeof(s), NULL);
+    UGUALI_S(s, "Chiavetta misure");
+    // spazio corto: tronca senza uscire
+    char corto[8];
+    VERO(dati_nome(corto, sizeof(corto), "E6614103E7523F2A") == 7);
+    UGUALI_S(corto, "Chiavet");
+}
+
 // --- motore -----------------------------------------------------------------
 
 static const char *VALORI_PROVA =
@@ -603,6 +627,7 @@ int main(void) {
     test_ricevitore();
     test_telaio();
     test_risposte();
+    test_nome();
     layout_t de, it;
     layout_base(&de, "DE");
     layout_base(&it, "IT");

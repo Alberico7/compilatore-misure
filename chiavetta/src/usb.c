@@ -11,6 +11,7 @@
 
 #include <string.h>
 
+#include "dati.h"
 #include "pico/unique_id.h"
 #include "tusb.h"
 
@@ -167,9 +168,9 @@ bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, const tusb_contro
 static const char *const stringhe[] = {
     NULL,                                   // 0: lingua
     "Compilatore misure",                  // 1: produttore
-    "Chiavetta misure",                    // 2: prodotto (tastiera)
+    NULL,                                   // 2: prodotto (tastiera): "Chiavetta misure 3F2A"
     NULL,                                   // 3: numero di serie (ID del chip)
-    "Chiavetta misure - caricamento",      // 4: prodotto (caricamento)
+    NULL,                                   // 4: prodotto (caricamento): "Chiavetta misure 3F2A - caricamento"
     "Caricamento valori",                   // 5: interfaccia WebUSB
 };
 
@@ -186,6 +187,18 @@ const uint16_t *tud_descriptor_string_cb(uint8_t indice, uint16_t lingua) {
         pico_get_unique_board_id_string(seriale, sizeof(seriale));
         n = strlen(seriale);
         for (size_t i = 0; i < n; i++) buf_stringa[1 + i] = (uint16_t)seriale[i];
+    } else if (indice == 2 || indice == 4) {
+        // il nome con le ultime 4 cifre dell'ID del chip, come nel Bluetooth
+        char seriale[2 * PICO_UNIQUE_BOARD_ID_SIZE_BYTES + 1], s[40];
+        pico_get_unique_board_id_string(seriale, sizeof(seriale));
+        n = dati_nome(s, sizeof(s), seriale);
+        static const char caricamento[] = " - caricamento";
+        if (indice == 4 && n + sizeof(caricamento) <= sizeof(s)) {
+            memcpy(s + n, caricamento, sizeof(caricamento));
+            n += sizeof(caricamento) - 1;
+        }
+        if (n > 39) n = 39;
+        for (size_t i = 0; i < n; i++) buf_stringa[1 + i] = (uint16_t)s[i];
     } else if (indice < sizeof(stringhe) / sizeof(stringhe[0])) {
         const char *s = stringhe[indice];
         n = strlen(s);
