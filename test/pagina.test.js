@@ -310,12 +310,12 @@ const sfondo = (page) => page.evaluate(() => getComputedStyle(document.body).bac
 test('tema scuro predefinito, cambio tema salvato', async () => {
   const page = await nuovaPagina();
   assert.equal(await tema(page), 'scuro');
-  assert.equal(await sfondo(page), 'rgb(20, 23, 28)');
+  assert.equal(await sfondo(page), 'rgb(18, 20, 23)');
   assert.equal(await page.locator('#btn-tema').innerText(), '☀', 'solo l\'icona');
   assert.equal(await page.getAttribute('#btn-tema', 'aria-label'), 'Passa al tema chiaro');
   await page.click('#btn-tema');
   assert.equal(await tema(page), 'chiaro');
-  assert.equal(await sfondo(page), 'rgb(244, 245, 247)');
+  assert.equal(await sfondo(page), 'rgb(236, 235, 229)');
   await page.reload();
   assert.equal(await tema(page), 'chiaro');
   await page.click('#btn-tema');
