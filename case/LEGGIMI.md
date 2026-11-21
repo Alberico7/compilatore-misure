@@ -49,8 +49,9 @@ Sul coperchio ogni tasto ha il suo simbolo inciso, grande 10 mm: **▶ Scrivi**,
    - una goccia di colla istantanea in ognuna delle due sedi sotto il fondo, poi si spinge dentro la calamita;
    - mettile **tutte e due con lo stesso polo verso l'esterno**: così non si respingono tra loro sulla macchina.
 2. **Pulsantini:**
-   - dall'interno del coperchio, si spinge ognuno tra le sue due guide, con il pulsante nel foro (a sinistra la guida è il bordo del coperchio);
-   - **le zampine vanno verso i lati aperti**, non contro le guide;
+   - dall'interno del coperchio, si spinge ognuno tra le sue due linguette, con il pulsante nel foro;
+   - **le zampine vanno verso i lati senza linguette**, cioè verso le viti;
+   - le linguette tengono solo il centro e la parte alta del pulsantino, così le zampine si possono piegare **di lato** (verso il Pico o verso la parete) senza toccarle. Non piegarle verso le viti: lì toccherebbero le colonnine;
    - un punto di colla a caldo sul retro lo tiene fermo.
 3. **Fili:**
    - si collega **un piedino di ogni pulsantino al comune**, cioè un filo che va al pin **18 (GND)** del Pico;

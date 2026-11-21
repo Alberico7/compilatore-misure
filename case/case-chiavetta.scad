@@ -23,8 +23,11 @@ interno_h    = 12;     // altezza interna (dal fondo al coperchio)
 tasto_lato   = 6;      // lato del corpo
 tasto_corpo  = 3.5;    // altezza del solo corpo (senza pulsante)
 tasto_d      = 3.5;    // diametro del pulsante
-tasto_x      = 4.6;    // centro della colonna dei tasti: a sinistra la guida e' il bordo del coperchio
+tasto_x      = 4.6;    // centro della colonna dei tasti, vicino alla parete sinistra
 tasti_y      = [39, 23, 7];                    // dall'alto: Scrivi, Ferma, Ricomincia (tra uno e l'altro le viti)
+tasto_zampa  = 3.5;    // lunghezza delle zampine (per il controllo, anche piegate)
+guida_l      = 3;      // linguette che tengono il corpo: lunghe solo al centro del lato, gli angoli restano liberi
+guida_h      = 2.2;    // e alte meno del corpo: sotto, dove escono le zampine, resta spazio per piegarle
 tasti_simbolo = ["play", "pausa", "ripeti"];   // incisi accanto ai tasti
 simbolo_lato = 10;     // grandezza dei simboli
 incisione    = 0.6;    // profondita' di simboli e anelli
@@ -170,16 +173,21 @@ module coperchio() {
                 for (y = viti_y)
                     translate([vite_x, y, zl - labbro_h - 1]) cylinder(d = colonna_d + 2 * tolleranza, h = labbro_h + 1);
                 apertura_usb(1, 3);
+                // a sinistra, accanto ai pulsantini, il bordo e' alto come le linguette: non tocca le zampine piegate
+                for (y = tasti_y)
+                    translate([tolleranza - 1, y - tasto_lato / 2 - 1.5, zl - labbro_h - 1])
+                        cube([labbro_sp + 1 + e, tasto_lato + 3, labbro_h - guida_h + 1]);
             }
             // a destra: ganci fissi sul bordo
             for (y = viti_y)
                 translate([interno_w - tolleranza - e, y - gancio_w / 2, gancio_z])
                     rotate([90, 0, 0]) mirror([0, 0, 1])
                         linear_extrude(gancio_w) gancio_profilo();
-            // guide dei pulsantini: tengono il corpo sui due lati senza zampine
+            // linguette dei pulsantini: tengono il corpo sui due lati senza zampine, solo al centro
+            // del lato e solo in alto, cosi' le zampine piegate di lato non le toccano
             for (y = tasti_y, s = [-1, 1])
-                translate([tasto_x + s * (tasto_lato / 2 + 0.15) + (s < 0 ? -1.2 : 0), y - tasto_lato / 2, zl - tasto_corpo + 0.5])
-                    cube([1.2, tasto_lato, tasto_corpo - 0.5 + e]);
+                translate([tasto_x + s * (tasto_lato / 2 + 0.15) + (s < 0 ? -1.2 : 0), y - guida_l / 2, zl - guida_h])
+                    cube([1.2, guida_l, guida_h + e]);
             // tubetti sopra LED e BOOTSEL
             translate([each P(pico_led), pico_z + pico_sp + usb_alta + 0.6]) cylinder(d = 4.4, h = zl - (pico_z + pico_sp + usb_alta + 0.6) + e);
             translate([each P(pico_bootsel), pico_z + pico_sp + 3]) cylinder(d = 4, h = zl - (pico_z + pico_sp + 3) + e);
@@ -218,7 +226,12 @@ module ingombri() {
         zc = alto_fondo - tasto_corpo;
         translate([tasto_x - tasto_lato / 2, y - tasto_lato / 2, zc]) cube([tasto_lato, tasto_lato, tasto_corpo - e]);
         translate([tasto_x, y, zc]) cylinder(d = tasto_d, h = 8);
-        for (sx = [-2.25, 2.25], sy = [-1, 1]) translate([tasto_x + sx - 0.4, y + sy * 3.25 - 0.4, zc - 3.5]) cube([0.8, 0.8, 3.5]);
+        for (sx = [-2.25, 2.25], sy = [-1, 1]) translate([tasto_x + sx - 0.4, y + sy * 3.25 - 0.4, zc - tasto_zampa]) cube([0.8, 0.8, tasto_zampa]);
+        // zampine piegate a 90 gradi: verso il Pico per intero, verso la parete finche' c'e' posto (0,2 mm prima)
+        for (sy = [-1, 1]) {
+            translate([tasto_x + 2.25 - 0.4, y + sy * 3.25 - 0.4, zc - 0.8]) cube([tasto_zampa + 0.4, 0.8, 0.8]);
+            translate([0.2, y + sy * 3.25 - 0.4, zc - 0.8]) cube([tasto_x - 2.25 + 0.4 - 0.2, 0.8, 0.8]);
+        }
     }
 }
 

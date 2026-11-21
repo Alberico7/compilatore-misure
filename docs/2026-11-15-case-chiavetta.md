@@ -10,6 +10,8 @@ Il 2026-11-16 ha chiesto **2 calamite** invece di 4, **simboli più grandi** (10
 
 Sempre il 2026-11-16 l'utente ha chiesto di chiudere **con le viti** invece che con le linguette, che rischiano di spezzarsi. A sinistra ci sono due **viti M3 svasate** in **inserti filettati di ottone**, messi a caldo in due colonnine tra un tasto e l'altro. I tasti sono un po' più distanziati per fare spazio alle colonnine. A destra restano i ganci fissi, che non si piegano e quindi non si spezzano.
 
+Il 2026-11-21 le guide dei pulsantini sono diventate linguette corte e basse (3 × 2,2 mm), e accanto ai pulsantini il bordo di sinistra è stato abbassato, così le zampine piegate di lato non le toccano: vedi [2026-11-21-guide-tasti-case.md](2026-11-21-guide-tasti-case.md).
+
 ## Cosa si fa
 
 Un case in due pezzi da stampare in 3D, per il Pico 2 W e i tre tasti (Scrivi, Ferma, Ricomincia) di [2026-11-14-tastiera-3-tasti.md](2026-11-14-tastiera-3-tasti.md):
@@ -61,7 +63,7 @@ In fondo c'è un margine vuoto di 5 mm davanti all'antenna, che lì non vuole ni
   - si chiude agganciando prima il lato destro, poi abbassando il sinistro e avvitando;
   - per riaprire si tolgono le viti, si solleva il lato sinistro e si sfila il coperchio.
 - **Tre sedi per i pulsantini**, sul lato interno:
-  - due guide tengono il corpo da 6 × 6 mm; a sinistra la guida è il bordo del coperchio;
+  - due linguette tengono il corpo da 6 × 6 mm, solo al centro del lato e in alto (dal 2026-11-21);
   - i lati con le zampine restano liberi per saldare i fili;
   - il pulsante esce di circa 2,5 mm da un foro da Ø 4,1 mm;
   - un punto di colla a caldo lo tiene fermo.
