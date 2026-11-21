@@ -169,14 +169,15 @@ test('sito e firmware insieme: cavo, Bluetooth, tasti scritti ed errori', { skip
     assert.deepEqual(await sim.comando('PREMI 100'), ['K 100\\n200\\n300\\n400\\n']);
     assert.deepEqual(await sim.comando('PREMI 100'), ['K 500\\n600\\n']);
 
-    // tre tasti: Ricomincia torna alla prima coppia; Ferma si ferma dopo il valore in corso;
+    // tre tasti (la scrittura parte mezzo secondo dopo il rilascio): Ricomincia torna alla prima coppia;
+    // Ferma si ferma dopo il valore in corso;
     // Ricomincia mentre scrive non fa niente
     assert.deepEqual(await sim.comando('PREMI RICOMINCIA 0-100'), ['K ']);
     assert.deepEqual(await sim.comando('STATO'), ['S PRONTO 0 6']);
-    assert.deepEqual(await sim.comando('PREMI SCRIVI 0-100 FERMA 1150-1250'), ['K 100\\n']);
+    assert.deepEqual(await sim.comando('PREMI SCRIVI 0-100 FERMA 650-750'), ['K 100\\n']);
     assert.deepEqual(await sim.comando('STATO'), ['S FERMATO 1 6']);
     assert.deepEqual(await sim.comando('PREMI SCRIVI 0-100'), ['K 200\\n300\\n400\\n']);
-    assert.deepEqual(await sim.comando('PREMI SCRIVI 0-100 RICOMINCIA 1200-1300'), ['K 500\\n600\\n']);
+    assert.deepEqual(await sim.comando('PREMI SCRIVI 0-100 RICOMINCIA 700-800'), ['K 500\\n600\\n']);
     assert.deepEqual(await sim.comando('STATO'), ['S FINITO 6 6']);
 
     // dati rovinati: scartati, restano i valori di prima

@@ -6,7 +6,7 @@
 
 #include "dati.h"
 
-#define MOTORE_ATTESA_MS        1000u  // dopo la pressione, prima di scrivere
+#define MOTORE_ATTESA_MS        500u   // dopo la pressione (dal rilascio), prima di scrivere
 #define MOTORE_RIMBALZO_MS      20u
 #define MOTORE_LUNGA_MS         2000u  // riporta all'inizio
 #define MOTORE_ABBINA_MS        5000u  // apre l'abbinamento Bluetooth
@@ -14,7 +14,7 @@
 typedef enum {
     ST_VUOTO = 0,   // nessun valore valido
     ST_PRONTO,      // valori caricati, posizione all'inizio
-    ST_ATTESA,      // pressione ricevuta, aspetta 1 s
+    ST_ATTESA,      // pressione ricevuta, aspetta mezzo secondo
     ST_SCRIVE,
     ST_FERMATO,     // fermato a meta' o a fine blocco
     ST_FINITO,      // tutti i valori scritti

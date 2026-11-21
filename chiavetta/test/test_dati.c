@@ -359,7 +359,7 @@ static void test_motore_layout(const layout_t *l) {
     simula(&M, l, 0, 20000, NULL, 0, &u, NULL);
     VERO(u.n == 0 && M.stato == ST_PRONTO);
 
-    // una pressione breve: dopo 1 s scrive tutto, esattamente
+    // una pressione breve: dopo mezzo secondo scrive tutto, esattamente
     carica(VALORI_PROVA);
     uscita_init(&u);
     intervallo_t breve[] = { { 1000, 1150 } };
@@ -507,10 +507,10 @@ static void test_tre_tasti(void) {
     UGUALI_S(u.testo, ATTESO_PROVA);
     VERO(u.errori_sequenza == 0);
 
-    // Ferma durante il secondo di attesa: non scrive niente
+    // Ferma durante il mezzo secondo di attesa: non scrive niente
     carica(VALORI_PROVA);
     uscita_init(&u);
-    pressione_t f3[] = { { SCRIVI, 100, 200 }, { MT_FERMA, 600, 700 } };
+    pressione_t f3[] = { { SCRIVI, 100, 200 }, { MT_FERMA, 450, 550 } };
     simula_tasti(&M, &l, 0, 10000, f3, 2, &u, NULL);
     VERO(u.n == 0 && M.stato == ST_PRONTO);
 

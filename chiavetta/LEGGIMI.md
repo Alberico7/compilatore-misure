@@ -85,15 +85,15 @@ Per aggiornare il firmware si ripete la stessa cosa. I valori e il codice Blueto
 1. Carica i valori dal sito: scegli **Bluetooth** o **Cavo** e premi **Invia i valori**. Il sito controlla che il **codice di controllo** della chiavetta sia uguale al suo.
 2. Collega la chiavetta alla macchina **senza** premere il pulsante: il LED fa due lampi e poi resta acceso fisso (pronta).
 3. Metti il cursore sul campo **Angolo 1** della maschera.
-4. **Premi il pulsante** (o Scrivi): dopo 1 secondo inizia a scrivere.
+4. **Premi il pulsante** (o Scrivi): dopo mezzo secondo inizia a scrivere.
 5. Controlla i valori sullo schermo della macchina **prima** di avviare la tastatura.
 
 <!-- Le tabelle "Pulsante", "Tasti" e "LED" finiscono anche nella guida del sito (src/build.js): si cambiano solo qui. -->
 
 | Pulsante | Effetto |
 |---|---|
-| Pressione breve, da pronta o fermata | Scrive, dopo 1 secondo |
-| Pressione mentre scrive (o nel secondo di attesa) | Si ferma dopo il valore in corso, mai a metà numero |
+| Pressione breve, da pronta o fermata | Scrive, dopo mezzo secondo |
+| Pressione mentre scrive (o nel mezzo secondo di attesa) | Si ferma dopo il valore in corso, mai a metà numero |
 | Tenuto da 2 a 5 secondi | Torna all'inizio; poi una pressione breve scrive dal primo valore |
 | Tenuto più di 5 secondi | Apre l'abbinamento Bluetooth per un minuto |
 | Pressione breve quando ha finito | Niente: per riscrivere tutto, prima tenere premuto 2–5 secondi |
@@ -101,7 +101,7 @@ Per aggiornare il firmware si ripete la stessa cosa. I valori e il codice Blueto
 | Tasti | Effetto |
 |---|---|
 | **Scrivi** | Come il pulsante, pressioni lunghe comprese |
-| **Ferma** | Durante la scrittura o il secondo di attesa: si ferma dopo il valore in corso, mai a metà numero. A chiavetta ferma non fa niente |
+| **Ferma** | Durante la scrittura o il mezzo secondo di attesa: si ferma dopo il valore in corso, mai a metà numero. A chiavetta ferma non fa niente |
 | **Ricomincia**, pressione breve | Torna alla prima coppia (tre lampi); poi Scrivi scrive dal primo valore |
 | **Ricomincia** tenuto 5 secondi | Apre l'abbinamento Bluetooth per un minuto. Quando lo puoi lasciare, il LED fa già il doppio lampo |
 | **Ricomincia** mentre scrive | Niente: prima premi Ferma, così non perdi il segno |
