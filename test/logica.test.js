@@ -42,6 +42,41 @@ test('errori', () => {
   assert.match(L.converti('20x', 'macchina', 2).messaggio, /non numerico/);
 });
 
+test('cambio dei decimali: stesso valore, cifre in più cancellate senza arrotondare', () => {
+  const casi = [
+    // [testo, modo, prima, dopo, atteso]
+    ['20,55', 'separatore', 2, 1, '20,5'],
+    ['20,59', 'separatore', 2, 1, '20,5'],
+    ['20.55', 'separatore', 2, 1, '20.5'],
+    ['-20,55', 'separatore', 2, 1, '-20,5'],
+    ['20,5', 'separatore', 2, 1, '20,5'],
+    ['20', 'separatore', 2, 1, '20'],
+    ['20,55', 'separatore', 2, 0, '20'],
+    [',55', 'separatore', 2, 1, '0,5'],
+    ['-0,05', 'separatore', 2, 1, '0,0'],
+    ['20,5', 'separatore', 1, 2, '20,5'],
+    ['2055', 'macchina', 2, 1, '205'],
+    ['-2055', 'macchina', 2, 1, '-205'],
+    ['2055', 'macchina', 2, 0, '20'],
+    ['5', 'macchina', 2, 1, '0'],
+    ['-5', 'macchina', 2, 1, '0'],
+    ['205', 'macchina', 1, 2, '2050'],
+    ['-205', 'macchina', 1, 3, '-20500'],
+    ['0', 'macchina', 1, 2, '0'],
+    ['', 'separatore', 2, 1, ''],
+    ['abc', 'separatore', 2, 1, 'abc'],
+    ['20,555', 'separatore', 2, 1, '20,555'],   // era già un errore: non si tocca
+    ['20,00', 'macchina', 2, 1, '20,00'],
+    ['20,55', 'separatore', 2, 2, '20,55'],
+  ];
+  for (const [testo, modo, prima, dopo, atteso] of casi) {
+    assert.equal(L.cambiaDecimali(testo, modo, prima, dopo), atteso, testo + ' ' + modo + ' ' + prima + '→' + dopo);
+  }
+  // il valore digitato in macchina resta lo stesso, a parte le cifre tolte
+  assert.equal(L.converti(L.cambiaDecimali('205', 'macchina', 1, 2), 'macchina', 2).display, '20.50');
+  assert.equal(L.converti(L.cambiaDecimali('2055', 'macchina', 2, 1), 'macchina', 1).display, '20.5');
+});
+
 test('analisi tabella: ordine, errori, avvisi', () => {
   const a = L.analizza([['20,00', '15,50'], ['-1', '3']], { modo: 'separatore', decAng: 2, decAlt: 2 });
   assert.equal(a.valido, true);

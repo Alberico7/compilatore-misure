@@ -28,7 +28,7 @@
   var stato = statoIniziale();
   var salvataggioOk = true;
   var analisi = null, blocchi = [];
-  var avvisoIncolla = '';
+  var avvisoTabella = '';
   /* scheda Chiavetta (app-chiavetta.js) */
   var chiavetta = AppChiavetta.crea({
     stato: function () { return stato; }, analisi: function () { return analisi; },
@@ -160,6 +160,29 @@
     });
   }
 
+  /* Decimali di angolo (col 0) o altezza (col 1) cambiati: le caselle di quella colonna tengono
+     lo stesso valore, accorciato se servono meno decimali (docs/2026-11-22-cambio-decimali.md). */
+  function cambiaDecimali(col, campo) {
+    var chiave = col === 0 ? 'decAng' : 'decAlt';
+    var prima = stato[chiave], dopo = intero(campo.value, 0, 6, 2);
+    campo.value = dopo;
+    if (dopo === prima) return;
+    stato[chiave] = dopo;
+    var n = 0;
+    stato.righe.forEach(function (r) {
+      var t = Logica.cambiaDecimali(r[col], stato.modo, prima, dopo);
+      if (t !== r[col]) { r[col] = t; n++; }
+    });
+    avvisoTabella = '';
+    if (n) {
+      avvisoTabella = 'Decimali ' + (col === 0 ? 'angolo' : 'altezza') + ': ' + dopo + '. ' +
+        (dopo < prima ? (n === 1 ? 'Accorciato 1 valore.' : 'Accorciati ' + n + ' valori.')
+          : (n === 1 ? 'Aggiunto lo zero in fondo a 1 valore.' : 'Aggiunti gli zeri in fondo a ' + n + ' valori.'));
+      costruisciTabella();
+    }
+    aggiorna();
+  }
+
   /* Come INVIO in macchina: angolo -> altezza -> angolo della riga dopo (aggiunge una riga all'ultima). */
   function avanti(r, c) {
     if (c === 0) { vai(r, 1); return; }
@@ -244,7 +267,7 @@
 
   function mostraRiepilogo(nUsate) {
     var h = '';
-    if (avvisoIncolla) h += '<div class="messaggio avviso">' + esc(avvisoIncolla) + '</div>';
+    if (avvisoTabella) h += '<div class="messaggio avviso">' + esc(avvisoTabella) + '</div>';
     if (nUsate === 0) {
       h += '<div class="messaggio avviso">Inserisci almeno una coppia Angolo/Altezza.</div>';
     } else if (analisi.errori.length) {
@@ -582,7 +605,7 @@
       stato.modo = l.modo; stato.decAng = l.decAng; stato.decAlt = l.decAlt;
       stato.listaNome = l.nome;
       stato.blocco = 0; stato.lettura = 0;
-      avvisoIncolla = '';
+      avvisoTabella = '';
       applicaImpostazioni();
       costruisciTabella();
       aggiorna();
@@ -725,9 +748,9 @@
   /* ---------- incolla da Excel ---------- */
   function incolla(r0, c0, testo) {
     var righe = testo.replace(/\r\n?/g, '\n').replace(/\n+$/, '').split('\n').map(function (l) { return l.split('\t'); });
-    avvisoIncolla = '';
+    avvisoTabella = '';
     if (r0 + righe.length > MAX_RIGHE) {
-      avvisoIncolla = 'Incollate solo le prime ' + (MAX_RIGHE - r0) + ' righe su ' + righe.length + ': il massimo è ' + MAX_RIGHE + ' righe.';
+      avvisoTabella = 'Incollate solo le prime ' + (MAX_RIGHE - r0) + ' righe su ' + righe.length + ': il massimo è ' + MAX_RIGHE + ' righe.';
       righe = righe.slice(0, MAX_RIGHE - r0);
     }
     while (stato.righe.length < r0 + righe.length) stato.righe.push(['', '']);
@@ -1132,8 +1155,8 @@
     document.querySelectorAll('input[name=modo]').forEach(function (r) {
       r.addEventListener('change', function () { stato.modo = r.value; costruisciTabella(); aggiorna(); });
     });
-    $('dec-ang').addEventListener('change', function () { stato.decAng = intero(this.value, 0, 6, 2); this.value = stato.decAng; aggiorna(); });
-    $('dec-alt').addEventListener('change', function () { stato.decAlt = intero(this.value, 0, 6, 2); this.value = stato.decAlt; aggiorna(); });
+    $('dec-ang').addEventListener('change', function () { cambiaDecimali(0, this); });
+    $('dec-alt').addEventListener('change', function () { cambiaDecimali(1, this); });
     $('num-righe').addEventListener('change', function () { impostaRighe(this.value, true); });
     $('btn-svuota').addEventListener('click', function () {
       chiedi('Cancellare tutti i valori della tabella?\nLe impostazioni restano.', 'Svuota').then(function (si) {
@@ -1142,7 +1165,7 @@
         stato.listaNome = '';   // la lista resta salvata: si chiude soltanto
         stato.blocco = 0;
         stato.lettura = 0;
-        avvisoIncolla = '';
+        avvisoTabella = '';
         $('prova').value = '';
         costruisciTabella();
         aggiorna();

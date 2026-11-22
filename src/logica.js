@@ -60,6 +60,30 @@ var Logica = (function () {
     };
   }
 
+  /* Testo nuovo di una casella quando i decimali passano da "prima" a "dopo"
+     (docs/2026-11-22-cambio-decimali.md). Il valore resta lo stesso: se si tolgono decimali,
+     le cifre in più in fondo si cancellano senza arrotondare; nel modo "come in macchina",
+     se se ne aggiungono, si aggiungono zeri in fondo. Caselle vuote o con errori: invariate. */
+  function cambiaDecimali(testo, modo, prima, dopo) {
+    var s = String(testo == null ? '' : testo).trim();
+    if (prima === dopo || converti(s, modo, prima).stato !== 'ok') return testo;
+    var m, segno, intera, nulla;
+    if (modo === 'macchina') {
+      m = /^(-?)(\d+)$/.exec(s);
+      segno = m[1]; intera = m[2];
+      if (dopo < prima) intera = intera.slice(0, intera.length - (prima - dopo)) || '0';
+      else if (/[1-9]/.test(intera)) intera += new Array(dopo - prima + 1).join('0');
+      nulla = !/[1-9]/.test(intera);
+      return (nulla ? '' : segno) + intera;
+    }
+    m = /^(-?)(\d*)([.,])(\d*)$/.exec(s);
+    if (!m || m[4].length <= dopo) return testo;
+    segno = m[1]; intera = m[2] || '0';
+    var frazione = m[4].slice(0, dopo);
+    nulla = !/[1-9]/.test(intera + frazione);
+    return (nulla ? '' : segno) + intera + (dopo > 0 ? m[3] + frazione : '');
+  }
+
   /* Valori sospetti (docs/2026-11-18-offline-liste-avvisi.md): avvisi, non errori.
      - angolo oltre 360;
      - altezza almeno SOSPETTO volte più grande (o più piccola) di tutte e due le vicine, che invece
@@ -303,6 +327,7 @@ var Logica = (function () {
   return {
     CR: CR,
     converti: converti,
+    cambiaDecimali: cambiaDecimali,
     formatoMacchina: formatoMacchina,
     analizza: analizza,
     code128Simboli: code128Simboli,

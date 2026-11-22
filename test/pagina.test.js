@@ -209,6 +209,32 @@ test('dati non validi: nessun codice, errori segnalati', async () => {
   await page.context().close();
 });
 
+test('cambio dei decimali con i valori scritti: solo la colonna giusta, con messaggio', async () => {
+  const page = await nuovaPagina();
+  await page.check('input[name=modo][value=separatore]');
+  await incollaExcel(page, [['20,55', '15,59'], ['21,5', '16'], ['abc', '17,25']]);
+  const cella = (r, c) => page.inputValue(`#corpo-tabella input[data-r="${r}"][data-c="${c}"]`);
+  await page.fill('#dec-ang', '1');
+  await page.dispatchEvent('#dec-ang', 'change');
+  assert.deepEqual([await cella(0, 0), await cella(1, 0), await cella(2, 0)], ['20,5', '21,5', 'abc']);
+  assert.deepEqual([await cella(0, 1), await cella(1, 1), await cella(2, 1)], ['15,59', '16', '17,25']);
+  assert.match(await page.locator('#riepilogo').innerText(), /Decimali angolo: 1\. Accorciato 1 valore\./);
+  // come in macchina: aggiungendo un decimale all'altezza si aggiunge lo zero in fondo
+  await page.check('input[name=modo][value=macchina]');
+  await page.fill('#corpo-tabella input[data-r="0"][data-c="1"]', '1559');
+  await page.fill('#corpo-tabella input[data-r="1"][data-c="1"]', '1600');
+  await page.fill('#corpo-tabella input[data-r="2"][data-c="1"]', '1725');
+  await page.fill('#dec-alt', '3');
+  await page.dispatchEvent('#dec-alt', 'change');
+  assert.deepEqual([await cella(0, 1), await cella(1, 1), await cella(2, 1)], ['15590', '16000', '17250']);
+  assert.match(await page.locator('#riepilogo').innerText(), /Decimali altezza: 3\. Aggiunti gli zeri in fondo a 3 valori\./);
+  assert.equal(await page.locator('#ant-0-1').innerText(), 'In macchina: 15.590');
+  await page.reload();
+  assert.equal(await cella(0, 1), '15590');
+  assert.deepEqual(page.erroriJs, []);
+  await page.context().close();
+});
+
 test('tastiera: INVIO e frecce come in macchina', async () => {
   const page = await nuovaPagina();
   await page.click('#corpo-tabella input[data-r="0"][data-c="0"]');
