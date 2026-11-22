@@ -80,6 +80,9 @@ var Dettato = (function () {
     return null;
   }
 
+  /* Come il riconoscimento può scrivere la "e" fra una cifra e le decine ("due il settanta"). */
+  var CONGIUNZIONI = ['e', 'è', 'ed', 'il'];
+
   var COMANDI = {
     avanti: 'avanti', poi: 'avanti', prossimo: 'avanti',
     indietro: 'indietro',
@@ -92,9 +95,11 @@ var Dettato = (function () {
      { tipo: 'valore', testo: '214,94' }   valore da scrivere nella casella attiva
      { tipo: 'comando', comando: 'avanti'|'indietro'|'cancella'|'correggi'|'stop' }
      { tipo: 'riga', n: 12 }
-     { tipo: 'ignoto', parole: '...' }      parole non capite (non si scrive niente) */
-  function interpreta(frase) {
-    var tok = String(frase || '').toLowerCase().trim().split(/\s+/).filter(Boolean);
+     { tipo: 'ignoto', parole: '...' }      parole non capite (non si scrive niente)
+     opzioni.unValore: modo "Un valore", dove anche "due settanta" (senza "e") vale 270. */
+  function interpreta(frase, opzioni) {
+    var unValore = !!(opzioni && opzioni.unValore);
+    var tok = String(frase || '').normalize('NFC').toLowerCase().trim().split(/\s+/).filter(Boolean);
     var azioni = [], ignote = [];
     function chiudiIgnote() {
       if (ignote.length) { azioni.push({ tipo: 'ignoto', parole: ignote.join(' ') }); ignote = []; }
@@ -119,9 +124,12 @@ var Dettato = (function () {
       if (t === 'meno') { meno = true; j = i + 1; }
       var num = numeroDa(tok, j);
       if (!num) { ignote.push(t); i++; continue; }
-      /* centinaia abbreviate: "due e settanta" = 270 (docs/2026-11-22-due-e-settanta.md) */
-      if (num.dopo === j + 1 && num.valore >= 1 && num.valore <= 9 && tok[j + 1] === 'e') {
-        var coda = numeroDa(tok, j + 2);
+      /* centinaia abbreviate: "due e settanta" = 270 (docs/2026-11-22-due-e-settanta.md); la "e" può
+         arrivare come "è", "ed" o "il", e nel modo Un valore anche mancare ("due settanta")
+         (docs/2026-11-22-un-valore-per-pressione.md) */
+      if (num.dopo === j + 1 && num.valore >= 1 && num.valore <= 9) {
+        var conE = CONGIUNZIONI.indexOf(tok[j + 1]) >= 0;
+        var coda = conE || unValore ? numeroDa(tok, conE ? j + 2 : j + 1) : null;
         if (coda && coda.valore >= 10 && coda.valore <= 99) num = { valore: num.valore * 100 + coda.valore, dopo: coda.dopo };
       }
       chiudiIgnote();

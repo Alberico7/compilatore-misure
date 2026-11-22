@@ -990,7 +990,16 @@
       }
       if (!r.testo) { mostraStatoVoce('<span class="non-capito">Non ho sentito niente.</span>'); return; }
       appenaScritto = false;
-      applicaAzioni(Dettato.interpreta(r.testo), true);
+      /* un valore solo per pressione: se se ne sentono di più non si scrive niente
+         (docs/2026-11-22-un-valore-per-pressione.md) */
+      var azioni = Dettato.interpreta(r.testo, { unValore: true });
+      var valori = azioni.filter(function (a) { return a.tipo === 'valore'; });
+      if (valori.length > 1) {
+        mostraStatoVoce('<span class="non-capito">Ho sentito più numeri: ' +
+          valori.map(function (a) { return esc(a.testo); }).join(' · ') + '. Ridetta il valore.</span>');
+        return;
+      }
+      applicaAzioni(azioni, true);
     });
   }
 

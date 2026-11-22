@@ -86,6 +86,33 @@ test('centinaia abbreviate: "due e settanta" = 270', () => {
   assert.deepEqual(D.interpreta('mille e cento'), [{ tipo: 'valore', testo: '1100' }]);
 });
 
+test('la "e" sentita come "è", "ed" o "il"; nel modo Un valore anche senza "e"', () => {
+  for (const frase of ['due è settanta', 'due ed settanta', 'due il settanta', 'due è settanta']) {
+    assert.deepEqual(D.interpreta(frase), [{ tipo: 'valore', testo: '270' }], frase);
+    assert.deepEqual(D.interpreta(frase, { unValore: true }), [{ tipo: 'valore', testo: '270' }], frase);
+  }
+  const unValore = [
+    ['due settanta', '270'],
+    ['due settanta virgola cinque', '270,5'],
+    ['meno tre quarantacinque', '-345'],
+    ['tre venti cinque', '325'],
+    ['duecentoquattordici virgola nove quattro', '214,94'],
+    ['due e settanta', '270'],
+  ];
+  for (const [frase, atteso] of unValore) {
+    assert.deepEqual(D.interpreta(frase, { unValore: true }), [{ tipo: 'valore', testo: atteso }], frase);
+  }
+  // nel modo Più valori "due settanta" resta due valori
+  assert.deepEqual(D.interpreta('due settanta'), [{ tipo: 'valore', testo: '2' }, { tipo: 'valore', testo: '70' }]);
+  // il resto non si unisce: più valori (la pagina non scrive niente)
+  const valori = (f) => D.interpreta(f, { unValore: true }).filter((a) => a.tipo === 'valore').map((a) => a.testo);
+  assert.deepEqual(valori('venti trenta'), ['20', '30']);
+  assert.deepEqual(valori('due e cinque'), ['2', '5']);
+  assert.deepEqual(valori('dodici cinquanta'), ['12', '50']);
+  // "il" altrove resta una parola non capita
+  assert.deepEqual(D.interpreta('il venti'), [{ tipo: 'ignoto', parole: 'il' }, { tipo: 'valore', testo: '20' }]);
+});
+
 test('comandi', () => {
   assert.deepEqual(D.interpreta('indietro'), [{ tipo: 'comando', comando: 'indietro' }]);
   assert.deepEqual(D.interpreta('cancella'), [{ tipo: 'comando', comando: 'cancella' }]);

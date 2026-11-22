@@ -108,6 +108,26 @@ test('primo uso: conferma dello scaricamento, poi "tieni premuto" scrive e passa
   await page.context().close();
 });
 
+test('"tieni premuto": un valore solo per pressione', async () => {
+  const page = await nuovaPagina();
+  await page.click('#cella-0-0');
+  await tieniPremutoEDici(page, 'due settanta');
+  assert.equal(await valore(page, 0, 0), '270');
+  assert.equal(await attivo(page), 'Altezza 1');
+  await tieniPremutoEDici(page, 'due il settanta');
+  assert.equal(await valore(page, 0, 1), '270');
+  assert.equal(await attivo(page), 'Angolo 2');
+  await tieniPremutoEDici(page, 'venti trenta');
+  assert.match(await statoVoce(page), /Ho sentito più numeri: 20 · 30\. Ridetta il valore\./);
+  assert.equal(await valore(page, 1, 0), '');
+  assert.equal(await valore(page, 1, 1), '');
+  assert.equal(await attivo(page), 'Angolo 2', 'niente scritto: la casella non cambia');
+  await tieniPremutoEDici(page, 'trenta');
+  assert.equal(await valore(page, 1, 0), '30');
+  assert.deepEqual(page.erroriJs, []);
+  await page.context().close();
+});
+
 test('barra spaziatrice tenuta premuta nella tabella (PC)', async () => {
   const page = await nuovaPagina();
   await page.click('#cella-2-1');
