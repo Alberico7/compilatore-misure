@@ -596,7 +596,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
         <li>Funziona sul sito (non aprendo il file dal PC). La prima volta chiede di scaricare il riconoscimento vocale (circa 50 MB, una volta sola) e il permesso del microfono. L'audio non esce dal dispositivo.</li>
         <li><b>Un valore: tieni premuto</b> 🎤 (sul PC anche la barra spaziatrice nella tabella), di' il valore, lascia: il valore va nella casella e si passa alla successiva.</li>
         <li><b>Più valori: tocca</b> 🎤 una volta e detta i valori uno dopo l'altro. Ogni valore finisce con <b>una pausa</b> oppure con la parola <b>"avanti"</b> (impostazione nel riquadro <b>Cambia</b>). Tocca di nuovo 🎤 o di' "stop" per finire. Le righe si aggiungono da sole.</li>
-        <li>Come dire i numeri: "duecentoquattordici virgola nove quattro" → 214,94; "zero virgola zero cinque" → 0,05; "meno uno virgola cinque" → -1,5.</li>
+        <li>Come dire i numeri: "duecentoquattordici virgola nove quattro" → 214,94; "zero virgola zero cinque" → 0,05; "meno uno virgola cinque" → -1,5; "due e settanta" → 270.</li>
         <li>Comandi: "correggi" (svuota il valore appena dettato e ci torna), "indietro", "cancella", "riga dodici", "stop".</li>
         <li>Con la pausa come fine del valore, non fermarti a metà numero: "duecento … quattordici" diventerebbero due valori. Controlla sempre "Capito: …" e l'anteprima sotto le caselle.</li>
         <li>Dopo il primo uso, la dettatura si prepara da sola all'apertura della pagina ("Dettatura pronta."): toccando 🎤 parte subito. Il microfono si accende solo toccando 🎤. Sui telefoni con poca memoria si può spegnere con <b>Prepara la dettatura all'apertura</b>, nel riquadro <b>Cambia</b>.</li>
@@ -3425,6 +3425,11 @@ var Dettato = (function () {
       if (t === 'meno') { meno = true; j = i + 1; }
       var num = numeroDa(tok, j);
       if (!num) { ignote.push(t); i++; continue; }
+      /* centinaia abbreviate: "due e settanta" = 270 (docs/2026-11-22-due-e-settanta.md) */
+      if (num.dopo === j + 1 && num.valore >= 1 && num.valore <= 9 && tok[j + 1] === 'e') {
+        var coda = numeroDa(tok, j + 2);
+        if (coda && coda.valore >= 10 && coda.valore <= 99) num = { valore: num.valore * 100 + coda.valore, dopo: coda.dopo };
+      }
       chiudiIgnote();
       var testo = String(num.valore);
       j = num.dopo;
