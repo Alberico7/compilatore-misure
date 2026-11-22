@@ -240,7 +240,9 @@ test('telefono: 🎤 nella barra in basso, la tastiera non si apre mentre si det
   assert.equal(await valore(page, 0, 0), '12,75');
   assert.equal(await attivo(page), 'Altezza 1');
   assert.equal(await page.getAttribute('#cella-0-1', 'inputmode'), 'none', 'tastiera chiusa durante la dettatura');
-  await page.tap('#cella-1-0'); // toccando una casella si torna a scrivere a mano
+  await page.tap('#cella-1-0'); // un tocco sceglie la casella: la tastiera resta chiusa
+  assert.equal(await page.getAttribute('#cella-1-0', 'inputmode'), 'none');
+  await page.tap('#cella-1-0'); // il secondo tocco la apre per scrivere a mano
   assert.equal(await page.getAttribute('#cella-1-0', 'inputmode'), 'decimal');
   const largh = await page.evaluate(() => document.documentElement.scrollWidth);
   assert.ok(largh <= 390, 'nessuno scorrimento orizzontale: ' + largh);

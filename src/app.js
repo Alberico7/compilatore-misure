@@ -117,8 +117,11 @@
   }
 
   /* ---------- tabella ---------- */
-  /* Mentre si detta, la tastiera del telefono non deve aprirsi: inputmode "none" finché non si tocca una casella. */
-  var tastieraNascosta = false;
+  /* Tastiera del telefono (docs/2026-11-22-barra-telefono-e-tastiera.md): con inputmode "none" non si apre.
+     Sul telefono si parte così: un tocco sceglie la casella, un secondo tocco sulla stessa apre la tastiera.
+     Mentre si detta resta chiusa. */
+  var touch = !!(window.matchMedia && window.matchMedia('(pointer: coarse)').matches);
+  var tastieraNascosta = touch;
   function modoInput() { return tastieraNascosta ? 'none' : (stato.modo === 'macchina' ? 'numeric' : 'decimal'); }
   function aggiornaModoInput() {
     document.querySelectorAll('#corpo-tabella input').forEach(function (el) { el.setAttribute('inputmode', modoInput()); });
@@ -769,6 +772,37 @@
   var cellaAttiva = null;
   function aggiornaBarraMobile() {
     $('barra-mobile').hidden = !((cellaAttiva || ascoltoContinuo) && schermoStretto());
+    posizionaBarra();
+  }
+
+  /* La tastiera del telefono copre il fondo della pagina senza farle spazio: la barra sale sopra la
+     tastiera, cioè al fondo della parte visibile (visualViewport). Senza visualViewport resta in fondo. */
+  function spazioSotto() {
+    var vv = window.visualViewport;
+    if (!vv) return 0;
+    return Math.max(0, Math.round(window.innerHeight - vv.offsetTop - vv.height));
+  }
+  function posizionaBarra() {
+    var b = $('barra-mobile');
+    var s = b.hidden ? 0 : spazioSotto();
+    b.style.bottom = s ? s + 'px' : '';
+  }
+
+  /* La tastiera è aperta? Si confronta l'altezza visibile con la più grande vista con questa larghezza
+     (così funziona sia se la tastiera copre la pagina sia se la accorcia). Senza visualViewport: come oggi. */
+  var schermoPieno = { w: 0, h: 0 };
+  function tastieraAperta() {
+    if (tastieraNascosta) return false;
+    var vv = window.visualViewport;
+    if (!vv) return true;
+    var h = vv.height * (vv.scale || 1);
+    if (window.innerWidth !== schermoPieno.w) schermoPieno = { w: window.innerWidth, h: 0 };
+    schermoPieno.h = Math.max(schermoPieno.h, window.innerHeight, h);
+    return schermoPieno.h - h > 120;
+  }
+  /* Avanti / Indietro della barra e tocco su un'altra casella: la tastiera resta com'era. */
+  function mantieniTastiera() {
+    if (touch && !tastieraAperta()) nascondiTastiera();
   }
 
   /* ---------- dettatura (Vosk) ---------- */
@@ -1080,10 +1114,6 @@
     $('corpo-tabella').addEventListener('keyup', function (e) {
       if (e.key === ' ' && stato.voceModo === 'premi') { e.preventDefault(); finisciPremi(); }
     });
-    /* toccando una casella si torna a scrivere a mano: la tastiera si riapre */
-    $('corpo-tabella').addEventListener('pointerdown', function () {
-      if (tastieraNascosta && !ascoltoContinuo) { tastieraNascosta = false; aggiornaModoInput(); }
-    });
     document.addEventListener('visibilitychange', function () {
       if (document.visibilityState !== 'hidden') { if (preparazioneRimandata) preparaInAnticipo(); return; }
       if (ascoltoContinuo) fermaContinuo('Fermata: la pagina è andata in secondo piano.');
@@ -1123,6 +1153,29 @@
       }
     });
 
+    /* Tocco su una casella (docs/2026-11-22-barra-telefono-e-tastiera.md): sulla casella già scelta apre la
+       tastiera per scrivere a mano; su un'altra la sceglie e lascia la tastiera com'era. Durante l'ascolto
+       continuo resta chiusa. Con il mouse non cambia niente. */
+    var apriAlClic = null;
+    corpo.addEventListener('pointerdown', function (e) {
+      var t = e.target;
+      if (e.pointerType === 'mouse' || !t.dataset || t.dataset.r === undefined) return;
+      if (document.activeElement === t) {
+        if (tastieraNascosta && !ascoltoContinuo) { tastieraNascosta = false; aggiornaModoInput(); apriAlClic = t; }
+      } else {
+        mantieniTastiera();
+      }
+    });
+    /* La tastiera si apre quando una casella riceve il fuoco: si ridà il fuoco alla casella già scelta. */
+    corpo.addEventListener('click', function (e) {
+      if (apriAlClic && e.target === apriAlClic) { var t = apriAlClic; t.blur(); t.focus(); }
+      apriAlClic = null;
+    });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', posizionaBarra);
+      window.visualViewport.addEventListener('scroll', posizionaBarra);
+    }
+
     corpo.addEventListener('focusin', function (e) {
       if (e.target.dataset && e.target.dataset.r !== undefined) {
         cellaAttiva = { r: +e.target.dataset.r, c: +e.target.dataset.c };
@@ -1151,8 +1204,8 @@
       $(id).addEventListener('pointerdown', function (e) { e.preventDefault(); });
       $(id).addEventListener('mousedown', function (e) { e.preventDefault(); });
     });
-    $('mob-avanti').addEventListener('click', function () { if (cellaAttiva) avanti(cellaAttiva.r, cellaAttiva.c); });
-    $('mob-indietro').addEventListener('click', function () { if (cellaAttiva) indietro(cellaAttiva.r, cellaAttiva.c); });
+    $('mob-avanti').addEventListener('click', function () { if (cellaAttiva) { mantieniTastiera(); avanti(cellaAttiva.r, cellaAttiva.c); } });
+    $('mob-indietro').addEventListener('click', function () { if (cellaAttiva) { mantieniTastiera(); indietro(cellaAttiva.r, cellaAttiva.c); } });
     $('mob-segno').addEventListener('click', function () { if (cellaAttiva) cambiaSegno(cellaAttiva.r, cellaAttiva.c); });
 
     $('riepilogo').addEventListener('click', function (e) {

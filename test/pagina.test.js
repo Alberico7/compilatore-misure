@@ -63,10 +63,24 @@ test.after(async () => { await browser.close(); });
 
 /* telefono: viewport 390x844 con tocco, come uno smartphone. */
 /* Questi test riguardano i codici: si parte dalla scheda "Codici a barre" (la predefinita è Chiavetta). */
-async function nuovaPagina(larghezza = 1200, { telefono = false, scheda = 'barre' } = {}) {
+/* Tastiera finta: la parte visibile dello schermo (visualViewport) si accorcia di 300 px quando "si apre",
+   come su Chrome per Android, dove la tastiera copre il fondo della pagina. window.__tastiera(true|false). */
+function tastieraFinta() {
+  const vv = new EventTarget();
+  let alta = 0;
+  Object.defineProperties(vv, {
+    height: { get: () => window.innerHeight - alta }, width: { get: () => window.innerWidth },
+    offsetTop: { get: () => 0 }, offsetLeft: { get: () => 0 }, scale: { get: () => 1 },
+  });
+  Object.defineProperty(window, 'visualViewport', { get: () => vv, configurable: true });
+  window.__tastiera = (aperta) => { alta = aperta ? 300 : 0; vv.dispatchEvent(new Event('resize')); };
+}
+
+async function nuovaPagina(larghezza = 1200, { telefono = false, scheda = 'barre', tastiera = false } = {}) {
   const ctx = await browser.newContext(telefono
     ? { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, reducedMotion: 'reduce' }
     : { viewport: { width: larghezza, height: 900 }, deviceScaleFactor: 1, reducedMotion: 'reduce' });
+  if (tastiera) await ctx.addInitScript(tastieraFinta);
   const page = await ctx.newPage();
   const erroriJs = [];
   page.on('pageerror', (e) => erroriJs.push(e.message));
@@ -399,17 +413,30 @@ test('smartphone: impaginazione, nessuno scorrimento orizzontale, comandi grandi
   await page.context().close();
 });
 
-test('smartphone: tastierino e barra Indietro / ± / Avanti come INVIO', async () => {
-  const page = await nuovaPagina(390, { telefono: true });
-  assert.equal(await page.getAttribute('#cella-0-0', 'inputmode'), 'decimal');
+test('smartphone: un tocco sceglie la casella, due aprono il tastierino; barra Indietro / ± / Avanti come INVIO', async () => {
+  const page = await nuovaPagina(390, { telefono: true, tastiera: true });
+  const modo = (sel) => page.getAttribute(sel, 'inputmode');
+  const fondoBarra = async () => { const b = await page.locator('#barra-mobile').boundingBox(); return Math.round(b.y + b.height); };
+  assert.equal(await modo('#cella-0-0'), 'none', 'sul telefono si parte senza tastiera');
   assert.equal(await page.getAttribute('#cella-0-0', 'enterkeyhint'), 'next');
   assert.equal(await page.locator('#barra-mobile').isVisible(), false);
   const attivo = () => page.evaluate(() => document.activeElement.getAttribute('aria-label'));
+  // primo tocco: sceglie la casella, la tastiera resta chiusa
   await page.tap('#cella-0-0');
+  assert.equal(await attivo(), 'Angolo 1');
   assert.equal(await page.locator('#barra-mobile').isVisible(), true);
+  assert.equal(await modo('#cella-0-0'), 'none');
+  assert.equal(await fondoBarra(), 844);
+  // secondo tocco sulla stessa casella: tastiera
+  await page.tap('#cella-0-0');
+  assert.equal(await modo('#cella-0-0'), 'decimal');
+  assert.equal(await attivo(), 'Angolo 1');
+  await page.evaluate(() => window.__tastiera(true));
+  assert.equal(await fondoBarra(), 844 - 300, 'la barra sta sopra la tastiera');
   await page.keyboard.type('20,5');
   await page.tap('#mob-avanti');
   assert.equal(await attivo(), 'Altezza 1');
+  assert.equal(await modo('#cella-0-1'), 'decimal', 'Avanti lascia la tastiera aperta');
   await page.keyboard.type('3');
   await page.tap('#mob-segno');
   assert.equal(await page.inputValue('#cella-0-1'), '-3');
@@ -418,15 +445,29 @@ test('smartphone: tastierino e barra Indietro / ± / Avanti come INVIO', async (
   assert.equal(await page.inputValue('#cella-0-1'), '3');
   await page.tap('#mob-avanti');
   assert.equal(await attivo(), 'Angolo 2');
+  // tocco su un'altra casella con la tastiera aperta: resta aperta
+  await page.tap('#cella-2-1');
+  assert.equal(await attivo(), 'Altezza 3');
+  assert.equal(await modo('#cella-2-1'), 'decimal');
+  // tastiera chiusa (tasto Indietro di Android): Avanti e Indietro non la riaprono, la barra torna in fondo
+  await page.evaluate(() => window.__tastiera(false));
+  assert.equal(await fondoBarra(), 844);
   await page.tap('#mob-indietro');
-  assert.equal(await attivo(), 'Altezza 1');
+  assert.equal(await attivo(), 'Angolo 3');
+  assert.equal(await modo('#cella-2-0'), 'none');
   await page.tap('#mob-indietro');
+  assert.equal(await attivo(), 'Altezza 2');
+  await page.tap('#cella-0-0');
   assert.equal(await attivo(), 'Angolo 1');
+  assert.equal(await modo('#cella-0-0'), 'none', 'tocco su un\'altra casella con la tastiera chiusa: resta chiusa');
   assert.equal(await page.locator('#ant-0-0').innerText(), 'In macchina: 20.50');
   // nel modo "come in macchina" il tastierino è solo numerico
   await page.tap('#modo-macchina');
-  assert.equal(await page.getAttribute('#cella-0-0', 'inputmode'), 'numeric');
   await page.locator('#barra-mobile').waitFor({ state: 'hidden', timeout: 2000 });   // barra nascosta fuori dalla tabella
+  await page.tap('#cella-0-0');
+  await page.tap('#cella-0-0');
+  assert.equal(await modo('#cella-0-0'), 'numeric');
+  assert.deepEqual(page.erroriJs, []);
   await page.context().close();
 });
 
