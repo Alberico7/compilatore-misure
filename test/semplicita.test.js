@@ -157,17 +157,44 @@ test('Chiavetta predefinita: per i nuovi, una volta sola per chi tornava, codici
   await ctx.close();
 });
 
+test('pausa dopo INVIO: 30 ms predefiniti, i 200 ms di prima passano a 30 una volta sola', async () => {
+  const page = await apri(390);
+  const pausa = () => page.evaluate((k) => JSON.parse(localStorage.getItem(k)).chRitInv, CHIAVE);
+  const salvaCon = (v) => page.evaluate(([k, v]) => localStorage.setItem(k, JSON.stringify(v)), [CHIAVE, v]);
+  await page.click('#tab-chiavetta');
+  assert.equal(await page.inputValue('#ch-rit-car'), '30');
+  assert.equal(await page.inputValue('#ch-rit-inv'), '30');
+  // chi aveva i 200 ms di prima passa a 30; chi aveva un altro valore lo tiene
+  await salvaCon(Object.assign({}, UTENTE_CHE_TORNA, { scheda: 'chiavetta', chRitInv: 200 }));
+  await page.reload();
+  assert.equal(await page.inputValue('#ch-rit-inv'), '30');
+  await salvaCon(Object.assign({}, UTENTE_CHE_TORNA, { scheda: 'chiavetta', chRitInv: 400 }));
+  await page.reload();
+  assert.equal(await page.inputValue('#ch-rit-inv'), '400');
+  // dopo il passaggio, 200 rimesso a mano resta
+  await salvaCon(Object.assign({}, UTENTE_CHE_TORNA, { scheda: 'chiavetta', chRitInv: 200 }));
+  await page.reload();
+  await page.evaluate(() => { document.getElementById('ch-scrittura').open = true; });
+  await page.fill('#ch-rit-inv', '200');
+  await page.dispatchEvent('#ch-rit-inv', 'change');
+  assert.equal(await pausa(), 200);
+  await page.reload();
+  assert.equal(await page.inputValue('#ch-rit-inv'), '200');
+  assert.deepEqual(page.erroriJs, []);
+  await page.context().close();
+});
+
 test('scheda Chiavetta: prima collegamento e pulsanti, impostazioni di scrittura chiuse con riepilogo', async () => {
   const page = await apri(390, { salvato: Object.assign({}, UTENTE_CHE_TORNA, { scheda: 'chiavetta', righe: [['1', '2']] }) });
   const ordine = await page.evaluate(() => ['ch-mezzo', 'btn-ch-invia', 'esito-chiavetta', 'ch-scrittura']
     .map((id) => document.getElementById(id).getBoundingClientRect().top));
   assert.deepEqual([...ordine].sort((a, b) => a - b), ordine, 'collegamento, pulsanti, esito, impostazioni');
   assert.equal(await page.$eval('#ch-scrittura', (d) => d.open), false);
-  assert.equal(await page.locator('#ch-imp-riepilogo').innerText(), 'pause 30 / 200 ms · tutte le coppie');
+  assert.equal(await page.locator('#ch-imp-riepilogo').innerText(), 'pause 30 / 30 ms · tutte le coppie');
   await page.tap('#ch-scrittura summary');
   await page.fill('#ch-coppie', '10');
   await page.dispatchEvent('#ch-coppie', 'change');
-  assert.equal(await page.locator('#ch-imp-riepilogo').innerText(), 'pause 30 / 200 ms · 10 coppie per pressione');
+  assert.equal(await page.locator('#ch-imp-riepilogo').innerText(), 'pause 30 / 30 ms · 10 coppie per pressione');
   await page.locator('#sez-codici').screenshot({ path: path.join(CARTELLA_SCREENSHOT, 'semplicita-chiavetta-telefono.png') });
   assert.deepEqual(page.erroriJs, []);
   await page.context().close();

@@ -69,7 +69,7 @@ coppie_per_pressione = 0
 - `ritardo_carattere_ms`: pausa tra un tasto e l'altro (se la maschera perde caratteri, si aumenta).
 - `ritardo_invio_ms`: pausa dopo ogni INVIO, per dare tempo alla maschera di passare al campo dopo.
 - `coppie_per_pressione`: 0 vuol dire tutte in una volta. Con 10, ogni pressione scrive 10 coppie e poi si ferma (se la maschera cambia pagina).
-- I ritardi e le coppie per pressione si impostano sul sito nella scheda "Chiavetta" (predefiniti 30 ms, 200 ms, 0).
+- I ritardi e le coppie per pressione si impostano sul sito nella scheda "Chiavetta" (predefiniti 30 ms, 30 ms, 0; fino al sito 1.12.0 la pausa dopo INVIO era 200 ms, vedi `docs/2026-11-22-pausa-invio-30ms.md`).
 - Valori: solo cifre, con un eventuale meno all'inizio. Al massimo 1000 valori.
 - Il testo viaggia con lunghezza e codice di controllo (CRC-32). Se arriva incompleto o contiene una riga non valida, la chiavetta **scarta tutto e tiene i valori precedenti**, e il sito mostra l'errore.
 

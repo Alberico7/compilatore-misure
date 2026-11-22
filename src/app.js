@@ -18,10 +18,11 @@
       modo: 'separatore', decAng: 2, decAlt: 2, righe: righe,
       coppieBlocco: 10, invioFinale: false, scheda: schedaPredefinita(), blocco: 0, confronto: 'tutti',
       tema: 'scuro', lettura: 0, voceModo: 'premi', voceSeparatore: 'pausa', vocePrepara: true,
-      chRitCar: 30, chRitInv: 200, chCoppie: 0, chMezzo: 'bluetooth',
+      chRitCar: 30, chRitInv: 30, chCoppie: 0, chMezzo: 'bluetooth',
       listaNome: '',     // lista salvata aperta nella tabella ('' = nessuna)
       impAperte: true,   // riquadro delle impostazioni aperto al primo uso
-      schedaChiavetta: true   // segno: lo spostamento una tantum sulla Chiavetta è già fatto
+      schedaChiavetta: true,  // segno: lo spostamento una tantum sulla Chiavetta è già fatto
+      pausaInvio30: true      // segno: il passaggio una tantum da 200 a 30 ms dopo INVIO è già fatto
     };
   }
 
@@ -48,6 +49,8 @@
         /* docs/2026-11-14-chiavetta-predefinita.md: una volta sola tutti passano alla scheda predefinita
            (prima era "Codici a barre"); poi si ricorda la scelta */
         if (s.schedaChiavetta === undefined) base.scheda = schedaPredefinita();
+        /* docs/2026-11-22-pausa-invio-30ms.md: una volta sola, chi ha ancora i 200 ms di prima passa a 30 */
+        if (s.pausaInvio30 === undefined && s.chRitInv === 200) base.chRitInv = 30;
         stato = base;
       }
     } catch (e) { salvataggioOk = false; }

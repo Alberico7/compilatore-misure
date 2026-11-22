@@ -335,7 +335,7 @@ test('Controlla la chiavetta: avanzamento, confronto con la tabella (valori e im
     await page.click('#btn-ch-controlla');
     assert.match(await esito(page, 'avviso'), /Diversi dalla tabella/);
     // di nuovo come prima: uguali
-    await page.fill('#ch-rit-inv', '200');
+    await page.fill('#ch-rit-inv', '30');
     await page.locator('#ch-rit-inv').dispatchEvent('change');
     await page.click('#btn-ch-controlla');
     assert.match(await esito(page, 'ok'), /Uguali/);

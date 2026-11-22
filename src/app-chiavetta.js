@@ -198,7 +198,7 @@ var AppChiavetta = (function () {
     }
 
     function collega() {
-      [['ch-rit-car', 'chRitCar', 1, 1000, 30], ['ch-rit-inv', 'chRitInv', 0, 5000, 200], ['ch-coppie', 'chCoppie', 0, 500, 0]].forEach(function (x) {
+      [['ch-rit-car', 'chRitCar', 1, 1000, 30], ['ch-rit-inv', 'chRitInv', 0, 5000, 30], ['ch-coppie', 'chCoppie', 0, 500, 0]].forEach(function (x) {
         $(x[0]).addEventListener('change', function () {
           stato()[x[1]] = ctx.intero(this.value, x[2], x[3], x[4]);
           this.value = stato()[x[1]];
