@@ -59,6 +59,33 @@ test('più valori nella stessa frase, separati o no da "avanti"', () => {
   ], 'dopo la virgola ogni numero detto è un decimale (come nelle etichette)');
 });
 
+test('centinaia abbreviate: "due e settanta" = 270', () => {
+  const casi = [
+    ['due e settanta', '270'],
+    ['tre e quarantacinque', '345'],
+    ['uno e dieci', '110'],
+    ['nove e novantanove', '999'],
+    ['due e settanta virgola cinque', '270,5'],
+    ['meno due e settanta', '-270'],
+  ];
+  for (const [frase, atteso] of casi) {
+    assert.deepEqual(D.interpreta(frase), [{ tipo: 'valore', testo: atteso }], frase);
+  }
+  assert.deepEqual(D.interpreta('due e cinque'), [
+    { tipo: 'valore', testo: '2' }, { tipo: 'ignoto', parole: 'e' }, { tipo: 'valore', testo: '5' },
+  ], 'sotto dieci dopo la "e": non si indovina');
+  assert.deepEqual(D.interpreta('dodici e cinquanta'), [
+    { tipo: 'valore', testo: '12' }, { tipo: 'ignoto', parole: 'e' }, { tipo: 'valore', testo: '50' },
+  ], 'prima della "e" solo da uno a nove');
+  assert.deepEqual(D.interpreta('riga due e settanta'), [
+    { tipo: 'riga', n: 2 }, { tipo: 'ignoto', parole: 'e' }, { tipo: 'valore', testo: '70' },
+  ], '"riga" vuole il numero per intero');
+  assert.deepEqual(D.interpreta('due avanti settanta'), [
+    { tipo: 'valore', testo: '2' }, { tipo: 'comando', comando: 'avanti' }, { tipo: 'valore', testo: '70' },
+  ]);
+  assert.deepEqual(D.interpreta('mille e cento'), [{ tipo: 'valore', testo: '1100' }]);
+});
+
 test('comandi', () => {
   assert.deepEqual(D.interpreta('indietro'), [{ tipo: 'comando', comando: 'indietro' }]);
   assert.deepEqual(D.interpreta('cancella'), [{ tipo: 'comando', comando: 'cancella' }]);

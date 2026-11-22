@@ -119,6 +119,11 @@ var Dettato = (function () {
       if (t === 'meno') { meno = true; j = i + 1; }
       var num = numeroDa(tok, j);
       if (!num) { ignote.push(t); i++; continue; }
+      /* centinaia abbreviate: "due e settanta" = 270 (docs/2026-11-22-due-e-settanta.md) */
+      if (num.dopo === j + 1 && num.valore >= 1 && num.valore <= 9 && tok[j + 1] === 'e') {
+        var coda = numeroDa(tok, j + 2);
+        if (coda && coda.valore >= 10 && coda.valore <= 99) num = { valore: num.valore * 100 + coda.valore, dopo: coda.dopo };
+      }
       chiudiIgnote();
       var testo = String(num.valore);
       j = num.dopo;
