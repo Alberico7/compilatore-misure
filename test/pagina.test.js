@@ -443,19 +443,19 @@ test('nome del programma: codice a barre della lista aperta, in cima alla sezion
     const page = await nuovaPagina(1200, { telefono, scheda: telefono ? 'chiavetta' : 'barre' });
     const box = page.locator('#nome-programma');
     const salvaCome = async (nome) => {
-      await page.click('#btn-liste');
+      await page.click('#btn-apri');
       await page.click('#lista-salva-come');
       assert.equal(await page.innerText('#nome-lista-testo'), 'Nome del programma (come in macchina)');
       await page.fill('#nome-lista-campo', nome);
       await page.click('#nome-lista-form button[type=submit]');
-      await page.click('#btn-liste');
+      await page.click('#btn-apri');
     };
-    assert.match(await box.innerText(), /salva la tabella con Liste → Salva/);
+    assert.match(await box.innerText(), /Scrivi il nome del programma sopra la tabella/);
     assert.equal(await box.locator('svg').count(), 0);
     await incollaExcel(page, [['20', '15']]);
-    await salvaCome('FLANGIA-1234');
+    await salvaCome('FRESA-1234');
     assert.equal(await page.locator('#codice-nome svg').count(), 1);
-    assert.equal(await decodifica(await page.locator('#codice-nome svg').screenshot(), BarcodeFormat.CODE_128), 'FLANGIA-1234');
+    assert.equal(await decodifica(await page.locator('#codice-nome svg').screenshot(), BarcodeFormat.CODE_128), 'FRESA-1234');
     assert.match(await box.innerText(), /nella pagina del caricatore/);
     assert.match(await box.innerText(), /segni escano giusti/, 'nel nome c\'è il trattino');
     // dentro lo schermo, anche sul telefono
@@ -473,16 +473,89 @@ test('nome del programma: codice a barre della lista aperta, in cima alla sezion
     assert.doesNotMatch(await box.innerText(), /segni/);
     // lettera accentata: la lista si salva, il codice no
     await salvaCome('Perù 3');
-    assert.match(await page.innerText('#lista-attuale'), /Perù 3/);
+    assert.equal(await page.inputValue('#programma'), 'Perù 3');
     assert.equal(await box.locator('svg').count(), 0);
-    assert.match(await box.innerText(), /"ù" non si può mettere in un codice a barre[\s\S]*Salva come/);
+    assert.match(await box.innerText(), /"ù" non si può mettere in un codice a barre[\s\S]*Cambia il nome sopra la tabella/);
+    assert.match(await page.innerText('#avviso-programma'), /"ù" non si può mettere in un codice a barre/);
     // Svuota tutto chiude la lista: il codice sparisce
     await page.click('#btn-svuota');
     await page.click('#conferma-si');
-    assert.match(await box.innerText(), /salva la tabella/);
+    assert.match(await box.innerText(), /Scrivi il nome del programma/);
     assert.deepEqual(page.erroriJs, []);
     await page.context().close();
   }
+});
+
+test('casella Nome del programma e Salva accanto: codice subito, un tocco per salvare', async () => {
+  // docs/2026-11-23-casella-nome-programma.md
+  const page = await nuovaPagina(1200, { scheda: 'barre' });
+  const pulsante = () => page.getAttribute('#btn-salva', 'aria-label');
+  const spento = () => page.locator('#btn-salva').isDisabled();
+  assert.equal(await page.inputValue('#programma'), '');
+  assert.equal(await spento(), true, 'tabella vuota: niente da salvare');
+  // il codice compare mentre si scrive, senza salvare
+  await page.click('#programma');
+  await page.keyboard.type('FRESA-1234');
+  assert.equal(await decodifica(await page.locator('#codice-nome svg').screenshot(), BarcodeFormat.CODE_128), 'FRESA-1234');
+  await incollaExcel(page, [['20', '15'], ['21', '16']]);
+  assert.equal(await pulsante(), 'Salva');
+  assert.equal(await spento(), false);
+  // un tocco: salvata con il nome della casella, senza domande
+  await page.click('#btn-salva');
+  assert.equal(await page.locator('#nome-lista').isVisible(), false, 'nessuna domanda');
+  assert.equal(await pulsante(), 'Salvata');
+  assert.equal(await spento(), true);
+  assert.match(await page.innerText('#esito-programma'), /Salvata "FRESA-1234": 2 coppie\./);
+  // cambiando un valore o il nome si riaccende
+  await page.fill('#cella-0-0', '22');
+  assert.equal(await pulsante(), 'Salva');
+  await page.click('#btn-salva');
+  assert.equal(await pulsante(), 'Salvata');
+  await page.fill('#programma', 'FRESA-1235');
+  assert.equal(await pulsante(), 'Salva');
+  await page.fill('#programma', 'FRESA-1234');
+  assert.equal(await pulsante(), 'Salvata', 'di nuovo il nome della lista salvata');
+  // un altro nome già usato da un'altra lista: chiede se sostituire
+  await page.fill('#programma', 'ALBERO');
+  await page.click('#btn-salva');
+  assert.equal(await pulsante(), 'Salvata');
+  await page.fill('#cella-0-0', '30');
+  await page.fill('#programma', 'fresa-1234');
+  await page.click('#btn-salva');
+  assert.match(await page.locator('#conferma-testo').innerText(), /Esiste già una lista "FRESA-1234"/);
+  await page.click('#conferma-no');
+  // il nome resta dopo la ricarica
+  await page.fill('#programma', 'ALBERO');
+  await page.reload();
+  assert.equal(await page.inputValue('#programma'), 'ALBERO');
+  // casella vuota: Salva chiede il nome, con la casella vuota
+  await page.fill('#programma', '');
+  await page.click('#btn-salva');
+  assert.equal(await page.locator('#nome-lista').isVisible(), true);
+  await page.fill('#nome-lista-campo', 'TERZO');
+  await page.click('#nome-lista-form button[type=submit]');
+  assert.equal(await page.inputValue('#programma'), 'TERZO');
+  assert.equal(await pulsante(), 'Salvata');
+  // Salva come: propone il nome della casella
+  await page.click('#btn-apri');
+  await page.click('#lista-salva-come');
+  assert.equal(await page.inputValue('#nome-lista-campo'), 'TERZO');
+  await page.click('#nome-lista-no');
+  assert.deepEqual(page.erroriJs, []);
+  await page.context().close();
+});
+
+test('nome del programma: chi aveva una lista aperta lo trova nella casella', async () => {
+  const page = await nuovaPagina(1200, { scheda: 'barre' });
+  await page.evaluate(() => {
+    localStorage.setItem('compilatore-misure-liste-v1', JSON.stringify([{ nome: 'VECCHIA', righe: [['20', '15']], modo: 'separatore', decGra: 2, decDat: 2, salvata: '2026-11-20T10:00:00.000Z' }]));
+    localStorage.setItem('compilatore-misure-v1', JSON.stringify({ righe: [['20', '15'], ['', '']], modo: 'separatore', decGra: 2, decDat: 2, listaNome: 'VECCHIA' }));
+  });
+  await page.reload();
+  assert.equal(await page.inputValue('#programma'), 'VECCHIA');
+  assert.equal(await page.getAttribute('#btn-salva', 'aria-label'), 'Salvata');
+  assert.equal(await decodifica(await page.locator('#codice-nome svg').screenshot(), BarcodeFormat.CODE_128), 'VECCHIA');
+  await page.context().close();
 });
 
 test('smartphone: impaginazione, nessuno scorrimento orizzontale, comandi grandi', async () => {

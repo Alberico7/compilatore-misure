@@ -137,7 +137,7 @@ test('avvisi sui valori sospetti', () => {
 
 test('nome del programma: si può mettere in un codice a barre?', () => {
   // docs/2026-11-23-codice-da-testo.md
-  assert.deepEqual(L.testoPerCodice('FLANGIA-1234'), { ok: true });
+  assert.deepEqual(L.testoPerCodice('FRESA-1234'), { ok: true });
   assert.deepEqual(L.testoPerCodice('Albero 2/B_x.1'), { ok: true });
   assert.deepEqual(L.testoPerCodice('A'.repeat(40)), { ok: true });
   assert.equal(L.testoPerCodice('').ok, false);

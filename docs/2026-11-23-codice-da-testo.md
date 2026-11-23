@@ -48,8 +48,8 @@ Il codice a barre accetta lettere senza accento, cifre, spazio e i segni della t
 
 ## Esempio
 
-1. Scrivi i valori e salva con **Liste → Salva**, nome **FLANGIA-1234**.
-2. In cima alla sezione 2 compare il codice di "FLANGIA-1234".
+1. Scrivi i valori e salva con **Liste → Salva**, nome **FRESA-1234**.
+2. In cima alla sezione 2 compare il codice di "FRESA-1234".
 3. In macchina, nella pagina del caricatore, metti il cursore sul campo del nome e leggi il codice. Poi vai nella maschera, cursore su **Grado 1**, e scrivi i valori con la chiavetta o con i codici.
 
 ## Cosa cambia nel codice
@@ -64,7 +64,7 @@ Il codice a barre accetta lettere senza accento, cifre, spazio e i segni della t
 - **Logica:** nome valido; lettera accentata, €, nome troppo lungo: niente codice, con il messaggio giusto.
 - **Pagina:**
   - senza lista aperta: il messaggio per salvare;
-  - salvando "FLANGIA-1234" compare il codice, che si decodifica esattamente in "FLANGIA-1234";
+  - salvando "FRESA-1234" compare il codice, che si decodifica esattamente in "FRESA-1234";
   - aprendo un'altra lista il codice cambia; con Svuota tutto sparisce;
   - con un nome con la "è": la lista si salva, il codice no, c'è il messaggio;
   - il riquadro si vede con tutte e tre le schede; sul telefono il codice sta dentro lo schermo;

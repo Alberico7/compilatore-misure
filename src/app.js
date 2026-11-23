@@ -20,6 +20,7 @@
       tema: 'scuro', lettura: 0, voceModo: 'premi', voceSeparatore: 'pausa', vocePrepara: true,
       chRitCar: 30, chRitInv: 30, chCoppie: 0, chMezzo: 'bluetooth',
       listaNome: '',     // lista salvata aperta nella tabella ('' = nessuna)
+      programma: '',     // nome del programma scritto sopra la tabella (docs/2026-11-23-casella-nome-programma.md)
       impAperte: false,  // riquadro delle impostazioni chiuso, anche al primo uso (docs/2026-11-23-righe-automatiche.md)
       schedaChiavetta: true,  // segno: lo spostamento una tantum sulla Chiavetta è già fatto
       pausaInvio30: true,     // segno: il passaggio una tantum da 200 a 30 ms dopo INVIO è già fatto
@@ -61,6 +62,9 @@
         if (s.schedaChiavetta === undefined) base.scheda = schedaPredefinita();
         /* docs/2026-11-22-pausa-invio-30ms.md: una volta sola, chi ha ancora i 200 ms di prima passa a 30 */
         if (s.pausaInvio30 === undefined && s.chRitInv === 200) base.chRitInv = 30;
+        /* docs/2026-11-23-casella-nome-programma.md: chi aveva una lista aperta trova il suo nome nella casella */
+        if (s.programma === undefined) base.programma = s.listaNome;
+        base.programma = typeof base.programma === 'string' ? base.programma : '';
         /* docs/2026-11-23-gradi-e-dati.md: una volta sola, con i 2 / 2 di prima e la tabella vuota, si passa
            a 0 / 1 come in macchina. Con dei valori scritti restano: cambiarli cambierebbe quello che si scrive. */
         var vuota = base.righe.every(function (r) { return !r[0].trim() && !r[1].trim(); });
@@ -522,15 +526,38 @@
     return due(d.getDate()) + '/' + due(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + due(d.getHours()) + ':' + due(d.getMinutes());
   }
 
-  /* Nome della lista aperta sopra la tabella, con "modifiche non salvate". */
+  /* docs/2026-11-23-casella-nome-programma.md: il pulsante Salva accanto al nome dice se la tabella è salvata
+     con quel nome (✓ Salvata) o no (Salva); sotto il nome, il carattere che non va nel codice a barre. */
   function mostraListaAttuale() {
-    var p = $('lista-attuale');
-    var liste = stato.listaNome ? leggiListe() : [], i = stato.listaNome ? trovaLista(liste, stato.listaNome) : -1;
-    if (i < 0) { stato.listaNome = ''; p.hidden = true; mostraNomeProgramma(''); return; }
-    var modificata = !stessoContenuto(liste[i], contenutoAttuale());
-    p.innerHTML = 'Lista: <b>' + esc(liste[i].nome) + '</b>' + (modificata ? ' <span class="modificata">· modifiche non salvate</span>' : '');
-    p.hidden = false;
-    mostraNomeProgramma(liste[i].nome);
+    var nome = stato.programma.trim(), c = contenutoAttuale();
+    if (stato.listaNome && trovaLista(leggiListe(), stato.listaNome) < 0) stato.listaNome = '';
+    var liste = nome ? leggiListe() : [], i = nome ? trovaLista(liste, nome) : -1;
+    var salvata = i >= 0 && c.righe.length > 0 && stessoContenuto(liste[i], c);
+    var b = $('btn-salva'), etichetta = salvata ? 'Salvata' : 'Salva';
+    if (b.getAttribute('aria-label') !== etichetta) {
+      b.innerHTML = (salvata ? '<span class="icona-testo" aria-hidden="true">✓</span>' : ICONA_SALVA) + ' <span class="testo">' + etichetta + '</span>';
+      b.setAttribute('aria-label', etichetta);
+      b.title = etichetta;
+    }
+    b.disabled = salvata || !c.righe.length;
+    b.classList.toggle('primario', !b.disabled);
+    var v = nome ? Logica.testoPerCodice(nome) : { ok: true };
+    $('avviso-programma').innerHTML = v.ok ? '' : '<div class="messaggio avviso">' + esc(v.messaggio) + '</div>';
+    mostraNomeProgramma(nome);
+  }
+  var ICONA_SALVA = '<svg class="icona" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 3h11.5L21 7.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7.5 3v5h8V3"/><path d="M7 21v-7h10v7"/></svg>';
+  function scriviProgramma(nome) {
+    stato.programma = nome;
+    $('programma').value = nome;
+  }
+  /* Esito di Salva: sotto il nome, o nel riquadro Liste se è aperto. */
+  var tempoEsito = null;
+  function esitoSalva(tipo, testo) {
+    if ($('liste').hidden) {
+      $('esito-programma').innerHTML = '<div class="messaggio ' + tipo + '">' + esc(testo) + '</div>';
+      clearTimeout(tempoEsito);
+      tempoEsito = setTimeout(function () { $('esito-programma').innerHTML = ''; }, 4000);
+    } else esitoListe(tipo, testo);
   }
 
   /* docs/2026-11-23-codice-da-testo.md: in cima alla sezione 2, il codice a barre del nome della lista aperta
@@ -543,14 +570,14 @@
     if (chiave === nomeMostrato) return;   // aggiorna() gira a ogni tasto: il codice si ridisegna solo se cambia
     nomeMostrato = chiave;
     if (!nome) {
-      box.innerHTML = '<p class="nota">Per il codice a barre del <b>nome del programma</b>, salva la tabella con <b>Liste → Salva</b>.</p>';
+      box.innerHTML = '<p class="nota">Scrivi il <b>nome del programma</b> sopra la tabella per avere il suo codice a barre.</p>';
       return;
     }
     var c = Logica.testoPerCodice(nome);
     var h = '<div class="titolo-nome">Nome del programma</div>';
     if (!c.ok) {
       h += '<div class="valore-nome">' + esc(nome) + '</div>' +
-        '<div class="messaggio avviso">' + esc(c.messaggio) + ' Rinomina la lista con <b>Liste → Salva come…</b></div>';
+        '<div class="messaggio avviso">' + esc(c.messaggio) + ' Cambia il nome sopra la tabella.</div>';
     } else {
       h += '<div class="cornice" id="codice-nome">' + Logica.code128Svg(nome, moduloBarre(nome, larg, 4), 70) + '</div>' +
         '<div class="valore-nome">' + esc(nome) + '</div>' +
@@ -568,12 +595,12 @@
     var h = visibili.map(function (l) {
       var n = l.righe.length;
       var aperta = stato.listaNome && l.nome.toLowerCase() === stato.listaNome.toLowerCase();
-      return '<li><div class="info"><div class="nome">' + esc(l.nome) + (aperta ? ' <span class="aperta">· aperta</span>' : '') + '</div>' +
-        '<div class="dettagli">' + plurale(n, 'coppia', 'coppie') + ' · ' + esc(dataBreve(l.salvata)) + '</div></div>' +
-        '<button type="button" data-apri="' + esc(l.nome) + '">Apri</button>' +
+      // un tocco sul nome apre la lista (docs/2026-11-23-apri-accanto-al-nome.md)
+      return '<li><button type="button" class="info" data-apri="' + esc(l.nome) + '"><span class="nome">' + esc(l.nome) + (aperta ? ' <span class="aperta">· aperta</span>' : '') + '</span>' +
+        '<span class="dettagli">' + plurale(n, 'coppia', 'coppie') + ' · ' + esc(dataBreve(l.salvata)) + '</span></button>' +
         '<button type="button" class="pericolo" data-elimina="' + esc(l.nome) + '">Elimina</button></li>';
     }).join('');
-    if (!liste.length) h = '<li class="vuoto">Nessuna lista salvata. Scrivi i valori e premi "Salva come…".</li>';
+    if (!liste.length) h = '<li class="vuoto">Nessuna lista salvata. Scrivi il nome del programma e i valori, poi tocca Salva.</li>';
     else if (!visibili.length) h = '<li class="vuoto">Nessuna lista con questo nome.</li>';
     $('elenco-liste').innerHTML = h;
   }
@@ -606,7 +633,7 @@
 
   function salvaCon(nome, chiediSeEsiste) {
     var c = contenutoAttuale();
-    if (!c.righe.length) { esitoListe('avviso', 'La tabella è vuota: non c\'è niente da salvare.'); return Promise.resolve(); }
+    if (!c.righe.length) { esitoSalva('avviso', 'La tabella è vuota: non c\'è niente da salvare.'); return Promise.resolve(); }
     var liste = leggiListe(), i = trovaLista(liste, nome);
     var ok = i >= 0 && chiediSeEsiste
       ? chiedi('Esiste già una lista "' + liste[i].nome + '".\nSostituirla con i valori attuali?', 'Sostituisci')
@@ -618,19 +645,28 @@
       liste.unshift({ nome: nome, righe: c.righe, modo: c.modo, decGra: c.decGra, decDat: c.decDat, salvata: new Date().toISOString() });
       if (!scriviListe(liste)) return;
       stato.listaNome = nome;
+      scriviProgramma(nome);
       salva();
-      esitoListe('ok', 'Salvata "' + nome + '": ' + plurale(c.righe.length, 'coppia', 'coppie') + '.');
+      esitoSalva('ok', 'Salvata "' + nome + '": ' + plurale(c.righe.length, 'coppia', 'coppie') + '.');
       mostraListe(); mostraListaAttuale();
     });
   }
+  function chiudiListe() {
+    $('liste').hidden = true;
+    $('btn-apri').setAttribute('aria-expanded', 'false');
+  }
   function salvaComeLista() {
-    return chiediNome('Nome del programma (come in macchina)', stato.listaNome).then(function (nome) {
+    return chiediNome('Nome del programma (come in macchina)', stato.programma.trim() || stato.listaNome).then(function (nome) {
       if (nome) return salvaCon(nome, true);
     });
   }
+  /* Salva con il nome scritto sopra la tabella, senza domande; chiede solo se il nome è vuoto
+     o se c'è già un'altra lista con quel nome. */
   function salvaLista() {
-    if (stato.listaNome && trovaLista(leggiListe(), stato.listaNome) >= 0) return salvaCon(stato.listaNome, false);
-    return salvaComeLista();
+    var nome = stato.programma.trim();
+    if (!nome) return salvaComeLista();
+    var aperta = stato.listaNome && stato.listaNome.toLowerCase() === nome.toLowerCase();
+    return salvaCon(nome, !aperta);
   }
 
   function apriLista(nome) {
@@ -646,12 +682,14 @@
       if (!stato.righe.length) stato.righe.push(['', '']);
       stato.modo = l.modo; stato.decGra = l.decGra; stato.decDat = l.decDat;
       stato.listaNome = l.nome;
+      scriviProgramma(l.nome);
       stato.blocco = 0; stato.lettura = 0;
       avvisoTabella = '';
       applicaImpostazioni();
       costruisciTabella();
       aggiorna();
-      esitoListe('ok', 'Aperta "' + l.nome + '": ' + plurale(l.righe.length, 'coppia', 'coppie') + '.');
+      chiudiListe();
+      esitoSalva('ok', 'Aperta "' + l.nome + '": ' + plurale(l.righe.length, 'coppia', 'coppie') + '.');
       mostraListe();
     });
   }
@@ -697,7 +735,7 @@
       var pulita = { nome: l.nome.trim().slice(0, 60), righe: l.righe, modo: l.modo, decGra: l.decGra, decDat: l.decDat,
         salvata: isNaN(new Date(l.salvata)) ? new Date().toISOString() : l.salvata };
       var i = trovaLista(liste, pulita.nome);
-      // già presente: stesse coppie con lo stesso nome, o con il nome già cambiato da un'importazione ("Flangia (2)")
+      // già presente: stesse coppie con lo stesso nome, o con il nome già cambiato da un'importazione ("Fresa (2)")
       var stessoNome = function (n) {
         n = n.toLowerCase(); var b = pulita.nome.toLowerCase();
         return n === b || (n.indexOf(b + ' (') === 0 && /^\d+\)$/.test(n.slice(b.length + 2)));
@@ -1263,6 +1301,7 @@
         if (!si) return;
         stato.righe = statoIniziale().righe;   // di nuovo le righe vuote iniziali
         stato.listaNome = '';   // la lista resta salvata: si chiude soltanto
+        scriviProgramma('');
         stato.blocco = 0;
         stato.lettura = 0;
         avvisoTabella = '';
@@ -1339,13 +1378,22 @@
     $('verifica').addEventListener('keydown', function (e) { if (e.key === 'Escape') chiudiVerifica(); });
 
     /* liste salvate */
-    $('btn-liste').addEventListener('click', function () {
-      var p = $('liste'), apri = p.hidden;
-      p.hidden = !apri;
-      this.setAttribute('aria-expanded', String(apri));
-      if (apri) { esitoListe('', ''); mostraListe(); }
+    $('btn-apri').addEventListener('click', function () {
+      if (!$('liste').hidden) { chiudiListe(); return; }
+      $('liste').hidden = false;
+      this.setAttribute('aria-expanded', 'true');
+      esitoListe('', ''); mostraListe();
     });
-    $('lista-salva').addEventListener('click', salvaLista);
+    $('btn-salva').addEventListener('click', salvaLista);
+    $('programma').addEventListener('input', function () {
+      stato.programma = this.value;
+      $('esito-programma').innerHTML = '';
+      salva();
+      mostraListaAttuale();
+    });
+    $('programma').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); this.blur(); }
+    });
     $('lista-salva-come').addEventListener('click', salvaComeLista);
     $('lista-cerca').addEventListener('input', mostraListe);
     $('elenco-liste').addEventListener('click', function (e) {
@@ -1401,6 +1449,7 @@
     sel.value = String(stato.coppieBlocco);
     $('invio-finale').checked = !!stato.invioFinale;
     $('imp-valori').open = !!stato.impAperte;
+    $('programma').value = stato.programma;
     chiavetta.applicaImpostazioni();
     applicaTema();
   }

@@ -1,6 +1,6 @@
 {
   "name": "compilatore-misure",
-  "version": "1.18.0",
+  "version": "1.19.0",
   "private": true,
   "description": "Coppie Angolo/Altezza per la maschera della macchina: codici a barre e QR da leggere col lettore, dettatura con Vosk, chiavetta-tastiera con Raspberry Pi Pico 2 W",
   "author": "Andrea Carletti",

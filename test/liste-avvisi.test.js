@@ -135,6 +135,11 @@ test('confronto: lista grande come in macchina, spunte che restano finché i val
 
 /* ---------------- liste salvate ---------------- */
 
+/* docs/2026-11-23-casella-nome-programma.md: il nome della lista è nella casella sopra la tabella,
+   lo stato sul pulsante Salva accanto ("Salva" o "✓ Salvata"). */
+const nomeProgramma = (page) => page.inputValue('#programma');
+const pulsanteSalva = (page) => page.getAttribute('#btn-salva', 'aria-label');
+
 async function salvaCome(page, nome) {
   await page.click('#lista-salva-come');
   await page.fill('#nome-lista-campo', nome);
@@ -143,7 +148,7 @@ async function salvaCome(page, nome) {
 
 test('liste: salva, modifiche non salvate, salva come con nome già usato, apri, svuota, elimina', async () => {
   const page = await apri();
-  await page.click('#btn-liste');
+  await page.click('#btn-apri');
   assert.match(await page.innerText('#elenco-liste'), /Nessuna lista salvata/);
   // tabella vuota: niente da salvare
   await salvaCome(page, 'Vuota');
@@ -151,18 +156,19 @@ test('liste: salva, modifiche non salvate, salva come con nome già usato, apri,
 
   await incolla(page, [['20', '150'], ['45', '151']]);
   await salvaCome(page, 'Flangia 1234');
-  assert.equal(await page.innerText('#lista-attuale'), 'Lista: Flangia 1234');
+  assert.equal(await nomeProgramma(page), 'Flangia 1234');
+  assert.equal(await pulsanteSalva(page), 'Salvata');
   assert.match(await page.innerText('#elenco-liste'), /Flangia 1234 · aperta\s+2 coppie/);
-  // modifica: compare "modifiche non salvate", Salva lo toglie senza chiedere il nome
+  // modifica: il pulsante torna "Salva"; Salva salva senza chiedere il nome
   await page.fill(cella(1, 1), '152');
-  assert.match(await page.innerText('#lista-attuale'), /modifiche non salvate/);
-  await page.click('#lista-salva');
+  assert.equal(await pulsanteSalva(page), 'Salva');
+  await page.click('#btn-salva');
   assert.equal(await page.locator('#nome-lista').isVisible(), false);
-  assert.equal(await page.innerText('#lista-attuale'), 'Lista: Flangia 1234');
+  assert.equal(await pulsanteSalva(page), 'Salvata');
 
   // seconda lista, in "come in macchina" con 3 decimali sui dati
   await page.click('#btn-svuota'); await page.click('#conferma-si');
-  assert.equal(await page.locator('#lista-attuale').isVisible(), false, 'Svuota tutto chiude la lista');
+  assert.equal(await nomeProgramma(page), '', 'Svuota tutto chiude la lista e svuota il nome');
   assert.match(await page.innerText('#elenco-liste'), /Flangia 1234/, '...ma non la cancella');
   await page.check('#modo-macchina');
   await page.fill('#dec-dat', '3'); await page.dispatchEvent('#dec-dat', 'change');
@@ -172,7 +178,8 @@ test('liste: salva, modifiche non salvate, salva come con nome già usato, apri,
   await salvaCome(page, 'flangia 1234');
   assert.match(await page.innerText('#conferma-testo'), /Esiste già una lista "Flangia 1234"/);
   await page.click('#conferma-no');
-  assert.equal(await page.innerText('#lista-attuale'), 'Lista: Albero');
+  assert.equal(await nomeProgramma(page), 'Albero');
+  assert.equal(await pulsanteSalva(page), 'Salvata');
 
   // valori non salvati, poi Apri: chiede conferma
   await page.fill(cella(0, 0), '9001');
@@ -182,24 +189,30 @@ test('liste: salva, modifiche non salvate, salva come con nome già usato, apri,
   assert.deepEqual(await valoriTabella(page), [['20', '150'], ['45', '152']]);
   assert.equal(await page.isChecked('#modo-separatore'), true, 'il modo torna quello della lista');
   assert.equal(await page.inputValue('#dec-dat'), '2');
-  assert.equal(await page.innerText('#lista-attuale'), 'Lista: Flangia 1234');
+  assert.equal(await nomeProgramma(page), 'Flangia 1234');
+  // aperta la lista, l'elenco si chiude da solo; Apri lo riapre
+  assert.equal(await page.locator('#liste').isVisible(), false);
+  assert.match(await page.innerText('#esito-programma'), /Aperta "Flangia 1234": 2 coppie\./);
+  await page.click('#btn-apri');
   // valori già salvati in una lista: Apri non chiede niente
   await page.click('#elenco-liste button[data-apri="Albero"]');
   assert.equal(await page.locator('#conferma').isVisible(), false);
   assert.deepEqual(await valoriTabella(page), [['9000', '1500']]);
   assert.equal(await page.isChecked('#modo-macchina'), true);
   assert.equal(await page.inputValue('#dec-dat'), '3');
+  await page.click('#btn-apri');
   // la più recente in alto
   assert.deepEqual(await page.$$eval('#elenco-liste .nome', (n) => n.map((x) => x.firstChild.textContent.trim())), ['Albero', 'Flangia 1234']);
 
   // dopo un riavvio tutto è ancora lì
   await page.reload();
-  assert.equal(await page.innerText('#lista-attuale'), 'Lista: Albero');
-  await page.click('#btn-liste');
+  assert.equal(await nomeProgramma(page), 'Albero');
+  assert.equal(await pulsanteSalva(page), 'Salvata');
+  await page.click('#btn-apri');
   // elimina: chiede conferma, la tabella resta
   await page.click('#elenco-liste button[data-elimina="Albero"]');
   await page.click('#conferma-si');
-  assert.equal(await page.locator('#lista-attuale').isVisible(), false);
+  assert.equal(await pulsanteSalva(page), 'Salva', 'lista eliminata: il nome resta, da salvare');
   assert.deepEqual(await valoriTabella(page), [['9000', '1500']]);
   assert.deepEqual(await page.$$eval('#elenco-liste .nome', (n) => n.map((x) => x.firstChild.textContent.trim())), ['Flangia 1234']);
   assert.deepEqual(page.erroriJs, []);
@@ -212,13 +225,14 @@ test('liste con i nomi vecchi (decAng / decAlt): salvate nel browser e importate
   const vecchia = (nome, righe, decAng, decAlt) => ({ nome, righe, modo: 'macchina', decAng, decAlt, salvata: '2026-11-20T10:00:00.000Z' });
   await page.evaluate((l) => localStorage.setItem('compilatore-misure-liste-v1', JSON.stringify(l)), [vecchia('Salvata prima', [['9000', '1500']], 2, 3)]);
   await page.reload();
-  await page.click('#btn-liste');
+  await page.click('#btn-apri');
   await page.click('#elenco-liste button[data-apri="Salvata prima"]');
   assert.deepEqual(await valoriTabella(page), [['9000', '1500']]);
   assert.equal(await page.locator('#corpo-tabella tr').count(), 2, 'una riga vuota dopo la coppia');
   assert.equal(await page.inputValue('#dec-gra'), '2');
   assert.equal(await page.inputValue('#dec-dat'), '3');
-  // file esportato da una versione di prima
+  // file esportato da una versione di prima (aprendo una lista l'elenco si chiude: si riapre)
+  await page.click('#btn-apri');
   const file = path.join(os.tmpdir(), 'liste-vecchie-' + process.pid + '.json');
   fs.writeFileSync(file, JSON.stringify({ formato: 'compilatore-misure-liste', versione: 1, liste: [vecchia('Da file', [['45', '151']], 0, 2)] }));
   await page.evaluate(() => { document.getElementById('lista-file').value = ''; document.getElementById('esito-liste').textContent = ''; });
@@ -239,7 +253,7 @@ test('liste con i nomi vecchi (decAng / decAlt): salvate nel browser e importate
 
 test('liste: la ricerca compare oltre 8 liste e filtra per nome', async () => {
   const page = await apri();
-  await page.click('#btn-liste');
+  await page.click('#btn-apri');
   for (let i = 1; i <= 9; i++) {
     await page.fill(cella(0, 0), String(i)); await page.fill(cella(0, 1), '1');
     await salvaCome(page, 'Pezzo ' + i);
@@ -255,7 +269,7 @@ test('liste: la ricerca compare oltre 8 liste e filtra per nome', async () => {
 
 test('liste: esporta e importa su un altro dispositivo, senza cancellare niente', async () => {
   const a = await apri();
-  await a.click('#btn-liste');
+  await a.click('#btn-apri');
   await incolla(a, [['20', '150'], ['45', '151']]);
   await salvaCome(a, 'Flangia');
   await incolla(a, [['1', '2']]);
@@ -283,7 +297,7 @@ test('liste: esporta e importa su un altro dispositivo, senza cancellare niente'
 
   // altro dispositivo: ha già "Flangia" con coppie diverse
   const b = await apri();
-  await b.click('#btn-liste');
+  await b.click('#btn-apri');
   await incolla(b, [['99', '99']]);
   await salvaCome(b, 'Flangia');
   // come fa il pulsante "Importa": si azzera la scelta precedente, poi si sceglie il file
@@ -393,10 +407,10 @@ test('file aperto dal PC: nessun service worker, le liste funzionano', async () 
   const page = await apri();
   assert.equal(await page.innerText('#stato-offline'), '');
   assert.equal(await page.evaluate(() => !!(navigator.serviceWorker && navigator.serviceWorker.controller)), false);
-  await page.click('#btn-liste');
+  await page.click('#btn-apri');
   await incolla(page, [['1', '2']]);
   await salvaCome(page, 'Dal PC');
   await page.reload();
-  assert.equal(await page.innerText('#lista-attuale'), 'Lista: Dal PC');
+  assert.equal(await nomeProgramma(page), 'Dal PC');
   await page.context().close();
 });
