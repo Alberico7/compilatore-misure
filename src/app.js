@@ -17,14 +17,15 @@
     return {
       modo: 'separatore', decGra: 0, decDat: 1, righe: righe,
       coppieBlocco: 10, invioFinale: false, scheda: schedaPredefinita(), blocco: 0, confronto: 'tutti',
-      tema: 'scuro', lettura: 0, voceModo: 'premi', voceSeparatore: 'pausa', vocePrepara: true,
+      tema: 'scuro', lettura: 0, voceModo: 'premi', voceSeparatore: 'pausa', vocePrepara: false,
       chRitCar: 30, chRitInv: 30, chCoppie: 0, chMezzo: 'bluetooth',
       listaNome: '',     // lista salvata aperta nella tabella ('' = nessuna)
       programma: '',     // nome del programma scritto sopra la tabella (docs/2026-11-23-casella-nome-programma.md)
       impAperte: false,  // riquadro delle impostazioni chiuso, anche al primo uso (docs/2026-11-23-righe-automatiche.md)
       schedaChiavetta: true,  // segno: lo spostamento una tantum sulla Chiavetta è già fatto
       pausaInvio30: true,     // segno: il passaggio una tantum da 200 a 30 ms dopo INVIO è già fatto
-      decimali01: true        // segno: il passaggio una tantum ai decimali 0 / 1 è già fatto
+      decimali01: true,       // segno: il passaggio una tantum ai decimali 0 / 1 è già fatto
+      preparaSpenta: true     // segno: la preparazione della dettatura all'apertura è già stata spenta una volta
     };
   }
 
@@ -62,6 +63,9 @@
         if (s.schedaChiavetta === undefined) base.scheda = schedaPredefinita();
         /* docs/2026-11-22-pausa-invio-30ms.md: una volta sola, chi ha ancora i 200 ms di prima passa a 30 */
         if (s.pausaInvio30 === undefined && s.chRitInv === 200) base.chRitInv = 30;
+        /* docs/2026-11-23-dettatura-non-preparata.md: il modello vocale all'apertura occupa troppa memoria sul
+           telefono; una volta sola si spegne per tutti, poi si ricorda la scelta */
+        if (s.preparaSpenta === undefined) base.vocePrepara = false;
         /* docs/2026-11-23-casella-nome-programma.md: chi aveva una lista aperta trova il suo nome nella casella */
         if (s.programma === undefined) base.programma = s.listaNome;
         base.programma = typeof base.programma === 'string' ? base.programma : '';
@@ -74,10 +78,16 @@
     } catch (e) { salvataggioOk = false; }
   }
   function salva() {
+    clearTimeout(timerSalva); timerSalva = null;
     try { localStorage.setItem(CHIAVE, JSON.stringify(stato)); salvataggioOk = true; }
     catch (e) { salvataggioOk = false; }
     $('stato-salvataggio').textContent = salvataggioOk ? 'Salvataggio automatico.' : 'Attenzione: salvataggio automatico non disponibile in questo browser.';
   }
+  /* docs/2026-11-23-dettatura-non-preparata.md: mentre si scrive si salva al massimo ogni mezzo secondo;
+     quando la pagina si nasconde o si chiude si salva subito (salvaSeInAttesa). */
+  var timerSalva = null;
+  function salvaPresto() { if (!timerSalva) timerSalva = setTimeout(salva, 500); }
+  function salvaSeInAttesa() { if (timerSalva) salva(); }
 
   /* ---------- utilità ---------- */
   function $(id) { return document.getElementById(id); }
@@ -224,7 +234,10 @@
   }
 
   /* ---------- analisi e anteprime ---------- */
-  function aggiorna() {
+  /* Dopo ogni modifica dei valori. inScrittura: un tasto in una casella. Allora la sezione 2 si ridisegna
+     dopo una pausa e il salvataggio si raggruppa (docs/2026-11-23-dettatura-non-preparata.md); tabella,
+     anteprime, errori e riepilogo restano immediati. */
+  function aggiorna(inScrittura) {
     rigaVuotaInFondo();
     var usate = righeUsate();
     var imp = { modo: stato.modo, decGra: stato.decGra, decDat: stato.decDat };
@@ -237,30 +250,51 @@
         var inp = cella(i, c), ant = $('ant-' + i + '-' + c);
         if (!inp) continue;
         var r = i < usate.length ? analisi.celle[i][c] : null;
-        inp.classList.remove('errore', 'avviso');
-        ant.className = 'anteprima';
-        if (!r) { ant.innerHTML = ''; continue; }
-        if (r.stato !== 'ok') {
-          inp.classList.add('errore'); ant.classList.add('errore');
-          ant.textContent = r.messaggio;
-        } else {
+        var tipo = '', html = '';
+        if (r && r.stato !== 'ok') { tipo = 'errore'; html = esc(r.messaggio); }
+        else if (r) {
           var note = segni[i + ',' + c];
-          if (note) { inp.classList.add('avviso'); ant.classList.add('avviso'); }
-          ant.innerHTML = 'In macchina: <b>' + esc(r.display) + '</b>' +
-            (note ? ' · ' + esc(note.join(' · ')) : '');
+          if (note) tipo = 'avviso';
+          html = 'In macchina: <b>' + esc(r.display) + '</b>' + (note ? ' · ' + esc(note.join(' · ')) : '');
         }
+        // si tocca la pagina solo se l'anteprima è cambiata: con 500 righe, a ogni tasto cambia quasi solo una casella
+        var chiave = tipo + '|' + html;
+        if (ant.dataset.k === chiave) continue;
+        ant.dataset.k = chiave;
+        inp.classList.toggle('errore', tipo === 'errore');
+        inp.classList.toggle('avviso', tipo === 'avviso');
+        ant.className = tipo ? 'anteprima ' + tipo : 'anteprima';
+        ant.innerHTML = html;
       }
     }
     aggiornaProgramma();
     if (!$('verifica').hidden) mostraVerifica();
     mostraRiepilogo(usate.length);
     riepilogoImpostazioni();
-    mostraBarre();
-    mostraQR();
-    chiavetta.aggiorna();
+    sezione2(!inScrittura);
     aggiornaConfronto();
     if (!$('lettura').hidden) mostraLettura();
-    salva();
+    if (inScrittura) salvaPresto(); else salva();
+  }
+
+  /* Sezione 2: si disegna solo la scheda aperta; le altre si segnano da ridisegnare e si disegnano
+     quando si aprono. Mentre si scrive, la scheda aperta si ridisegna un terzo di secondo dopo l'ultimo tasto.
+     Invia, Controlla e Leggi uno alla volta leggono i valori dalla tabella (analisi), sempre aggiornata. */
+  var daDisegnare = { barre: true, qr: true, chiavetta: true }, timerSezione2 = null;
+  function sezione2(subito) {
+    daDisegnare.barre = daDisegnare.qr = daDisegnare.chiavetta = true;
+    clearTimeout(timerSezione2);
+    if (subito) disegnaSchedaAperta();
+    else timerSezione2 = setTimeout(disegnaSchedaAperta, 333);
+  }
+  function disegnaSchedaAperta() {
+    clearTimeout(timerSezione2); timerSezione2 = null;
+    var s = stato.scheda;
+    if (!daDisegnare[s]) return;
+    daDisegnare[s] = false;
+    if (s === 'barre') mostraBarre();
+    else if (s === 'qr') mostraQR();
+    else chiavetta.aggiorna();
   }
 
   /* Note brevi degli avvisi per casella: { "riga,col": ["oltre 360!", ...] }. La coppia uguale segna tutte e due le caselle. */
@@ -383,7 +417,9 @@
       $('tab-' + s).setAttribute('aria-selected', String(stato.scheda === s));
       $('pannello-' + s).hidden = stato.scheda !== s;
     });
-    mostraQR(); // la larghezza del QR dipende dal pannello visibile
+    // i codici a barre possono essere un migliaio: chiusa la scheda si tolgono, e si ridisegnano quando si riapre
+    if (stato.scheda !== 'barre' && $('uscita-barre').firstChild) { $('uscita-barre').innerHTML = ''; daDisegnare.barre = true; }
+    disegnaSchedaAperta();   // la scheda appena aperta, se è rimasta indietro
   }
 
   /* ---------- lettura uno alla volta ---------- */
@@ -906,7 +942,9 @@
   var ascoltoContinuo = false, tastoPremuto = false, bufferAvanti = '', appenaScritto = false;
   var ultimaDettata = null, ultimiValori = [], timerSilenzio = null, avvisoLentezza = false;
   var preparazione = null;   // preparazione del motore in corso (Promise<boolean>)
-  var attesaTocco = false;   // un tocco del 🎤 aspetta la fine della preparazione
+  var attesaTocco = false;   // un tocco del microfono aspetta la fine della preparazione
+  // il microfono piccolo dentro il testo dei messaggi: lo stesso disegno della guida, preso dal template
+  var ICONA_MICROFONO = (document.querySelector('#sez-guida .icona-testo') || { outerHTML: '' }).outerHTML;
   var MSG_PREPARA = 'Preparazione della dettatura…';
   var SEPARATORI = ['avanti', 'poi', 'prossimo'];
 
@@ -1100,7 +1138,7 @@
     preparaVoce().then(function (pronto) {
       attesaTocco = false;
       if (!pronto) { tastoPremuto = false; return; }
-      if (!tastoPremuto) { mostraStatoVoce('<span class="info">Pronto: tieni premuto 🎤 e parla.</span>'); return; }
+      if (!tastoPremuto) { mostraStatoVoce('<span class="info">Pronto: tieni premuto ' + ICONA_MICROFONO + ' e parla.</span>'); return; }
       return motore.avvia({ onParziale: parziale, onRisultato: function () {} }).then(function () {
         statoVoce = 'ascolto'; aggiornaPulsanteVoce();
         if (!tastoPremuto) { tastoPremuto = true; finisciPremi(); return; }
@@ -1233,8 +1271,11 @@
       var t = e.target;
       if (!t.dataset || t.dataset.r === undefined) return;
       stato.righe[+t.dataset.r][+t.dataset.c] = t.value;
-      aggiorna();
+      aggiorna(true);
     });
+    // il salvataggio raggruppato si fa subito quando la pagina si nasconde (altra app, altra scheda) o si chiude
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') salvaSeInAttesa(); });
+    window.addEventListener('pagehide', salvaSeInAttesa);
 
     corpo.addEventListener('keydown', function (e) {
       var t = e.target;
@@ -1440,7 +1481,8 @@
     window.addEventListener('resize', function () {
       clearTimeout(timerRidim);
       timerRidim = setTimeout(function () {
-        mostraBarre(); mostraQR(); aggiornaBarraMobile();
+        daDisegnare.barre = daDisegnare.qr = true;   // la larghezza dei codici dipende dalla finestra
+        disegnaSchedaAperta(); aggiornaBarraMobile();
         largNome = 0; mostraNomeProgramma(stato.programma.trim());
         if (!$('lettura').hidden) mostraLettura();
       }, 150);

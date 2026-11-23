@@ -241,6 +241,10 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
 .voce-btn { font-size: 19px; min-height: 52px; padding: 10px 20px; touch-action: none; user-select: none; -webkit-user-select: none; }
 .voce-btn.ascolto, .voce-mob.ascolto { background: var(--errore); color: var(--su-accento); border-color: var(--errore); }
 .voce-btn.caricamento { opacity: .7; }
+/* microfono a linea, come Salva e Apri (docs/2026-11-23-simbolo-microfono.md) */
+.voce-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.voce-mob .icona { width: 28px; height: 28px; }
+.icona.icona-testo { width: 1.05em; height: 1.05em; vertical-align: -0.15em; stroke-width: 2.2; }
 .voce-stato { margin: 4px 0 8px; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .voce-stato .provvisorio { color: var(--tenue); font-weight: 400; font-style: italic; }
 .voce-stato .non-capito { color: var(--errore); }
@@ -424,7 +428,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     </details>
     <div class="pulsanti azioni-valori">
       <div class="voce" id="voce" hidden>
-        <button type="button" class="voce-btn" id="btn-voce"><span aria-hidden="true">🎤</span> <span id="btn-voce-testo">Detta</span></button>
+        <button type="button" class="voce-btn" id="btn-voce"><svg class="icona" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg> <span id="btn-voce-testo">Detta</span></button>
       </div>
       <button type="button" class="pericolo" id="btn-svuota">Svuota tutto</button>
     </div>
@@ -438,7 +442,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     <div class="programma">
       <label for="programma">Nome del programma</label>
       <div class="riga-programma">
-        <input type="text" id="programma" maxlength="60" autocomplete="off" spellcheck="false" enterkeyhint="done" placeholder="per esempio FRESA-1234">
+        <input type="text" id="programma" maxlength="60" autocomplete="off" spellcheck="false" enterkeyhint="done" placeholder="es. FRESA-1234">
         <button type="button" class="primario" id="btn-salva" title="Salva" aria-label="Salva"><svg class="icona" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 3h11.5L21 7.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7.5 3v5h8V3"/><path d="M7 21v-7h10v7"/></svg> <span class="testo">Salva</span></button>
         <button type="button" id="btn-apri" title="Apri una lista salvata" aria-label="Apri una lista salvata" aria-expanded="false" aria-controls="liste"><svg class="icona" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 18V6a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v2"/><path d="M3 18l2.6-6.4A1 1 0 0 1 6.5 11H21a1 1 0 0 1 .9 1.4l-2.6 6A1 1 0 0 1 18.4 19H4a1 1 0 0 1-1-1z"/></svg> <span class="testo">Apri</span></button>
       </div>
@@ -592,7 +596,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     <details>
       <summary>Da smartphone</summary>
       <ul>
-        <li>Un tocco su una casella la sceglie, senza aprire la tastiera: così si può dettare con 🎤. Per scrivere a mano tocca la stessa casella <b>una seconda volta</b>: si apre la tastiera.</li>
+        <li>Un tocco su una casella la sceglie, senza aprire la tastiera: così si può dettare con <svg class="icona icona-testo" viewBox="0 0 24 24" role="img" aria-label="microfono" focusable="false"><rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg>. Per scrivere a mano tocca la stessa casella <b>una seconda volta</b>: si apre la tastiera.</li>
         <li>Per scrivere: scrivi il numero e premi <b>Avanti</b> nella barra in basso (fa come INVIO). <b>±</b> cambia il segno, <b>Indietro</b> torna alla casella prima. Avanti e Indietro lasciano la tastiera com'è: se è chiusa non la aprono. La barra resta sopra la tastiera.</li>
         <li>Per leggere i codici dal telefono in macchina: <b>Leggi uno alla volta</b>. Un codice per schermata, con <b>Successivo</b> o scorrendo col dito. Se lo schermo si spegne, riparti da dove eri.</li>
         <li>Luminosità dello schermo al massimo, telefono fermo e dritto davanti al lettore.</li>
@@ -622,12 +626,12 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
       <summary>Dettatura</summary>
       <ul>
         <li>Funziona sul sito (non aprendo il file dal PC). La prima volta chiede di scaricare il riconoscimento vocale (circa 50 MB, una volta sola) e il permesso del microfono. L'audio non esce dal dispositivo.</li>
-        <li><b>Un valore: tieni premuto</b> 🎤 (sul PC anche la barra spaziatrice nella tabella), di' il valore, lascia: il valore va nella casella e si passa alla successiva. Ogni pressione scrive un numero solo: se il sito ne sente due, non scrive niente e chiede di ridettare.</li>
-        <li><b>Più valori: tocca</b> 🎤 una volta e detta i valori uno dopo l'altro. Ogni valore finisce con <b>una pausa</b> oppure con la parola <b>"avanti"</b> (impostazione nel riquadro <b>Cambia</b>). Tocca di nuovo 🎤 o di' "stop" per finire. Le righe si aggiungono da sole.</li>
+        <li><b>Un valore: tieni premuto</b> <svg class="icona icona-testo" viewBox="0 0 24 24" role="img" aria-label="microfono" focusable="false"><rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg> (sul PC anche la barra spaziatrice nella tabella), di' il valore, lascia: il valore va nella casella e si passa alla successiva. Ogni pressione scrive un numero solo: se il sito ne sente due, non scrive niente e chiede di ridettare.</li>
+        <li><b>Più valori: tocca</b> <svg class="icona icona-testo" viewBox="0 0 24 24" role="img" aria-label="microfono" focusable="false"><rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg> una volta e detta i valori uno dopo l'altro. Ogni valore finisce con <b>una pausa</b> oppure con la parola <b>"avanti"</b> (impostazione nel riquadro <b>Cambia</b>). Tocca di nuovo <svg class="icona icona-testo" viewBox="0 0 24 24" role="img" aria-label="microfono" focusable="false"><rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg> o di' "stop" per finire. Le righe si aggiungono da sole.</li>
         <li>Come dire i numeri: "duecentoquattordici virgola nove quattro" → 214,94; "zero virgola zero cinque" → 0,05; "meno uno virgola cinque" → -1,5; "due e settanta" → 270.</li>
         <li>Comandi: "correggi" (svuota il valore appena dettato e ci torna), "indietro", "cancella", "riga dodici", "stop".</li>
         <li>Con la pausa come fine del valore, non fermarti a metà numero: "duecento … quattordici" diventerebbero due valori. Controlla sempre "Capito: …" e l'anteprima sotto le caselle.</li>
-        <li>Dopo il primo uso, la dettatura si prepara da sola all'apertura della pagina ("Dettatura pronta."): toccando 🎤 parte subito. Il microfono si accende solo toccando 🎤. Sui telefoni con poca memoria si può spegnere con <b>Prepara la dettatura all'apertura</b>, nel riquadro <b>Cambia</b>.</li>
+        <li>Il riconoscimento vocale si carica al primo tocco su <svg class="icona icona-testo" viewBox="0 0 24 24" role="img" aria-label="microfono" focusable="false"><rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg>: quella volta servono alcuni secondi. Occupa molta memoria, per questo non si prepara da solo all'apertura. Se il telefono ha memoria in abbondanza, metti la spunta a <b>Prepara la dettatura all'apertura</b>, nel riquadro <b>Cambia</b>: toccando <svg class="icona icona-testo" viewBox="0 0 24 24" role="img" aria-label="microfono" focusable="false"><rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg> partirà subito. Il microfono si accende solo toccando <svg class="icona icona-testo" viewBox="0 0 24 24" role="img" aria-label="microfono" focusable="false"><rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg>.</li>
         <li>Su Vanadium (GrapheneOS), se il riconoscimento è lento, attiva "JavaScript JIT" per questo sito nelle impostazioni del sito.</li>
       </ul>
     </details>
@@ -660,7 +664,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
 <div class="barra-mobile" id="barra-mobile" hidden>
   <button type="button" id="mob-indietro">◀ Indietro</button>
   <button type="button" class="segno" id="mob-segno" aria-label="Cambia segno">±</button>
-  <button type="button" class="segno voce-mob" id="mob-voce" aria-label="Detta" hidden>🎤</button>
+  <button type="button" class="segno voce-mob" id="mob-voce" aria-label="Detta" hidden><svg class="icona" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg></button>
   <button type="button" class="primario" id="mob-avanti">Avanti ▶</button>
 </div>
 

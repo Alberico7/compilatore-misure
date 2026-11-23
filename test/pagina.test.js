@@ -104,7 +104,11 @@ async function incollaExcel(page, coppie, riga = 0, col = 0) {
   }, { testo, riga, col });
 }
 
+/* Mentre si scrive, la scheda aperta si ridisegna un terzo di secondo dopo l'ultimo tasto
+   (docs/2026-11-23-dettatura-non-preparata.md): prima di leggere i codici si aspetta. */
+const PAUSA_SEZIONE2 = 450;
 async function leggiBarre(page) {
+  await page.waitForTimeout(PAUSA_SEZIONE2);
   const celle = page.locator('#uscita-barre .cella-barra');
   const n = await celle.count();
   const letti = [], etichette = [];
@@ -248,6 +252,44 @@ test('cambio dei decimali con i valori scritti: solo la colonna giusta, con mess
   await page.reload();
   assert.equal(await cella(0, 1), '15590');
   assert.deepEqual(page.erroriJs, []);
+  await page.context().close();
+});
+
+test('pagina più leggera: si disegna solo la scheda aperta, e mentre si scrive dopo una pausa', async () => {
+  // docs/2026-11-23-dettatura-non-preparata.md
+  const page = await nuovaPagina(1200, { scheda: 'chiavetta' });
+  const codici = () => page.locator('#uscita-barre .cella-barra').count();
+  await incollaExcel(page, [['20', '15'], ['21', '16']]);
+  assert.equal(await codici(), 0, 'scheda Chiavetta aperta: niente codici a barre disegnati');
+  assert.equal(await page.locator('#qr-codice svg').count(), 0, 'niente QR disegnato');
+  assert.match(await page.locator('#pannello-chiavetta').innerText(), /2 coppie \(4 valori\)/, 'la chiavetta invece sì');
+  await page.click('#tab-barre');
+  assert.equal(await codici(), 4, 'aperta la scheda: codici subito');
+  // un tasto con la scheda aperta: i codici cambiano dopo la pausa, l'anteprima sotto la casella subito
+  await page.fill('#cella-0-0', '22');
+  assert.match(await page.innerText('#ant-0-0'), /In macchina: 22.00/);
+  assert.equal((await leggiBarre(page)).letti[0], '2200');
+  // il salvataggio raggruppato si fa subito quando la pagina si nasconde
+  await page.fill('#cella-1-0', '23');
+  await page.evaluate(() => {
+    Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true });
+    document.dispatchEvent(new Event('visibilitychange'));
+  });
+  const salvato = await page.evaluate(() => JSON.parse(localStorage.getItem('compilatore-misure-v1')).righe[1][0]);
+  assert.equal(salvato, '23');
+  assert.deepEqual(page.erroriJs, []);
+  await page.context().close();
+});
+
+test('microfono a linea come Salva e Apri: niente emoji nella pagina', async () => {
+  // docs/2026-11-23-simbolo-microfono.md
+  const page = await nuovaPagina();
+  assert.equal((await page.content()).includes(String.fromCodePoint(0x1F3A4)), false, 'nessuna emoji del microfono');
+  for (const id of ['#btn-voce', '#mob-voce']) {
+    assert.equal(await page.locator(id + ' svg.icona').count(), 1, id + ' con il disegno');
+  }
+  assert.equal(await page.getAttribute('#mob-voce', 'aria-label'), 'Detta');
+  assert.ok(await page.locator('#sez-guida svg.icona-testo').count() >= 4, 'nella guida il microfono piccolo');
   await page.context().close();
 });
 

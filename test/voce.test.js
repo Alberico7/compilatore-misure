@@ -43,12 +43,23 @@ function simulatore([modelloGiaScaricato, opzioni]) {
   };
 }
 
-async function nuovaPagina({ telefono = false, giaScaricato = true, simulato = true, voce = {}, prima = null, decimali = [2, 2] } = {}) {
+/* prepara: la spunta "Prepara la dettatura all'apertura", spenta di predefinito dal sito 1.21.0
+   (docs/2026-11-23-dettatura-non-preparata.md). Si mette nella memoria del browser prima dell'apertura,
+   solo se è vuota: così una ricarica tiene le scelte fatte nel test. */
+function conPreparazione() {
+  const k = 'compilatore-misure-v1';
+  if (!localStorage.getItem(k)) {
+    localStorage.setItem(k, JSON.stringify({ righe: [['', ''], ['', ''], ['', ''], ['', ''], ['', '']], vocePrepara: true, preparaSpenta: true }));
+  }
+}
+
+async function nuovaPagina({ telefono = false, giaScaricato = true, simulato = true, voce = {}, prima = null, decimali = [2, 2], prepara = false } = {}) {
   const ctx = await browser.newContext(telefono
     ? { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, reducedMotion: 'reduce' }
     : { viewport: { width: 1200, height: 900 }, reducedMotion: 'reduce' });
   if (simulato) await ctx.addInitScript(simulatore, [giaScaricato, voce]);
   if (prima) await ctx.addInitScript(prima);
+  if (prepara) await ctx.addInitScript(conPreparazione);
   const page = await ctx.newPage();
   page.erroriJs = [];
   page.on('pageerror', (e) => page.erroriJs.push(e.message));
@@ -267,8 +278,34 @@ test('screenshot della dettatura sul PC', async () => {
 /* docs/2026-11-19-dettatura-pronta.md: con il modello già nel dispositivo, la dettatura si prepara all'apertura */
 const preparando = (page) => page.waitForFunction(() => document.getElementById('btn-voce').classList.contains('caricamento'));
 
+test('preparazione all\'apertura spenta di predefinito; per chi l\'aveva accesa si spegne una volta sola', async () => {
+  // docs/2026-11-23-dettatura-non-preparata.md
+  let page = await nuovaPagina();
+  assert.equal(await page.locator('#voce-prepara').isChecked(), false);
+  await page.waitForTimeout(2000);
+  assert.equal(await page.evaluate(() => window.__voce.tentativi), 0, 'nessuna preparazione all\'apertura');
+  await page.context().close();
+  // chi l'aveva accesa (versione di prima, senza il segno preparaSpenta)
+  page = await nuovaPagina({ prima: () => {
+    if (!localStorage.getItem('compilatore-misure-v1')) {
+      localStorage.setItem('compilatore-misure-v1', JSON.stringify({ righe: [['', '']], vocePrepara: true }));
+    }
+  } });
+  assert.equal(await page.locator('#voce-prepara').isChecked(), false, 'spenta una volta');
+  await page.waitForTimeout(2000);
+  assert.equal(await page.evaluate(() => window.__voce.tentativi), 0);
+  // rimessa a mano, resta
+  await page.evaluate(() => { document.getElementById('imp-valori').open = true; });
+  await page.locator('#voce-prepara').check();
+  await page.reload();
+  assert.equal(await page.locator('#voce-prepara').isChecked(), true);
+  await page.waitForFunction(() => window.__voce.preparato === 1);
+  assert.deepEqual(page.erroriJs, []);
+  await page.context().close();
+});
+
 test('dettatura pronta all\'apertura: senza toccare 🎤 e senza aprire il microfono', async () => {
-  const page = await nuovaPagina();
+  const page = await nuovaPagina({ prepara: true });
   await page.waitForFunction(() => window.__voce.preparato === 1);
   await page.waitForFunction(() => /Dettatura pronta/.test(document.getElementById('voce-stato').textContent));
   assert.equal(await page.evaluate(() => window.__voce.avviato), 0, 'il microfono non si apre');
@@ -291,7 +328,7 @@ test('dettatura pronta all\'apertura: niente senza modello, con l\'impostazione 
   await page.context().close();
 
   // impostazione spenta: si salva e vale alla riapertura
-  page = await nuovaPagina();
+  page = await nuovaPagina({ prepara: true });
   assert.equal(await page.locator('#voce-prepara').isChecked(), true, 'attiva in partenza');
   await page.locator('#voce-prepara').uncheck();
   await page.reload();
@@ -304,7 +341,7 @@ test('dettatura pronta all\'apertura: niente senza modello, con l\'impostazione 
   await page.context().close();
 
   // pagina aperta in secondo piano: aspetta che torni visibile
-  page = await nuovaPagina({ prima: () => {
+  page = await nuovaPagina({ prepara: true, prima: () => {
     window.__visibile = 'hidden';
     Object.defineProperty(Document.prototype, 'visibilityState', { configurable: true, get: () => window.__visibile });
   } });
@@ -317,7 +354,7 @@ test('dettatura pronta all\'apertura: niente senza modello, con l\'impostazione 
 });
 
 test('tocco durante la preparazione: "tieni premuto" parte alla fine, una volta sola', async () => {
-  const page = await nuovaPagina({ voce: { ritardo: 1500 } });
+  const page = await nuovaPagina({ prepara: true, voce: { ritardo: 1500 } });
   await page.click('#cella-0-0');
   await preparando(page);
   // tenuto premuto: l'ascolto parte quando è pronto
@@ -328,7 +365,7 @@ test('tocco durante la preparazione: "tieni premuto" parte alla fine, una volta 
   await page.context().close();
 
   // lasciato prima che sia pronto (anche due tocchi): niente ascolto, solo "Pronto"
-  const p2 = await nuovaPagina({ voce: { ritardo: 1500 } });
+  const p2 = await nuovaPagina({ prepara: true, voce: { ritardo: 1500 } });
   await preparando(p2);
   const b = await p2.locator('#btn-voce').boundingBox();
   await p2.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
@@ -342,7 +379,7 @@ test('tocco durante la preparazione: "tieni premuto" parte alla fine, una volta 
 });
 
 test('tocco durante la preparazione: "più valori" parte alla fine, una volta sola', async () => {
-  const page = await nuovaPagina({ voce: { ritardo: 1500 } });
+  const page = await nuovaPagina({ prepara: true, voce: { ritardo: 1500 } });
   await page.selectOption('#voce-modo', 'continuo');
   await page.reload();
   await preparando(page);
@@ -360,7 +397,7 @@ test('tocco durante la preparazione: "più valori" parte alla fine, una volta so
 });
 
 test('preparazione all\'apertura non riuscita: nessun errore a schermo, il tocco riprova', async () => {
-  const page = await nuovaPagina({ voce: { fallisci: true } });
+  const page = await nuovaPagina({ prepara: true, voce: { fallisci: true } });
   await page.waitForFunction(() => window.__voce.tentativi === 1);
   await page.waitForFunction(() => !document.getElementById('btn-voce').classList.contains('caricamento'));
   assert.equal(await statoVoce(page), '');
@@ -370,7 +407,7 @@ test('preparazione all\'apertura non riuscita: nessun errore a schermo, il tocco
   assert.equal(await page.evaluate(() => window.__voce.tentativi), 2);
 
   // tocco durante una preparazione all'apertura che poi fallisce: riprova subito
-  const p2 = await nuovaPagina({ voce: { fallisci: true, ritardo: 1500 } });
+  const p2 = await nuovaPagina({ prepara: true, voce: { fallisci: true, ritardo: 1500 } });
   await p2.click('#cella-0-0');
   await preparando(p2);
   await tieniPremutoEDici(p2, 'otto');

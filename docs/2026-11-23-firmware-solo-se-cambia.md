@@ -1,7 +1,7 @@
 # Pubblicazione: il firmware si compila solo quando cambia
 
 Data: 2026-11-23 (21:14)
-Stato: **realizzato il 2026-11-23**, confermato dall'utente il 2026-11-23. Va ancora verificato su GitHub (vedi Prova).
+Stato: **realizzato il 2026-11-23**, confermato dall'utente il 2026-11-23. **Verificato su GitHub il 2026-11-23:** la prima pubblicazione (f5bf4ba) ha compilato il firmware e l'ha tenuto da parte. La seguente (353fe49, sito 1.20.0) l'ha ripreso e ha saltato Strumenti per il Pico, pico-sdk e Compila.
 
 Note di realizzazione:
 

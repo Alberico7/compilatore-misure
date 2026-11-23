@@ -240,6 +240,10 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
 .voce-btn { font-size: 19px; min-height: 52px; padding: 10px 20px; touch-action: none; user-select: none; -webkit-user-select: none; }
 .voce-btn.ascolto, .voce-mob.ascolto { background: var(--errore); color: var(--su-accento); border-color: var(--errore); }
 .voce-btn.caricamento { opacity: .7; }
+/* microfono a linea, come Salva e Apri (docs/2026-11-23-simbolo-microfono.md) */
+.voce-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.voce-mob .icona { width: 28px; height: 28px; }
+.icona.icona-testo { width: 1.05em; height: 1.05em; vertical-align: -0.15em; stroke-width: 2.2; }
 .voce-stato { margin: 4px 0 8px; font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .voce-stato .provvisorio { color: var(--tenue); font-weight: 400; font-style: italic; }
 .voce-stato .non-capito { color: var(--errore); }
@@ -422,7 +426,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     </details>
     <div class="pulsanti azioni-valori">
       <div class="voce" id="voce" hidden>
-        <button type="button" class="voce-btn" id="btn-voce"><span aria-hidden="true">🎤</span> <span id="btn-voce-testo">Detta</span></button>
+        <button type="button" class="voce-btn" id="btn-voce"><svg class="icona" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg> <span id="btn-voce-testo">Detta</span></button>
       </div>
       <button type="button" class="pericolo" id="btn-svuota">Svuota tutto</button>
     </div>
@@ -436,7 +440,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     <div class="programma">
       <label for="programma">Nome del programma</label>
       <div class="riga-programma">
-        <input type="text" id="programma" maxlength="60" autocomplete="off" spellcheck="false" enterkeyhint="done" placeholder="per esempio FRESA-1234">
+        <input type="text" id="programma" maxlength="60" autocomplete="off" spellcheck="false" enterkeyhint="done" placeholder="es. FRESA-1234">
         <button type="button" class="primario" id="btn-salva" title="Salva" aria-label="Salva"><svg class="icona" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 3h11.5L21 7.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7.5 3v5h8V3"/><path d="M7 21v-7h10v7"/></svg> <span class="testo">Salva</span></button>
         <button type="button" id="btn-apri" title="Apri una lista salvata" aria-label="Apri una lista salvata" aria-expanded="false" aria-controls="liste"><svg class="icona" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 18V6a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v2"/><path d="M3 18l2.6-6.4A1 1 0 0 1 6.5 11H21a1 1 0 0 1 .9 1.4l-2.6 6A1 1 0 0 1 18.4 19H4a1 1 0 0 1-1-1z"/></svg> <span class="testo">Apri</span></button>
       </div>
@@ -592,7 +596,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     <details>
       <summary>Da smartphone</summary>
       <ul>
-        <li>Un tocco su una casella la sceglie, senza aprire la tastiera: così si può dettare con 🎤. Per scrivere a mano tocca la stessa casella <b>una seconda volta</b>: si apre la tastiera.</li>
+        <li>Un tocco su una casella la sceglie, senza aprire la tastiera: così si può dettare con <svg class="icona icona-testo" viewBox="0 0 24 24" role="img" aria-label="microfono" focusable="false"><rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg>. Per scrivere a mano tocca la stessa casella <b>una seconda volta</b>: si apre la tastiera.</li>
         <li>Per scrivere: scrivi il numero e premi <b>Avanti</b> nella barra in basso (fa come INVIO). <b>±</b> cambia il segno, <b>Indietro</b> torna alla casella prima. Avanti e Indietro lasciano la tastiera com'è: se è chiusa non la aprono. La barra resta sopra la tastiera.</li>
         <li>Per leggere i codici dal telefono in macchina: <b>Leggi uno alla volta</b>. Un codice per schermata, con <b>Successivo</b> o scorrendo col dito. Se lo schermo si spegne, riparti da dove eri.</li>
         <li>Luminosità dello schermo al massimo, telefono fermo e dritto davanti al lettore.</li>
@@ -622,12 +626,12 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
       <summary>Dettatura</summary>
       <ul>
         <li>Funziona sul sito (non aprendo il file dal PC). La prima volta chiede di scaricare il riconoscimento vocale (circa 50 MB, una volta sola) e il permesso del microfono. L'audio non esce dal dispositivo.</li>
-        <li><b>Un valore: tieni premuto</b> 🎤 (sul PC anche la barra spaziatrice nella tabella), di' il valore, lascia: il valore va nella casella e si passa alla successiva. Ogni pressione scrive un numero solo: se il sito ne sente due, non scrive niente e chiede di ridettare.</li>
-        <li><b>Più valori: tocca</b> 🎤 una volta e detta i valori uno dopo l'altro. Ogni valore finisce con <b>una pausa</b> oppure con la parola <b>"avanti"</b> (impostazione nel riquadro <b>Cambia</b>). Tocca di nuovo 🎤 o di' "stop" per finire. Le righe si aggiungono da sole.</li>
+        <li><b>Un valore: tieni premuto</b> <svg class="icona icona-testo" viewBox="0 0 24 24" role="img" aria-label="microfono" focusable="false"><rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg> (sul PC anche la barra spaziatrice nella tabella), di' il valore, lascia: il valore va nella casella e si passa alla successiva. Ogni pressione scrive un numero solo: se il sito ne sente due, non scrive niente e chiede di ridettare.</li>
+        <li><b>Più valori: tocca</b> <svg class="icona icona-testo" viewBox="0 0 24 24" role="img" aria-label="microfono" focusable="false"><rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg> una volta e detta i valori uno dopo l'altro. Ogni valore finisce con <b>una pausa</b> oppure con la parola <b>"avanti"</b> (impostazione nel riquadro <b>Cambia</b>). Tocca di nuovo <svg class="icona icona-testo" viewBox="0 0 24 24" role="img" aria-label="microfono" focusable="false"><rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg> o di' "stop" per finire. Le righe si aggiungono da sole.</li>
         <li>Come dire i numeri: "duecentoquattordici virgola nove quattro" → 214,94; "zero virgola zero cinque" → 0,05; "meno uno virgola cinque" → -1,5; "due e settanta" → 270.</li>
         <li>Comandi: "correggi" (svuota il valore appena dettato e ci torna), "indietro", "cancella", "riga dodici", "stop".</li>
         <li>Con la pausa come fine del valore, non fermarti a metà numero: "duecento … quattordici" diventerebbero due valori. Controlla sempre "Capito: …" e l'anteprima sotto le caselle.</li>
-        <li>Dopo il primo uso, la dettatura si prepara da sola all'apertura della pagina ("Dettatura pronta."): toccando 🎤 parte subito. Il microfono si accende solo toccando 🎤. Sui telefoni con poca memoria si può spegnere con <b>Prepara la dettatura all'apertura</b>, nel riquadro <b>Cambia</b>.</li>
+        <li>Il riconoscimento vocale si carica al primo tocco su <svg class="icona icona-testo" viewBox="0 0 24 24" role="img" aria-label="microfono" focusable="false"><rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg>: quella volta servono alcuni secondi. Occupa molta memoria, per questo non si prepara da solo all'apertura. Se il telefono ha memoria in abbondanza, metti la spunta a <b>Prepara la dettatura all'apertura</b>, nel riquadro <b>Cambia</b>: toccando <svg class="icona icona-testo" viewBox="0 0 24 24" role="img" aria-label="microfono" focusable="false"><rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg> partirà subito. Il microfono si accende solo toccando <svg class="icona icona-testo" viewBox="0 0 24 24" role="img" aria-label="microfono" focusable="false"><rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg>.</li>
         <li>Su Vanadium (GrapheneOS), se il riconoscimento è lento, attiva "JavaScript JIT" per questo sito nelle impostazioni del sito.</li>
       </ul>
     </details>
@@ -660,7 +664,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
 <div class="barra-mobile" id="barra-mobile" hidden>
   <button type="button" id="mob-indietro">◀ Indietro</button>
   <button type="button" class="segno" id="mob-segno" aria-label="Cambia segno">±</button>
-  <button type="button" class="segno voce-mob" id="mob-voce" aria-label="Detta" hidden>🎤</button>
+  <button type="button" class="segno voce-mob" id="mob-voce" aria-label="Detta" hidden><svg class="icona" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg></button>
   <button type="button" class="primario" id="mob-avanti">Avanti ▶</button>
 </div>
 
@@ -4344,14 +4348,15 @@ var AppChiavetta = (function () {
     return {
       modo: 'separatore', decGra: 0, decDat: 1, righe: righe,
       coppieBlocco: 10, invioFinale: false, scheda: schedaPredefinita(), blocco: 0, confronto: 'tutti',
-      tema: 'scuro', lettura: 0, voceModo: 'premi', voceSeparatore: 'pausa', vocePrepara: true,
+      tema: 'scuro', lettura: 0, voceModo: 'premi', voceSeparatore: 'pausa', vocePrepara: false,
       chRitCar: 30, chRitInv: 30, chCoppie: 0, chMezzo: 'bluetooth',
       listaNome: '',     // lista salvata aperta nella tabella ('' = nessuna)
       programma: '',     // nome del programma scritto sopra la tabella (docs/2026-11-23-casella-nome-programma.md)
       impAperte: false,  // riquadro delle impostazioni chiuso, anche al primo uso (docs/2026-11-23-righe-automatiche.md)
       schedaChiavetta: true,  // segno: lo spostamento una tantum sulla Chiavetta è già fatto
       pausaInvio30: true,     // segno: il passaggio una tantum da 200 a 30 ms dopo INVIO è già fatto
-      decimali01: true        // segno: il passaggio una tantum ai decimali 0 / 1 è già fatto
+      decimali01: true,       // segno: il passaggio una tantum ai decimali 0 / 1 è già fatto
+      preparaSpenta: true     // segno: la preparazione della dettatura all'apertura è già stata spenta una volta
     };
   }
 
@@ -4389,6 +4394,9 @@ var AppChiavetta = (function () {
         if (s.schedaChiavetta === undefined) base.scheda = schedaPredefinita();
         /* docs/2026-11-22-pausa-invio-30ms.md: una volta sola, chi ha ancora i 200 ms di prima passa a 30 */
         if (s.pausaInvio30 === undefined && s.chRitInv === 200) base.chRitInv = 30;
+        /* docs/2026-11-23-dettatura-non-preparata.md: il modello vocale all'apertura occupa troppa memoria sul
+           telefono; una volta sola si spegne per tutti, poi si ricorda la scelta */
+        if (s.preparaSpenta === undefined) base.vocePrepara = false;
         /* docs/2026-11-23-casella-nome-programma.md: chi aveva una lista aperta trova il suo nome nella casella */
         if (s.programma === undefined) base.programma = s.listaNome;
         base.programma = typeof base.programma === 'string' ? base.programma : '';
@@ -4401,10 +4409,16 @@ var AppChiavetta = (function () {
     } catch (e) { salvataggioOk = false; }
   }
   function salva() {
+    clearTimeout(timerSalva); timerSalva = null;
     try { localStorage.setItem(CHIAVE, JSON.stringify(stato)); salvataggioOk = true; }
     catch (e) { salvataggioOk = false; }
     $('stato-salvataggio').textContent = salvataggioOk ? 'Salvataggio automatico.' : 'Attenzione: salvataggio automatico non disponibile in questo browser.';
   }
+  /* docs/2026-11-23-dettatura-non-preparata.md: mentre si scrive si salva al massimo ogni mezzo secondo;
+     quando la pagina si nasconde o si chiude si salva subito (salvaSeInAttesa). */
+  var timerSalva = null;
+  function salvaPresto() { if (!timerSalva) timerSalva = setTimeout(salva, 500); }
+  function salvaSeInAttesa() { if (timerSalva) salva(); }
 
   /* ---------- utilità ---------- */
   function $(id) { return document.getElementById(id); }
@@ -4551,7 +4565,10 @@ var AppChiavetta = (function () {
   }
 
   /* ---------- analisi e anteprime ---------- */
-  function aggiorna() {
+  /* Dopo ogni modifica dei valori. inScrittura: un tasto in una casella. Allora la sezione 2 si ridisegna
+     dopo una pausa e il salvataggio si raggruppa (docs/2026-11-23-dettatura-non-preparata.md); tabella,
+     anteprime, errori e riepilogo restano immediati. */
+  function aggiorna(inScrittura) {
     rigaVuotaInFondo();
     var usate = righeUsate();
     var imp = { modo: stato.modo, decGra: stato.decGra, decDat: stato.decDat };
@@ -4564,30 +4581,51 @@ var AppChiavetta = (function () {
         var inp = cella(i, c), ant = $('ant-' + i + '-' + c);
         if (!inp) continue;
         var r = i < usate.length ? analisi.celle[i][c] : null;
-        inp.classList.remove('errore', 'avviso');
-        ant.className = 'anteprima';
-        if (!r) { ant.innerHTML = ''; continue; }
-        if (r.stato !== 'ok') {
-          inp.classList.add('errore'); ant.classList.add('errore');
-          ant.textContent = r.messaggio;
-        } else {
+        var tipo = '', html = '';
+        if (r && r.stato !== 'ok') { tipo = 'errore'; html = esc(r.messaggio); }
+        else if (r) {
           var note = segni[i + ',' + c];
-          if (note) { inp.classList.add('avviso'); ant.classList.add('avviso'); }
-          ant.innerHTML = 'In macchina: <b>' + esc(r.display) + '</b>' +
-            (note ? ' · ' + esc(note.join(' · ')) : '');
+          if (note) tipo = 'avviso';
+          html = 'In macchina: <b>' + esc(r.display) + '</b>' + (note ? ' · ' + esc(note.join(' · ')) : '');
         }
+        // si tocca la pagina solo se l'anteprima è cambiata: con 500 righe, a ogni tasto cambia quasi solo una casella
+        var chiave = tipo + '|' + html;
+        if (ant.dataset.k === chiave) continue;
+        ant.dataset.k = chiave;
+        inp.classList.toggle('errore', tipo === 'errore');
+        inp.classList.toggle('avviso', tipo === 'avviso');
+        ant.className = tipo ? 'anteprima ' + tipo : 'anteprima';
+        ant.innerHTML = html;
       }
     }
     aggiornaProgramma();
     if (!$('verifica').hidden) mostraVerifica();
     mostraRiepilogo(usate.length);
     riepilogoImpostazioni();
-    mostraBarre();
-    mostraQR();
-    chiavetta.aggiorna();
+    sezione2(!inScrittura);
     aggiornaConfronto();
     if (!$('lettura').hidden) mostraLettura();
-    salva();
+    if (inScrittura) salvaPresto(); else salva();
+  }
+
+  /* Sezione 2: si disegna solo la scheda aperta; le altre si segnano da ridisegnare e si disegnano
+     quando si aprono. Mentre si scrive, la scheda aperta si ridisegna un terzo di secondo dopo l'ultimo tasto.
+     Invia, Controlla e Leggi uno alla volta leggono i valori dalla tabella (analisi), sempre aggiornata. */
+  var daDisegnare = { barre: true, qr: true, chiavetta: true }, timerSezione2 = null;
+  function sezione2(subito) {
+    daDisegnare.barre = daDisegnare.qr = daDisegnare.chiavetta = true;
+    clearTimeout(timerSezione2);
+    if (subito) disegnaSchedaAperta();
+    else timerSezione2 = setTimeout(disegnaSchedaAperta, 333);
+  }
+  function disegnaSchedaAperta() {
+    clearTimeout(timerSezione2); timerSezione2 = null;
+    var s = stato.scheda;
+    if (!daDisegnare[s]) return;
+    daDisegnare[s] = false;
+    if (s === 'barre') mostraBarre();
+    else if (s === 'qr') mostraQR();
+    else chiavetta.aggiorna();
   }
 
   /* Note brevi degli avvisi per casella: { "riga,col": ["oltre 360!", ...] }. La coppia uguale segna tutte e due le caselle. */
@@ -4710,7 +4748,9 @@ var AppChiavetta = (function () {
       $('tab-' + s).setAttribute('aria-selected', String(stato.scheda === s));
       $('pannello-' + s).hidden = stato.scheda !== s;
     });
-    mostraQR(); // la larghezza del QR dipende dal pannello visibile
+    // i codici a barre possono essere un migliaio: chiusa la scheda si tolgono, e si ridisegnano quando si riapre
+    if (stato.scheda !== 'barre' && $('uscita-barre').firstChild) { $('uscita-barre').innerHTML = ''; daDisegnare.barre = true; }
+    disegnaSchedaAperta();   // la scheda appena aperta, se è rimasta indietro
   }
 
   /* ---------- lettura uno alla volta ---------- */
@@ -5233,7 +5273,9 @@ var AppChiavetta = (function () {
   var ascoltoContinuo = false, tastoPremuto = false, bufferAvanti = '', appenaScritto = false;
   var ultimaDettata = null, ultimiValori = [], timerSilenzio = null, avvisoLentezza = false;
   var preparazione = null;   // preparazione del motore in corso (Promise<boolean>)
-  var attesaTocco = false;   // un tocco del 🎤 aspetta la fine della preparazione
+  var attesaTocco = false;   // un tocco del microfono aspetta la fine della preparazione
+  // il microfono piccolo dentro il testo dei messaggi: lo stesso disegno della guida, preso dal template
+  var ICONA_MICROFONO = (document.querySelector('#sez-guida .icona-testo') || { outerHTML: '' }).outerHTML;
   var MSG_PREPARA = 'Preparazione della dettatura…';
   var SEPARATORI = ['avanti', 'poi', 'prossimo'];
 
@@ -5427,7 +5469,7 @@ var AppChiavetta = (function () {
     preparaVoce().then(function (pronto) {
       attesaTocco = false;
       if (!pronto) { tastoPremuto = false; return; }
-      if (!tastoPremuto) { mostraStatoVoce('<span class="info">Pronto: tieni premuto 🎤 e parla.</span>'); return; }
+      if (!tastoPremuto) { mostraStatoVoce('<span class="info">Pronto: tieni premuto ' + ICONA_MICROFONO + ' e parla.</span>'); return; }
       return motore.avvia({ onParziale: parziale, onRisultato: function () {} }).then(function () {
         statoVoce = 'ascolto'; aggiornaPulsanteVoce();
         if (!tastoPremuto) { tastoPremuto = true; finisciPremi(); return; }
@@ -5560,8 +5602,11 @@ var AppChiavetta = (function () {
       var t = e.target;
       if (!t.dataset || t.dataset.r === undefined) return;
       stato.righe[+t.dataset.r][+t.dataset.c] = t.value;
-      aggiorna();
+      aggiorna(true);
     });
+    // il salvataggio raggruppato si fa subito quando la pagina si nasconde (altra app, altra scheda) o si chiude
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'hidden') salvaSeInAttesa(); });
+    window.addEventListener('pagehide', salvaSeInAttesa);
 
     corpo.addEventListener('keydown', function (e) {
       var t = e.target;
@@ -5767,7 +5812,8 @@ var AppChiavetta = (function () {
     window.addEventListener('resize', function () {
       clearTimeout(timerRidim);
       timerRidim = setTimeout(function () {
-        mostraBarre(); mostraQR(); aggiornaBarraMobile();
+        daDisegnare.barre = daDisegnare.qr = true;   // la larghezza dei codici dipende dalla finestra
+        disegnaSchedaAperta(); aggiornaBarraMobile();
         largNome = 0; mostraNomeProgramma(stato.programma.trim());
         if (!$('lettura').hidden) mostraLettura();
       }, 150);
