@@ -4,6 +4,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      ricompila:
+        description: 'Ricompila il firmware della chiavetta anche se non è cambiato'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -20,22 +25,47 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+      # docs/2026-11-23-firmware-solo-se-cambia.md: il firmware compilato si tiene da parte, con un'etichetta
+      # fatta dall'impronta dei file della chiavetta e di questo file. Se non sono cambiati si usa quello e
+      # si saltano Ubuntu, pico-sdk e compilazione (il server dei pacchetti di Ubuntu a volte non risponde).
+      - name: Etichetta del firmware
+        id: chiave
+        run: echo "chiave=firmware-${{ hashFiles('chiavetta/**', '!chiavetta/build/**', '.github/workflows/pages.yml') }}" >> "$GITHUB_OUTPUT"
+      - name: Firmware già compilato
+        id: cache
+        if: ${{ !inputs.ricompila }}
+        uses: actions/cache/restore@v6
+        with:
+          path: chiavetta/build/chiavetta.uf2
+          key: ${{ steps.chiave.outputs.chiave }}
       - name: Strumenti per il Pico
+        if: steps.cache.outputs.cache-hit != 'true'
         # se un server di Ubuntu non risponde, meglio fallire presto che restare fermi per ore
         timeout-minutes: 10
         run: |
           sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 update
           sudo apt-get -o Acquire::Retries=3 -o Acquire::http::Timeout=30 install -y gcc-arm-none-eabi libnewlib-arm-none-eabi cmake ninja-build libusb-1.0-0-dev pkg-config
       - name: pico-sdk 2.3.1
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           git clone --depth 1 --branch 2.3.1 https://github.com/raspberrypi/pico-sdk.git "$RUNNER_TEMP/pico-sdk"
           git -C "$RUNNER_TEMP/pico-sdk" submodule update --init --depth 1
       - name: Compila il firmware della chiavetta
+        if: steps.cache.outputs.cache-hit != 'true'
         run: |
           export PICO_SDK_PATH="$RUNNER_TEMP/pico-sdk"
           cmake -S chiavetta -B chiavetta/build -G Ninja -DCMAKE_BUILD_TYPE=Release
           cmake --build chiavetta/build
+      - name: Tieni da parte il firmware
+        if: steps.cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: chiavetta/build/chiavetta.uf2
+          key: ${{ steps.chiave.outputs.chiave }}
+      - name: Firmware da pubblicare
+        run: |
           ls -l chiavetta/build/chiavetta.uf2
+          sha256sum chiavetta/build/chiavetta.uf2
       - uses: actions/upload-artifact@v7
         with:
           name: firmware
