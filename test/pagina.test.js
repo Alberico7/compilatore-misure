@@ -76,9 +76,11 @@ function tastieraFinta() {
   window.__tastiera = (aperta) => { alta = aperta ? 300 : 0; vv.dispatchEvent(new Event('resize')); };
 }
 
-/* I test sono scritti con 2 decimali per gradi e dati (i predefiniti sono 0 / 1: docs/2026-11-23-gradi-e-dati.md). */
+/* I test sono scritti con 2 decimali per gradi e dati (i predefiniti sono 0 / 1: docs/2026-11-23-gradi-e-dati.md),
+   e cambiano modo e decimali dal riquadro Cambia, che ora parte chiuso: qui si apre. */
 async function usaDecimali(page, [gradi, dati]) {
   await page.evaluate(([g, d]) => {
+    document.getElementById('imp-valori').open = true;
     [['dec-gra', g], ['dec-dat', d]].forEach(([id, v]) => {
       const el = document.getElementById(id);
       el.value = String(v);
@@ -149,7 +151,7 @@ test('100 coppie: 200 Code 128 decodificati nell\'ordine giusto', async () => {
   const page = await nuovaPagina();
   const { coppie, attese } = generaCoppie(100, 42);
   await incollaExcel(page, coppie);
-  assert.equal(await page.locator('#corpo-tabella tr').count(), 100);
+  assert.equal(await page.locator('#corpo-tabella tr').count(), 101, '100 coppie e una riga vuota in fondo');
   const { letti, etichette } = await leggiBarre(page);
   assert.equal(letti.length, 200);
   assert.deepEqual(letti, attese);
@@ -277,13 +279,20 @@ test('tastiera: INVIO e frecce come in macchina', async () => {
   assert.equal(await attivo(), 'Grado 4');
   const { letti } = await leggiBarre(page);
   assert.deepEqual(letti, ['2000', '1500', '2100', '1650']);
-  // INVIO sull'ultimo Dato aggiunge una riga
-  await page.fill('#num-righe', '2');
-  await page.dispatchEvent('#num-righe', 'change');
-  await page.click('#corpo-tabella input[data-r="1"][data-c="1"]');
+  // ultima riga completa: sotto ne compare una vuota, e INVIO sull'ultimo Dato ci porta
+  for (let r = 2; r < 5; r++) { await page.fill(`#cella-${r}-0`, '1'); await page.fill(`#cella-${r}-1`, '2'); }
+  assert.equal(await page.locator('#corpo-tabella tr').count(), 6);
+  await page.click('#cella-4-1');
   await page.keyboard.press('Enter');
-  assert.equal(await page.locator('#corpo-tabella tr').count(), 3);
-  assert.equal(await attivo(), 'Grado 3');
+  assert.equal(await page.locator('#corpo-tabella tr').count(), 6);
+  assert.equal(await attivo(), 'Grado 6');
+  // solo il Dato nell'ultima riga: nessuna riga nuova, INVIO la aggiunge come in macchina
+  await page.fill('#cella-5-1', '3');
+  assert.equal(await page.locator('#corpo-tabella tr').count(), 6);
+  await page.click('#cella-5-1');
+  await page.keyboard.press('Enter');
+  assert.equal(await page.locator('#corpo-tabella tr').count(), 7);
+  assert.equal(await attivo(), 'Grado 7');
   await page.context().close();
 });
 
@@ -339,19 +348,35 @@ test('prova del lettore: corretto, INVIO doppio, valori attaccati', async () => 
   await page.context().close();
 });
 
-test('eliminare righe con valori chiede conferma nella pagina', async () => {
+test("righe: sempre una vuota in fondo quando l'ultima è completa, fino a 500", async () => {
+  // docs/2026-11-23-righe-automatiche.md
   const page = await nuovaPagina();
-  await incollaExcel(page, [['1', '2'], ['3', '4'], ['5', '6']]);
-  await page.fill('#num-righe', '1');
-  await page.dispatchEvent('#num-righe', 'change');
-  assert.match(await page.locator('#conferma-testo').innerText(), /contengono 2 coppie/);
-  await page.click('#conferma-no');
-  assert.equal(await page.locator('#corpo-tabella tr').count(), 5);
-  assert.equal(await page.inputValue('#num-righe'), '5');
-  await page.fill('#num-righe', '1');
-  await page.dispatchEvent('#num-righe', 'change');
+  const righe = () => page.locator('#corpo-tabella tr').count();
+  assert.equal(await page.locator('#num-righe').count(), 0, 'niente casella Righe');
+  assert.equal(await righe(), 5);
+  // scrivendo a mano: la riga compare al primo tasto del Dato, e il cursore resta nella casella
+  await page.click('#cella-4-0');
+  await page.keyboard.type('20');
+  assert.equal(await righe(), 5, 'solo il Grado: nessuna riga nuova');
+  await page.click('#cella-4-1');
+  await page.keyboard.type('1');
+  assert.equal(await righe(), 6);
+  await page.keyboard.type('5,5');
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'cella-4-1');
+  assert.equal(await page.inputValue('#cella-4-1'), '15,5');
+  assert.equal(await page.inputValue('#cella-5-0'), '');
+  // incollando: dopo l'ultima coppia resta una riga vuota
+  await incollaExcel(page, [['1', '2'], ['3', '4'], ['5', '6'], ['7', '8'], ['9', '10'], ['11', '12'], ['13', '14']]);
+  assert.equal(await righe(), 8);
+  // Svuota tutto: di nuovo 5 righe vuote
+  await page.click('#btn-svuota');
   await page.click('#conferma-si');
-  assert.equal(await page.locator('#corpo-tabella tr').count(), 1);
+  assert.equal(await righe(), 5);
+  // al massimo 500 righe
+  await incollaExcel(page, Array.from({ length: 500 }, (_, i) => [String(i + 1), '1']));
+  assert.equal(await righe(), 500);
+  assert.equal(await page.inputValue('#cella-499-0'), '500');
+  assert.deepEqual(page.erroriJs, []);
   await page.context().close();
 });
 

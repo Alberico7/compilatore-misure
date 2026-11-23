@@ -42,20 +42,28 @@ async function apri(larghezza, { telefono = true, salvato = null, altezza = 844 
 
 const UTENTE_CHE_TORNA = { righe: [['', ''], ['', ''], ['', ''], ['', ''], ['', '']], modo: 'separatore', decGra: 2, decDat: 2 };
 
-test('prima volta: 5 righe e impostazioni aperte, con riepilogo che segue le scelte e si ricorda', async () => {
+test('prima volta: 5 righe e impostazioni chiuse, con riepilogo che segue le scelte e si ricorda', async () => {
+  // docs/2026-11-23-righe-automatiche.md: il riquadro Cambia parte chiuso, niente casella Righe
   const page = await apri(390);
   assert.equal(await page.locator('#corpo-tabella tr').count(), 5);
-  assert.equal(await page.$eval('#imp-valori', (d) => d.open), true, 'aperte al primo uso');
-  assert.equal(await page.locator('#imp-riepilogo').innerText(), 'Con separatore · decimali 0 / 1 · 5 righe');
+  assert.equal(await page.$eval('#imp-valori', (d) => d.open), false, 'chiuse anche al primo uso');
+  assert.equal(await page.locator('#imp-riepilogo').innerText(), 'Con separatore · decimali 0 / 1');
+  assert.equal(await page.locator('#num-righe').count(), 0);
+  await page.tap('#imp-valori summary');
+  assert.equal(await page.$eval('#imp-valori', (d) => d.open), true);
   await page.tap('#modo-macchina');
   await page.fill('#dec-dat', '3');
   await page.dispatchEvent('#dec-dat', 'change');
-  assert.equal(await page.locator('#imp-riepilogo').innerText(), 'Come in macchina · decimali 0 / 3 · 5 righe');
-  await page.tap('#imp-valori summary');
-  assert.equal(await page.$eval('#imp-valori', (d) => d.open), false);
+  assert.equal(await page.locator('#imp-riepilogo').innerText(), 'Come in macchina · decimali 0 / 3');
+  await page.waitForFunction((k) => JSON.parse(localStorage.getItem(k)).impAperte === true, CHIAVE);
   await page.reload();
-  assert.equal(await page.$eval('#imp-valori', (d) => d.open), false, 'chiuse dopo la ricarica');
-  assert.equal(await page.locator('#imp-riepilogo').innerText(), 'Come in macchina · decimali 0 / 3 · 5 righe');
+  assert.equal(await page.$eval('#imp-valori', (d) => d.open), true, 'lasciato aperto: resta aperto');
+  await page.tap('#imp-valori summary');
+  // l'evento "toggle" arriva dopo il tocco: si aspetta che la scelta sia salvata
+  await page.waitForFunction((k) => JSON.parse(localStorage.getItem(k)).impAperte === false, CHIAVE);
+  await page.reload();
+  assert.equal(await page.$eval('#imp-valori', (d) => d.open), false, 'chiuso dopo la ricarica');
+  assert.equal(await page.locator('#imp-riepilogo').innerText(), 'Come in macchina · decimali 0 / 3');
   assert.deepEqual(page.erroriJs, []);
   await page.context().close();
 });

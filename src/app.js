@@ -20,7 +20,7 @@
       tema: 'scuro', lettura: 0, voceModo: 'premi', voceSeparatore: 'pausa', vocePrepara: true,
       chRitCar: 30, chRitInv: 30, chCoppie: 0, chMezzo: 'bluetooth',
       listaNome: '',     // lista salvata aperta nella tabella ('' = nessuna)
-      impAperte: true,   // riquadro delle impostazioni aperto al primo uso
+      impAperte: false,  // riquadro delle impostazioni chiuso, anche al primo uso (docs/2026-11-23-righe-automatiche.md)
       schedaChiavetta: true,  // segno: lo spostamento una tantum sulla Chiavetta è già fatto
       pausaInvio30: true,     // segno: il passaggio una tantum da 200 a 30 ms dopo INVIO è già fatto
       decimali01: true        // segno: il passaggio una tantum ai decimali 0 / 1 è già fatto
@@ -56,7 +56,6 @@
         Object.keys(base).forEach(function (k) { if (s[k] !== undefined) base[k] = s[k]; });
         base.righe = s.righe.slice(0, MAX_RIGHE).map(function (r) { return [String(r[0] || ''), String(r[1] || '')]; });
         if (!base.righe.length) base.righe.push(['', '']);
-        if (s.impAperte === undefined) base.impAperte = false;   // chi l'ha già usato le ha già scelte
         /* docs/2026-11-14-chiavetta-predefinita.md: una volta sola tutti passano alla scheda predefinita
            (prima era "Codici a barre"); poi si ricorda la scelta */
         if (s.schedaChiavetta === undefined) base.scheda = schedaPredefinita();
@@ -142,43 +141,37 @@
     document.querySelectorAll('#corpo-tabella input').forEach(function (el) { el.setAttribute('inputmode', modoInput()); });
   }
 
+  function htmlRiga(i, tipoInput) {
+    return '<tr><td class="n">' + (i + 1) + '</td>' +
+      [0, 1].map(function (c) {
+        var nome = (c === 0 ? 'Grado ' : 'Dato ') + (i + 1);
+        return '<td><input type="text" inputmode="' + tipoInput + '" enterkeyhint="next" autocomplete="off" spellcheck="false" data-r="' + i + '" data-c="' + c +
+          '" id="cella-' + i + '-' + c + '" aria-label="' + nome + '" value="' + esc(stato.righe[i][c]) + '"><div class="anteprima" id="ant-' + i + '-' + c + '"></div></td>';
+      }).join('') + '</tr>';
+  }
   function costruisciTabella() {
     var tipoInput = modoInput();
     var html = [];
-    for (var i = 0; i < stato.righe.length; i++) {
-      html.push('<tr><td class="n">' + (i + 1) + '</td>' +
-        [0, 1].map(function (c) {
-          var nome = (c === 0 ? 'Grado ' : 'Dato ') + (i + 1);
-          return '<td><input type="text" inputmode="' + tipoInput + '" enterkeyhint="next" autocomplete="off" spellcheck="false" data-r="' + i + '" data-c="' + c +
-            '" id="cella-' + i + '-' + c + '" aria-label="' + nome + '" value="' + esc(stato.righe[i][c]) + '"><div class="anteprima" id="ant-' + i + '-' + c + '"></div></td>';
-        }).join('') + '</tr>');
-    }
+    for (var i = 0; i < stato.righe.length; i++) html.push(htmlRiga(i, tipoInput));
     $('corpo-tabella').innerHTML = html.join('');
-    $('num-righe').value = stato.righe.length;
     riepilogoImpostazioni();
+  }
+
+  /* docs/2026-11-23-righe-automatiche.md: quando l'ultima riga ha grado e dato, sotto ne compare una vuota.
+     Si aggiunge in fondo alla tabella senza ridisegnarla: chi sta scrivendo non perde il cursore. */
+  function rigaVuotaInFondo() {
+    var n = stato.righe.length, ultima = stato.righe[n - 1];
+    if (n >= MAX_RIGHE || !ultima || !ultima[0].trim() || !ultima[1].trim()) return;
+    stato.righe.push(['', '']);
+    var corpo = $('corpo-tabella');
+    if (corpo.rows.length === n) corpo.insertAdjacentHTML('beforeend', htmlRiga(n, modoInput()));
+    else costruisciTabella();
   }
 
   /* Riga sempre visibile del riquadro delle impostazioni. */
   function riepilogoImpostazioni() {
-    var n = stato.righe.length;
     $('imp-riepilogo').textContent = (stato.modo === 'macchina' ? 'Come in macchina' : 'Con separatore') +
-      ' · decimali ' + stato.decGra + ' / ' + stato.decDat + ' · ' + n + (n === 1 ? ' riga' : ' righe');
-  }
-
-  function impostaRighe(n, chiediConferma) {
-    n = intero(n, 1, MAX_RIGHE, stato.righe.length);
-    if (n === stato.righe.length) { $('num-righe').value = n; return Promise.resolve(); }
-    var tolte = n < stato.righe.length ? stato.righe.slice(n).filter(function (r) { return r[0].trim() || r[1].trim(); }).length : 0;
-    var ok = tolte && chiediConferma
-      ? chiedi('Le righe da ' + (n + 1) + ' a ' + stato.righe.length + ' contengono ' + tolte + (tolte === 1 ? ' coppia' : ' coppie') + ' con valori.\nEliminarle?', 'Elimina')
-      : Promise.resolve(true);
-    return ok.then(function (si) {
-      if (!si) { $('num-righe').value = stato.righe.length; return; }
-      while (stato.righe.length < n) stato.righe.push(['', '']);
-      stato.righe.length = n;
-      costruisciTabella();
-      aggiorna();
-    });
+      ' · decimali ' + stato.decGra + ' / ' + stato.decDat;
   }
 
   /* Decimali dei gradi (col 0) o dei dati (col 1) cambiati: le caselle di quella colonna tengono
@@ -228,6 +221,7 @@
 
   /* ---------- analisi e anteprime ---------- */
   function aggiorna() {
+    rigaVuotaInFondo();
     var usate = righeUsate();
     var imp = { modo: stato.modo, decGra: stato.decGra, decDat: stato.decDat };
     analisi = Logica.analizza(usate, imp);
@@ -1237,11 +1231,10 @@
     });
     $('dec-gra').addEventListener('change', function () { cambiaDecimali(0, this); });
     $('dec-dat').addEventListener('change', function () { cambiaDecimali(1, this); });
-    $('num-righe').addEventListener('change', function () { impostaRighe(this.value, true); });
     $('btn-svuota').addEventListener('click', function () {
       chiedi('Cancellare tutti i valori della tabella?\nLe impostazioni restano.', 'Svuota').then(function (si) {
         if (!si) return;
-        stato.righe = stato.righe.map(function () { return ['', '']; });
+        stato.righe = statoIniziale().righe;   // di nuovo le righe vuote iniziali
         stato.listaNome = '';   // la lista resta salvata: si chiude soltanto
         stato.blocco = 0;
         stato.lettura = 0;

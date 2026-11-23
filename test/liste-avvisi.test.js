@@ -17,9 +17,11 @@ let browser;
 test.before(async () => { browser = await chromium.launch(process.env.CI ? {} : { channel: 'msedge' }); });
 test.after(async () => { await browser.close(); });
 
-/* I test sono scritti con 2 decimali per gradi e dati (i predefiniti sono 0 / 1: docs/2026-11-23-gradi-e-dati.md). */
+/* I test sono scritti con 2 decimali per gradi e dati (i predefiniti sono 0 / 1: docs/2026-11-23-gradi-e-dati.md),
+   e cambiano modo e decimali dal riquadro Cambia, che ora parte chiuso: qui si apre. */
 async function usaDecimali(page, [gradi, dati]) {
   await page.evaluate(([g, d]) => {
+    document.getElementById('imp-valori').open = true;
     [['dec-gra', g], ['dec-dat', d]].forEach(([id, v]) => {
       const el = document.getElementById(id);
       el.value = String(v);
@@ -213,6 +215,7 @@ test('liste con i nomi vecchi (decAng / decAlt): salvate nel browser e importate
   await page.click('#btn-liste');
   await page.click('#elenco-liste button[data-apri="Salvata prima"]');
   assert.deepEqual(await valoriTabella(page), [['9000', '1500']]);
+  assert.equal(await page.locator('#corpo-tabella tr').count(), 2, 'una riga vuota dopo la coppia');
   assert.equal(await page.inputValue('#dec-gra'), '2');
   assert.equal(await page.inputValue('#dec-dat'), '3');
   // file esportato da una versione di prima
