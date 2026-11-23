@@ -116,7 +116,18 @@ function dispositiviFinti(opzioni) {
   Object.defineProperty(navigator, 'bluetooth', { value: opzioni.senzaBt ? undefined : bluetooth, configurable: true });
 }
 
-async function nuovaPagina(sim, opzioni = {}, { telefono = false } = {}) {
+/* I test sono scritti con 2 decimali per gradi e dati (i predefiniti sono 0 / 1: docs/2026-11-23-gradi-e-dati.md). */
+async function usaDecimali(page, [gradi, dati]) {
+  await page.evaluate(([g, d]) => {
+    [['dec-gra', g], ['dec-dat', d]].forEach(([id, v]) => {
+      const el = document.getElementById(id);
+      el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  }, [gradi, dati]);
+}
+
+async function nuovaPagina(sim, opzioni = {}, { telefono = false, decimali = [2, 2] } = {}) {
   const ctx = await browser.newContext(telefono
     ? { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, reducedMotion: 'reduce' }
     : { viewport: { width: 1200, height: 900 }, reducedMotion: 'reduce' });
@@ -126,6 +137,7 @@ async function nuovaPagina(sim, opzioni = {}, { telefono = false } = {}) {
   const erroriJs = [];
   page.on('pageerror', (e) => erroriJs.push(e.message));
   await page.goto(server.url);
+  if (decimali) await usaDecimali(page, decimali);
   page.erroriJs = erroriJs;
   return page;
 }

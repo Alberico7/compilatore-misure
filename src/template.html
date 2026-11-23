@@ -8,7 +8,7 @@
 <!--ICONE-->
 <meta name="claude:viewport-fit-sides" content="cover">
 <!--
-  Compilatore misure Angolo/Altezza per la maschera della macchina
+  Compilatore misure Gradi/Dati per la maschera della macchina
   Copyright (c) 2026 Andrea Carletti. Licenza PolyForm Noncommercial 1.0.0: solo uso non commerciale (vedi LICENSE).
   Include "QR Code Generator for JavaScript", Copyright (c) 2009 Kazuhiko Arase, licenza MIT.
 -->
@@ -38,7 +38,7 @@
   --accento: #8dbbe8;
   --su-accento: #0e1824;
   --accento-chiaro: #1b2735;
-  --altezza: #c6b4e4;
+  --dato: #c6b4e4;
   --errore: #f0a49c;
   --errore-chiaro: #3a2320;
   --avviso: #e6c47e;
@@ -63,7 +63,7 @@
   --accento: #0e4a87;
   --su-accento: #ffffff;
   --accento-chiaro: #e1eaf4;
-  --altezza: #583590;
+  --dato: #583590;
   --errore: #8f1a14;
   --errore-chiaro: #f7e5e2;
   --avviso: #6b4200;
@@ -144,7 +144,7 @@ details.riquadro > :last-child { margin-bottom: 14px; }
 
 /* tabella */
 .contenitore-tabella { overflow-x: auto; }
-table.misure { border-collapse: collapse; width: 100%; max-width: 640px; table-layout: fixed; } /* Angolo e Altezza larghe uguali */
+table.misure { border-collapse: collapse; width: 100%; max-width: 640px; table-layout: fixed; } /* Grado e Dato larghe uguali */
 table.misure th:first-child { width: 48px; }
 table.misure th { text-align: left; font-size: 15px; color: var(--tenue); padding: 6px 8px; border-bottom: 2px solid var(--bordo); }
 table.misure td { padding: 4px 8px; vertical-align: top; border-bottom: 1px solid var(--riga); }
@@ -183,8 +183,8 @@ table.misure input.avviso { border-color: var(--bordo-avviso); background: var(-
 .cella-barra { padding: 14px 10px 12px; border-bottom: 1px solid var(--bordo); text-align: center; break-inside: avoid; min-width: 0; }
 .cella-barra:nth-child(odd) { border-right: 1px solid var(--bordo); }
 .etichetta { font-weight: 700; font-size: 17px; }
-.tipo-ang { color: var(--accento); }
-.tipo-alt { color: var(--altezza); }
+.tipo-gra { color: var(--accento); }
+.tipo-dat { color: var(--dato); }
 .cella-barra .cornice { margin: 6px auto 4px; }
 .cella-barra .valore { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .cifre { font-size: 13px; color: var(--tenue); }
@@ -341,7 +341,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
   .navigazione button { flex: 1; }
 }
 @media print {
-  :root { --sfondo: #fff; --carta: #fff; --testo: #000; --tenue: #333; --bordo: #999; --bordo-campo: #999; --accento: #000; --altezza: #000; color-scheme: light; }
+  :root { --sfondo: #fff; --carta: #fff; --testo: #000; --tenue: #333; --bordo: #999; --bordo-campo: #999; --accento: #000; --dato: #000; color-scheme: light; }
   body { font-size: 12pt; }
   nav.indice, #sez-dati, #sez-prova, #sez-guida, .schede, .barra-qr, .pulsanti, footer, header.testata .sottotitolo, #btn-tema, .barra-mobile, .lettura, .nota, .velo { display: none !important; }
   section.blocco { border: 0; padding: 0; margin: 0; }
@@ -355,7 +355,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
   <header class="testata">
     <div>
       <h1><img class="logo" src="__LOGO__" alt="" width="40" height="40"><span>Compilatore misure</span></h1>
-      <p class="sottotitolo">Angolo e Altezza per la maschera della macchina, letti con il lettore di codici in modalità tastiera.</p>
+      <p class="sottotitolo">Gradi e Dati per la maschera della macchina, letti con il lettore di codici in modalità tastiera.</p>
     </div>
     <button type="button" id="btn-tema" aria-pressed="false"></button>
     <div class="sicurezza" role="note">
@@ -383,8 +383,8 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
             <label><input type="radio" name="modo" id="modo-macchina" value="macchina"> Come in macchina (2000)</label>
           </div>
         </fieldset>
-        <label class="campo"><span>Decimali angolo</span><input type="number" class="piccolo" id="dec-ang" min="0" max="6" step="1" inputmode="numeric"></label>
-        <label class="campo"><span>Decimali altezza</span><input type="number" class="piccolo" id="dec-alt" min="0" max="6" step="1" inputmode="numeric"></label>
+        <label class="campo"><span>Decimali gradi</span><input type="number" class="piccolo" id="dec-gra" min="0" max="6" step="1" inputmode="numeric"></label>
+        <label class="campo"><span>Decimali dati</span><input type="number" class="piccolo" id="dec-dat" min="0" max="6" step="1" inputmode="numeric"></label>
         <label class="campo"><span>Righe</span><input type="number" class="piccolo" id="num-righe" min="1" max="500" step="1" inputmode="numeric"></label>
       </div>
       <div class="impostazioni voce-impostazioni" id="voce-impostazioni" hidden>
@@ -427,14 +427,14 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     <div class="voce-stato" id="voce-stato" aria-live="polite"></div>
     <div class="voce-ultimi" id="voce-ultimi"></div>
     <p class="nota">
-      <span class="solo-largo"><kbd>Invio</kbd> passa da Angolo ad Altezza e poi alla riga dopo, come in macchina. <kbd>↑</kbd> <kbd>↓</kbd> cambiano riga.
-      Da Excel: seleziona le due colonne, copia, clicca su <b>Angolo 1</b> e incolla con <kbd>Ctrl</kbd>+<kbd>V</kbd>.</span>
+      <span class="solo-largo"><kbd>Invio</kbd> passa da Grado a Dato e poi alla riga dopo, come in macchina. <kbd>↑</kbd> <kbd>↓</kbd> cambiano riga.
+      Da Excel: seleziona le due colonne, copia, clicca su <b>Grado 1</b> e incolla con <kbd>Ctrl</kbd>+<kbd>V</kbd>.</span>
       <span id="stato-salvataggio"></span> <span id="stato-offline"></span>
     </p>
     <p class="lista-attuale" id="lista-attuale" hidden></p>
     <div class="contenitore-tabella">
       <table class="misure">
-        <thead><tr><th>N°</th><th>Angolo</th><th>Altezza</th></tr></thead>
+        <thead><tr><th>N°</th><th>Grado</th><th>Dato</th></tr></thead>
         <tbody id="corpo-tabella"></tbody>
       </table>
     </div>
@@ -456,7 +456,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
         <button type="button" class="primario" id="btn-lettura">Leggi uno alla volta</button>
         <button type="button" id="btn-stampa" hidden>Stampa codici</button>
       </div>
-      <p class="nota">In macchina mettiti sul campo <b>Angolo 1</b>, poi leggi i codici nell'ordine (da sinistra a destra, riga per riga).
+      <p class="nota">In macchina mettiti sul campo <b>Grado 1</b>, poi leggi i codici nell'ordine (da sinistra a destra, riga per riga).
         Ogni codice contiene solo le cifre: l'INVIO lo aggiunge il lettore. Da telefono usa <b>Leggi uno alla volta</b>.</p>
       <div id="uscita-barre"></div>
     </div>
@@ -538,23 +538,23 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     <details open>
       <summary>Come si usa</summary>
       <ol>
-        <li>Nel riquadro in alto (<b>Cambia</b>) scegli come scrivi i valori: <b>con separatore</b> (20.00 o 20,00) oppure <b>come in macchina</b> (2000, senza punto), e i decimali di angolo e altezza come in macchina. Si sceglie una volta: poi resta il riepilogo.</li>
+        <li>Nel riquadro in alto (<b>Cambia</b>) scegli come scrivi i valori: <b>con separatore</b> (20.00 o 20,00) oppure <b>come in macchina</b> (2000, senza punto), e i decimali di gradi e dati come in macchina. Si sceglie una volta: poi resta il riepilogo.</li>
         <li>Se cambi i decimali con i valori già scritti, i valori restano gli stessi. Togliendo decimali, le cifre in più in fondo si cancellano, senza arrotondare: da 2 a 1 decimale, 20,55 diventa 20,5. Un messaggio dice quanti valori sono cambiati.</li>
         <li>Scrivi i valori nella tabella oppure incolla due colonne da Excel: INVIO (o Avanti) sull'ultima casella aggiunge una riga; per avere subito più righe, o per toglierne in fondo, cambia <b>Righe</b> nel riquadro <b>Cambia</b>. Sotto ogni casella vedi il valore come apparirà in macchina: controllalo.</li>
-        <li>Correggi le caselle in rosso. I codici compaiono solo quando tutti i valori sono corretti. Le caselle in arancione sono <b>da controllare</b> (negativi, angoli oltre 360, altezze molto diverse dalle vicine, coppie ripetute): i codici si generano lo stesso.</li>
+        <li>Correggi le caselle in rosso. I codici compaiono solo quando tutti i valori sono corretti. Le caselle in arancione sono <b>da controllare</b> (negativi, gradi oltre 360, dati molto diversi dai vicini, coppie ripetute): i codici si generano lo stesso.</li>
         <li>Scegli il metodo: <b>Chiavetta</b> (consigliata, vedi la guida <b>Chiavetta</b> qui sotto), <b>Codici a barre</b> (lettore 1D, un codice per valore) o <b>QR a blocchi</b> (lettore 2D, più coppie per codice).</li>
-        <li>Con i codici: in macchina posiziona il cursore sul campo <b>Angolo 1</b> della maschera.</li>
+        <li>Con i codici: in macchina posiziona il cursore sul campo <b>Grado 1</b> della maschera.</li>
         <li>Con i codici: leggili nell'ordine. Con i QR usa <b>Successivo</b> dopo ogni blocco: il riquadro dice da quale coppia riparte.</li>
         <li><b>Controlla tutti i valori sullo schermo della macchina prima di avviare la tastatura.</b> Lo strumento compila solo i campi, non avvia cicli: un valore sbagliato può mandare il tastatore contro l'utensile. <b>Confronta con la macchina</b>, sotto la tabella, mostra la lista a caratteri grandi: tocca ogni riga quando l'hai controllata.</li>
       </ol>
-      <p>Se si salta un campo o un valore è sbagliato: fermati, correggi a mano in macchina, poi riparti dal codice giusto (le etichette "Angolo n" / "Altezza n" dicono dove sei).</p>
+      <p>Se si salta un campo o un valore è sbagliato: fermati, correggi a mano in macchina, poi riparti dal codice giusto (le etichette "Grado n" / "Dato n" dicono dove sei).</p>
     </details>
     <details>
       <summary>Chiavetta</summary>
       <ol>
         <li>Nella scheda <b>Chiavetta</b> scegli il collegamento: <b>Bluetooth</b> (Chrome su Android) oppure <b>Cavo</b>, collegando la chiavetta <b>tenendo premuto il pulsante</b> (telefono con adattatore OTG, oppure PC). Poi premi <b>Invia i valori</b>.</li>
         <li>Il sito confronta il <b>codice di controllo</b> della chiavetta con il suo: se coincidono, i valori sono arrivati identici.</li>
-        <li>In macchina collega la chiavetta <b>senza</b> premere il pulsante: è una tastiera e basta. Metti il cursore su <b>Angolo 1</b> e premi il pulsante: dopo mezzo secondo scrive.</li>
+        <li>In macchina collega la chiavetta <b>senza</b> premere il pulsante: è una tastiera e basta. Metti il cursore su <b>Grado 1</b> e premi il pulsante: dopo mezzo secondo scrive.</li>
         <li>Con i tre tasti, facoltativi: <b>Ferma</b> si ferma dopo il valore in corso, <b>Ricomincia</b> torna alla prima coppia.</li>
         <li><b>Controlla la chiavetta</b> dice cosa contiene, a che punto è e se i valori sono uguali alla tabella. Via Bluetooth funziona anche con la chiavetta collegata alla macchina e non fa partire nessun tasto.</li>
         <li>Prima volta col Bluetooth: imposta il codice con il cavo, poi tieni premuto il pulsante <b>5 secondi</b> (doppio lampo) e invia dal telefono entro un minuto: il telefono chiede il codice. Si ricorda un solo telefono.</li>
@@ -660,7 +660,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     </div>
   </div>
   <p class="nota">Tocca una riga quando l'hai controllata sullo schermo della macchina: la casella a destra si spunta.</p>
-  <div class="verifica-intestazione" aria-hidden="true"><span>N°</span><span>Angolo</span><span>Altezza</span><span></span></div>
+  <div class="verifica-intestazione" aria-hidden="true"><span>N°</span><span>Grado</span><span>Dato</span><span></span></div>
   <div class="verifica-lista"><ol class="elenco-verifica" id="verifica-elenco"></ol></div>
 </div>
 

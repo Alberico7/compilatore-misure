@@ -12,10 +12,10 @@ const { versioneFirmware, compilatoreOSalta, compila, avviaSimulatore, esa, CHIA
 
 const { cc, salta: senzaCompilatore } = compilatoreOSalta();
 
-const IMP = { ritardoCarattere: 30, ritardoInvio: 200, coppiePerPressione: 0, decAng: 2, decAlt: 2 };
+const IMP = { ritardoCarattere: 30, ritardoInvio: 200, coppiePerPressione: 0, decGra: 2, decDat: 2 };
 
 function valoriDa(righe) {
-  const a = Logica.analizza(righe, { modo: 'separatore', decAng: 2, decAlt: 2 });
+  const a = Logica.analizza(righe, { modo: 'separatore', decGra: 2, decDat: 2 });
   assert.ok(a.valido);
   return a.valori;
 }
@@ -35,7 +35,7 @@ test('sito: CRC-32, testo, pacchetti e risposte', () => {
   const t = Chiavetta.testo(valori, IMP);
   assert.equal(t,
     '# Compilatore misure - valori per la chiavetta\n' +
-    '# 2 coppie - decimali angolo 2, altezza 2\n' +
+    '# 2 coppie - decimali gradi 2, dati 2\n' +
     'ritardo_carattere_ms = 30\nritardo_invio_ms = 200\ncoppie_per_pressione = 0\n' +
     '21494\n2694\n-150\n5930\n');
   assert.ok(/^[\x00-\x7f]*$/.test(t), 'solo ASCII');
@@ -144,10 +144,10 @@ test('sito e firmware insieme: cavo, Bluetooth, tasti scritti ed errori', { skip
     // 100 coppie dal generatore, con qualche negativo
     const righe = [], attese = [];
     for (let i = 0; i < 100; i++) {
-      const ang = (i * 7919) % 36000 - (i % 17 === 0 ? 50000 : 0), alt = (i * 104729) % 9000 + 1;
+      const gra = (i * 7919) % 36000 - (i % 17 === 0 ? 50000 : 0), dat = (i * 104729) % 9000 + 1;
       const conSep = (c) => (c < 0 ? '-' : '') + Math.floor(Math.abs(c) / 100) + ',' + String(Math.abs(c) % 100).padStart(2, '0');
-      righe.push([conSep(ang), conSep(alt)]);
-      attese.push(String(ang), String(alt));
+      righe.push([conSep(gra), conSep(dat)]);
+      attese.push(String(gra), String(dat));
     }
     const valori = valoriDa(righe);
     assert.deepEqual(valori.map((v) => v.cifre), attese.map((x) => String(+x)));

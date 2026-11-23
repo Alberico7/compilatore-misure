@@ -84,13 +84,13 @@ var Chiavetta = (function () {
   }
 
   /* Testo per la chiavetta (solo caratteri ASCII).
-     valori: [{cifre}], imp: {ritardoCarattere, ritardoInvio, coppiePerPressione, decAng, decAlt}
+     valori: [{cifre}], imp: {ritardoCarattere, ritardoInvio, coppiePerPressione, decGra, decDat}
      Niente data né ora: stessi valori e impostazioni = stesso testo = stesso codice di controllo,
      così "Controlla la chiavetta" può confrontarlo con la tabella. */
   function testo(valori, imp) {
     var righe = [
       '# Compilatore misure - valori per la chiavetta',
-      '# ' + valori.length / 2 + ' coppie - decimali angolo ' + imp.decAng + ', altezza ' + imp.decAlt
+      '# ' + valori.length / 2 + ' coppie - decimali gradi ' + imp.decGra + ', dati ' + imp.decDat
     ];
     IMPOSTAZIONI.forEach(function (x) { righe.push(x.nome + ' = ' + imp[x.campo]); });
     valori.forEach(function (v) { righe.push(v.cifre); });

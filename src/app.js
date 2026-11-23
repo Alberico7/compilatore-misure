@@ -15,15 +15,26 @@
     var righe = [];
     for (var i = 0; i < RIGHE_INIZIALI; i++) righe.push(['', '']);
     return {
-      modo: 'separatore', decAng: 2, decAlt: 2, righe: righe,
+      modo: 'separatore', decGra: 0, decDat: 1, righe: righe,
       coppieBlocco: 10, invioFinale: false, scheda: schedaPredefinita(), blocco: 0, confronto: 'tutti',
       tema: 'scuro', lettura: 0, voceModo: 'premi', voceSeparatore: 'pausa', vocePrepara: true,
       chRitCar: 30, chRitInv: 30, chCoppie: 0, chMezzo: 'bluetooth',
       listaNome: '',     // lista salvata aperta nella tabella ('' = nessuna)
       impAperte: true,   // riquadro delle impostazioni aperto al primo uso
       schedaChiavetta: true,  // segno: lo spostamento una tantum sulla Chiavetta è già fatto
-      pausaInvio30: true      // segno: il passaggio una tantum da 200 a 30 ms dopo INVIO è già fatto
+      pausaInvio30: true,     // segno: il passaggio una tantum da 200 a 30 ms dopo INVIO è già fatto
+      decimali01: true        // segno: il passaggio una tantum ai decimali 0 / 1 è già fatto
     };
+  }
+
+  /* docs/2026-11-23-gradi-e-dati.md: impostazioni, liste e file salvati prima hanno i nomi vecchi
+     (decAng, decAlt). Si leggono e si passano ai nomi nuovi. */
+  function nomiNuovi(o) {
+    if (!o || typeof o !== 'object') return o;
+    if (o.decGra === undefined && o.decAng !== undefined) o.decGra = o.decAng;
+    if (o.decDat === undefined && o.decAlt !== undefined) o.decDat = o.decAlt;
+    delete o.decAng; delete o.decAlt;
+    return o;
   }
 
   var stato = statoIniziale();
@@ -39,7 +50,7 @@
   /* ---------- salvataggio ---------- */
   function carica() {
     try {
-      var s = JSON.parse(localStorage.getItem(CHIAVE) || 'null');
+      var s = nomiNuovi(JSON.parse(localStorage.getItem(CHIAVE) || 'null'));
       if (s && Array.isArray(s.righe)) {
         var base = statoIniziale();
         Object.keys(base).forEach(function (k) { if (s[k] !== undefined) base[k] = s[k]; });
@@ -51,6 +62,10 @@
         if (s.schedaChiavetta === undefined) base.scheda = schedaPredefinita();
         /* docs/2026-11-22-pausa-invio-30ms.md: una volta sola, chi ha ancora i 200 ms di prima passa a 30 */
         if (s.pausaInvio30 === undefined && s.chRitInv === 200) base.chRitInv = 30;
+        /* docs/2026-11-23-gradi-e-dati.md: una volta sola, con i 2 / 2 di prima e la tabella vuota, si passa
+           a 0 / 1 come in macchina. Con dei valori scritti restano: cambiarli cambierebbe quello che si scrive. */
+        var vuota = base.righe.every(function (r) { return !r[0].trim() && !r[1].trim(); });
+        if (s.decimali01 === undefined && base.decGra === 2 && base.decDat === 2 && vuota) { base.decGra = 0; base.decDat = 1; }
         stato = base;
       }
     } catch (e) { salvataggioOk = false; }
@@ -133,7 +148,7 @@
     for (var i = 0; i < stato.righe.length; i++) {
       html.push('<tr><td class="n">' + (i + 1) + '</td>' +
         [0, 1].map(function (c) {
-          var nome = (c === 0 ? 'Angolo ' : 'Altezza ') + (i + 1);
+          var nome = (c === 0 ? 'Grado ' : 'Dato ') + (i + 1);
           return '<td><input type="text" inputmode="' + tipoInput + '" enterkeyhint="next" autocomplete="off" spellcheck="false" data-r="' + i + '" data-c="' + c +
             '" id="cella-' + i + '-' + c + '" aria-label="' + nome + '" value="' + esc(stato.righe[i][c]) + '"><div class="anteprima" id="ant-' + i + '-' + c + '"></div></td>';
         }).join('') + '</tr>');
@@ -147,7 +162,7 @@
   function riepilogoImpostazioni() {
     var n = stato.righe.length;
     $('imp-riepilogo').textContent = (stato.modo === 'macchina' ? 'Come in macchina' : 'Con separatore') +
-      ' · decimali ' + stato.decAng + ' / ' + stato.decAlt + ' · ' + n + (n === 1 ? ' riga' : ' righe');
+      ' · decimali ' + stato.decGra + ' / ' + stato.decDat + ' · ' + n + (n === 1 ? ' riga' : ' righe');
   }
 
   function impostaRighe(n, chiediConferma) {
@@ -166,10 +181,10 @@
     });
   }
 
-  /* Decimali di angolo (col 0) o altezza (col 1) cambiati: le caselle di quella colonna tengono
+  /* Decimali dei gradi (col 0) o dei dati (col 1) cambiati: le caselle di quella colonna tengono
      lo stesso valore, accorciato se servono meno decimali (docs/2026-11-22-cambio-decimali.md). */
   function cambiaDecimali(col, campo) {
-    var chiave = col === 0 ? 'decAng' : 'decAlt';
+    var chiave = col === 0 ? 'decGra' : 'decDat';
     var prima = stato[chiave], dopo = intero(campo.value, 0, 6, 2);
     campo.value = dopo;
     if (dopo === prima) return;
@@ -181,7 +196,7 @@
     });
     avvisoTabella = '';
     if (n) {
-      avvisoTabella = 'Decimali ' + (col === 0 ? 'angolo' : 'altezza') + ': ' + dopo + '. ' +
+      avvisoTabella = 'Decimali ' + (col === 0 ? 'gradi' : 'dati') + ': ' + dopo + '. ' +
         (dopo < prima ? (n === 1 ? 'Accorciato 1 valore.' : 'Accorciati ' + n + ' valori.')
           : (n === 1 ? 'Aggiunto lo zero in fondo a 1 valore.' : 'Aggiunti gli zeri in fondo a ' + n + ' valori.'));
       costruisciTabella();
@@ -189,7 +204,7 @@
     aggiorna();
   }
 
-  /* Come INVIO in macchina: angolo -> altezza -> angolo della riga dopo (aggiunge una riga all'ultima). */
+  /* Come INVIO in macchina: grado -> dato -> grado della riga dopo (aggiunge una riga all'ultima). */
   function avanti(r, c) {
     if (c === 0) { vai(r, 1); return; }
     if (r === stato.righe.length - 1) {
@@ -214,7 +229,7 @@
   /* ---------- analisi e anteprime ---------- */
   function aggiorna() {
     var usate = righeUsate();
-    var imp = { modo: stato.modo, decAng: stato.decAng, decAlt: stato.decAlt };
+    var imp = { modo: stato.modo, decGra: stato.decGra, decDat: stato.decDat };
     analisi = Logica.analizza(usate, imp);
     blocchi = analisi.valido ? Logica.blocchiQR(analisi.valori, stato.coppieBlocco, stato.invioFinale) : [];
     var segni = segniAvvisi();
@@ -251,7 +266,7 @@
   }
 
   /* Note brevi degli avvisi per casella: { "riga,col": ["oltre 360!", ...] }. La coppia uguale segna tutte e due le caselle. */
-  var NOTE_AVVISI = { negativo: 'negativo!', angolo360: 'oltre 360!', altezza: 'molto diversa dalle vicine!', uguale: 'uguale alla coppia sopra!' };
+  var NOTE_AVVISI = { negativo: 'negativo!', grado360: 'oltre 360!', dato: 'molto diverso dai vicini!', uguale: 'uguale alla coppia sopra!' };
   function segniAvvisi() {
     var segni = {};
     analisi.avvisi.forEach(function (a) {
@@ -275,7 +290,7 @@
     var h = '';
     if (avvisoTabella) h += '<div class="messaggio avviso">' + esc(avvisoTabella) + '</div>';
     if (nUsate === 0) {
-      h += '<div class="messaggio avviso">Inserisci almeno una coppia Angolo/Altezza.</div>';
+      h += '<div class="messaggio avviso">Inserisci almeno una coppia Grado/Dato.</div>';
     } else if (analisi.errori.length) {
       h += '<div class="messaggio errore"><b>' + analisi.errori.length + (analisi.errori.length === 1 ? ' casella da correggere' : ' caselle da correggere') +
         '</b> — i codici si generano solo quando tutti i valori sono corretti.' + listaMessaggi(analisi.errori, 8) + '</div>';
@@ -308,7 +323,7 @@
   }
 
   function etichetta(v) {
-    return '<span class="' + (v.tipo === 'Angolo' ? 'tipo-ang' : 'tipo-alt') + '">' + v.tipo + '</span> ' + v.coppia;
+    return '<span class="' + (v.tipo === 'Grado' ? 'tipo-gra' : 'tipo-dat') + '">' + v.tipo + '</span> ' + v.coppia;
   }
 
   /* Pixel per modulo del Code 128 perché stia in "larghezza" (min 2, max "massimo"). */
@@ -355,7 +370,7 @@
       '<div class="info-blocco">Prima di leggere, in macchina mettiti sul campo <b>' + esc(b.iniziaCon) + '</b>. ' +
       'Questo blocco contiene le coppie da <b>' + b.primaCoppia + '</b> a <b>' + b.ultimaCoppia + '</b>.</div>' +
       '<div class="area-qr"><div class="cornice" id="qr-codice">' + Logica.qrSvg(qrcode, b.testo, latoQR()) + '</div></div>' +
-      '<div class="contenuto-qr"><table><thead><tr><th>Coppia</th><th>Angolo</th><th>Altezza</th></tr></thead><tbody>' + righe.join('') + '</tbody></table>' +
+      '<div class="contenuto-qr"><table><thead><tr><th>Coppia</th><th>Grado</th><th>Dato</th></tr></thead><tbody>' + righe.join('') + '</tbody></table>' +
       '<div class="grezzo" title="Contenuto del QR: ⏎ = INVIO">' + grezzo + '</div></div>';
     /* ridisegna solo se cambia (il ridimensionamento della finestra lo richiama anche senza modifiche) */
     if (uscita.dataset.html === html) return;
@@ -454,7 +469,7 @@
       var si = !!spunte.fatte[i];
       if (si) fatte++;
       h.push('<li><button type="button" class="riga-verifica' + (note.length ? ' avviso' : '') + '" data-i="' + i + '" aria-pressed="' + si + '"' +
-        ' aria-label="Coppia ' + (i + 1) + ': angolo ' + esc(analisi.celle[i][0].display) + ', altezza ' + esc(analisi.celle[i][1].display) + (note.length ? ', da controllare' : '') + '">' +
+        ' aria-label="Coppia ' + (i + 1) + ': grado ' + esc(analisi.celle[i][0].display) + ', dato ' + esc(analisi.celle[i][1].display) + (note.length ? ', da controllare' : '') + '">' +
         '<span class="n">' + (i + 1) + '</span><span class="val">' + esc(analisi.celle[i][0].display) + '</span><span class="val">' + esc(analisi.celle[i][1].display) + '</span>' +
         '<span class="spunta" aria-hidden="true">' + (si ? '✓' : '') + '</span>' +
         (note.length ? '<span class="nota-avviso">⚠ ' + esc(note.join(' · ')) + '</span>' : '') + '</button></li>');
@@ -472,7 +487,7 @@
     if (!listeLette) {
       try {
         var l = JSON.parse(localStorage.getItem(CHIAVE_LISTE) || '[]');
-        listeLette = Array.isArray(l) ? l.filter(listaValida) : [];
+        listeLette = Array.isArray(l) ? l.map(nomiNuovi).filter(listaValida) : [];
       } catch (e) { listeLette = []; }
     }
     return listeLette.slice();
@@ -485,17 +500,17 @@
     return l && typeof l.nome === 'string' && l.nome.trim() && Array.isArray(l.righe) && l.righe.length <= MAX_RIGHE &&
       l.righe.every(function (r) { return Array.isArray(r) && r.length === 2 && typeof r[0] === 'string' && typeof r[1] === 'string'; }) &&
       (l.modo === 'separatore' || l.modo === 'macchina') &&
-      [l.decAng, l.decAlt].every(function (d) { return d === (d | 0) && d >= 0 && d <= 6; });
+      [l.decGra, l.decDat].every(function (d) { return d === (d | 0) && d >= 0 && d <= 6; });
   }
   /* Quello che si salva di una lista: coppie (senza righe vuote in fondo, senza spazi), modo e decimali. */
   function contenutoAttuale() {
     return {
       righe: righeUsate().map(function (r) { return [r[0].trim(), r[1].trim()]; }),
-      modo: stato.modo, decAng: stato.decAng, decAlt: stato.decAlt
+      modo: stato.modo, decGra: stato.decGra, decDat: stato.decDat
     };
   }
   function stessoContenuto(a, b) {
-    return a.modo === b.modo && a.decAng === b.decAng && a.decAlt === b.decAlt && JSON.stringify(a.righe) === JSON.stringify(b.righe);
+    return a.modo === b.modo && a.decGra === b.decGra && a.decDat === b.decDat && JSON.stringify(a.righe) === JSON.stringify(b.righe);
   }
   function trovaLista(liste, nome) {
     var k = nome.trim().toLowerCase();
@@ -579,7 +594,7 @@
       if (!si) return;
       liste = leggiListe(); i = trovaLista(liste, nome);
       if (i >= 0) { nome = liste[i].nome; liste.splice(i, 1); }
-      liste.unshift({ nome: nome, righe: c.righe, modo: c.modo, decAng: c.decAng, decAlt: c.decAlt, salvata: new Date().toISOString() });
+      liste.unshift({ nome: nome, righe: c.righe, modo: c.modo, decGra: c.decGra, decDat: c.decDat, salvata: new Date().toISOString() });
       if (!scriviListe(liste)) return;
       stato.listaNome = nome;
       salva();
@@ -608,7 +623,7 @@
       if (!si) return;
       stato.righe = l.righe.map(function (r) { return [r[0], r[1]]; });
       if (!stato.righe.length) stato.righe.push(['', '']);
-      stato.modo = l.modo; stato.decAng = l.decAng; stato.decAlt = l.decAlt;
+      stato.modo = l.modo; stato.decGra = l.decGra; stato.decDat = l.decDat;
       stato.listaNome = l.nome;
       stato.blocco = 0; stato.lettura = 0;
       avvisoTabella = '';
@@ -657,8 +672,8 @@
     if (!nuove) { esitoListe('errore', 'Questo file non contiene liste del Compilatore misure.'); return; }
     var liste = leggiListe(), aggiunte = 0, saltate = 0, scartate = 0;
     nuove.forEach(function (l) {
-      if (!listaValida(l)) { scartate++; return; }
-      var pulita = { nome: l.nome.trim().slice(0, 60), righe: l.righe, modo: l.modo, decAng: l.decAng, decAlt: l.decAlt,
+      if (!listaValida(nomiNuovi(l))) { scartate++; return; }
+      var pulita = { nome: l.nome.trim().slice(0, 60), righe: l.righe, modo: l.modo, decGra: l.decGra, decDat: l.decDat,
         salvata: isNaN(new Date(l.salvata)) ? new Date().toISOString() : l.salvata };
       var i = trovaLista(liste, pulita.nome);
       // già presente: stesse coppie con lo stesso nome, o con il nome già cambiato da un'importazione ("Flangia (2)")
@@ -833,7 +848,7 @@
     for (var i = 0; i < stato.righe.length; i++) for (var c = 0; c < 2; c++) if (!stato.righe[i][c].trim()) return { r: i, c: c };
     return { r: stato.righe.length - 1, c: 1 };
   }
-  function nomeCella(p) { return (p.c === 0 ? 'Angolo ' : 'Altezza ') + (p.r + 1); }
+  function nomeCella(p) { return (p.c === 0 ? 'Grado ' : 'Dato ') + (p.r + 1); }
   function nascondiTastiera() {
     if (!tastieraNascosta) { tastieraNascosta = true; aggiornaModoInput(); }
   }
@@ -1220,8 +1235,8 @@
     document.querySelectorAll('input[name=modo]').forEach(function (r) {
       r.addEventListener('change', function () { stato.modo = r.value; costruisciTabella(); aggiorna(); });
     });
-    $('dec-ang').addEventListener('change', function () { cambiaDecimali(0, this); });
-    $('dec-alt').addEventListener('change', function () { cambiaDecimali(1, this); });
+    $('dec-gra').addEventListener('change', function () { cambiaDecimali(0, this); });
+    $('dec-dat').addEventListener('change', function () { cambiaDecimali(1, this); });
     $('num-righe').addEventListener('change', function () { impostaRighe(this.value, true); });
     $('btn-svuota').addEventListener('click', function () {
       chiedi('Cancellare tutti i valori della tabella?\nLe impostazioni restano.', 'Svuota').then(function (si) {
@@ -1357,8 +1372,8 @@
 
   function applicaImpostazioni() {
     document.querySelectorAll('input[name=modo]').forEach(function (r) { r.checked = r.value === stato.modo; });
-    $('dec-ang').value = stato.decAng;
-    $('dec-alt').value = stato.decAlt;
+    $('dec-gra').value = stato.decGra;
+    $('dec-dat').value = stato.decDat;
     var sel = $('coppie-blocco');
     if (!Array.prototype.some.call(sel.options, function (o) { return +o.value === stato.coppieBlocco; })) {
       var o = document.createElement('option'); o.value = o.textContent = stato.coppieBlocco; sel.appendChild(o);

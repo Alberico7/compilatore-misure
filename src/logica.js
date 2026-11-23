@@ -85,54 +85,54 @@ var Logica = (function () {
   }
 
   /* Valori sospetti (docs/2026-11-18-offline-liste-avvisi.md): avvisi, non errori.
-     - angolo oltre 360;
-     - altezza almeno SOSPETTO volte più grande (o più piccola) di tutte e due le vicine, che invece
+     - grado oltre 360;
+     - dato almeno SOSPETTO volte più grande (o più piccolo) di tutti e due i vicini, che invece
        sono simili tra loro: il caso tipico della virgola sbagliata (2000 tra 200 e 205);
-     - coppia con angolo E altezza uguali alla coppia sopra. */
+     - coppia con grado E dato uguali alla coppia sopra. */
   var SOSPETTO = 5;
   function sospetti(celle, imp) {
     var avvisi = [];
     var ok = function (r) { return r && r.stato === 'ok'; };
-    var limite = 360 * Math.pow(10, imp.decAng);
+    var limite = 360 * Math.pow(10, imp.decGra);
     celle.forEach(function (c, i) {
       if (ok(c[0]) && Number(c[0].cifre) > limite) {
-        avvisi.push({ riga: i, col: 0, tipo: 'angolo360', testo: 'Angolo ' + (i + 1) + ': ' + c[0].display + ' è oltre 360' });
+        avvisi.push({ riga: i, col: 0, tipo: 'grado360', testo: 'Grado ' + (i + 1) + ': ' + c[0].display + ' è oltre 360' });
       }
       var p = celle[i - 1];
       if (p && ok(c[0]) && ok(c[1]) && ok(p[0]) && ok(p[1]) && c[0].cifre === p[0].cifre && c[1].cifre === p[1].cifre) {
         avvisi.push({ riga: i, col: 0, tipo: 'uguale', testo: 'Coppia ' + (i + 1) + ' uguale alla ' + i });
       }
     });
-    // altezze compilate, nell'ordine: le vicine sono quella prima e quella dopo (agli estremi, le due più vicine)
-    var alt = [];
-    celle.forEach(function (c, i) { if (ok(c[1])) alt.push({ riga: i, v: Math.abs(Number(c[1].cifre)), r: c[1] }); });
-    if (alt.length < 3) return avvisi;
-    alt.forEach(function (a, k) {
-      var n = alt.length;
-      var vic = k === 0 ? [alt[1], alt[2]] : k === n - 1 ? [alt[n - 2], alt[n - 3]] : [alt[k - 1], alt[k + 1]];
+    // dati compilati, nell'ordine: i vicini sono quello prima e quello dopo (agli estremi, i due più vicini)
+    var dati = [];
+    celle.forEach(function (c, i) { if (ok(c[1])) dati.push({ riga: i, v: Math.abs(Number(c[1].cifre)), r: c[1] }); });
+    if (dati.length < 3) return avvisi;
+    dati.forEach(function (a, k) {
+      var n = dati.length;
+      var vic = k === 0 ? [dati[1], dati[2]] : k === n - 1 ? [dati[n - 2], dati[n - 3]] : [dati[k - 1], dati[k + 1]];
       var x = vic[0].v, y = vic[1].v;
       if (!a.v || !x || !y) return;                                   // con uno zero il rapporto non ha senso
-      if (Math.max(x, y) >= SOSPETTO * Math.min(x, y)) return;          // vicine diverse tra loro: salto vero di misura
-      var grande = a.v >= SOSPETTO * x && a.v >= SOSPETTO * y, piccola = a.v * SOSPETTO <= x && a.v * SOSPETTO <= y;
-      if (grande || piccola) {
+      if (Math.max(x, y) >= SOSPETTO * Math.min(x, y)) return;          // vicini diversi tra loro: salto vero di misura
+      var grande = a.v >= SOSPETTO * x && a.v >= SOSPETTO * y, piccolo = a.v * SOSPETTO <= x && a.v * SOSPETTO <= y;
+      if (grande || piccolo) {
         var ord = vic.slice().sort(function (u, w) { return u.riga - w.riga; });
-        avvisi.push({ riga: a.riga, col: 1, tipo: 'altezza', testo: 'Altezza ' + (a.riga + 1) + ': ' + a.r.display +
-          ' è molto diversa dalle vicine (' + ord[0].r.display + ' e ' + ord[1].r.display + '): controlla la virgola' });
+        avvisi.push({ riga: a.riga, col: 1, tipo: 'dato', testo: 'Dato ' + (a.riga + 1) + ': ' + a.r.display +
+          ' è molto diverso dai vicini (' + ord[0].r.display + ' e ' + ord[1].r.display + '): controlla la virgola' });
       }
     });
     return avvisi;
   }
 
-  /* Analizza tutta la tabella. righe: [[angolo, altezza], ...]
-     imp: { modo, decAng, decAlt } */
+  /* Analizza tutta la tabella. righe: [[grado, dato], ...]
+     imp: { modo, decGra, decDat } */
   function analizza(righe, imp) {
     var celle = [], errori = [], avvisi = [], valori = [];
     var separatoriInMacchina = 0;
     for (var i = 0; i < righe.length; i++) {
-      var ra = converti(righe[i][0], imp.modo, imp.decAng);
-      var rh = converti(righe[i][1], imp.modo, imp.decAlt);
-      celle.push([ra, rh]);
-      [[ra, 'Angolo', 0], [rh, 'Altezza', 1]].forEach(function (x) {
+      var rg = converti(righe[i][0], imp.modo, imp.decGra);
+      var rd = converti(righe[i][1], imp.modo, imp.decDat);
+      celle.push([rg, rd]);
+      [[rg, 'Grado', 0], [rd, 'Dato', 1]].forEach(function (x) {
         var r = x[0], nome = x[1] + ' ' + (i + 1);
         if (r.stato !== 'ok') {
           errori.push({ riga: i, col: x[2], testo: nome + ': ' + r.messaggio });

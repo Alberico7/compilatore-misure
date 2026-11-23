@@ -78,61 +78,61 @@ test('cambio dei decimali: stesso valore, cifre in più cancellate senza arroton
 });
 
 test('analisi tabella: ordine, errori, avvisi', () => {
-  const a = L.analizza([['20,00', '15,50'], ['-1', '3']], { modo: 'separatore', decAng: 2, decAlt: 2 });
+  const a = L.analizza([['20,00', '15,50'], ['-1', '3']], { modo: 'separatore', decGra: 2, decDat: 2 });
   assert.equal(a.valido, true);
   assert.deepEqual(a.valori.map((v) => v.cifre), ['2000', '1550', '-100', '300']);
-  assert.deepEqual(a.valori.map((v) => v.etichetta), ['Angolo 1', 'Altezza 1', 'Angolo 2', 'Altezza 2']);
+  assert.deepEqual(a.valori.map((v) => v.etichetta), ['Grado 1', 'Dato 1', 'Grado 2', 'Dato 2']);
   assert.equal(a.avvisi.length, 1);
-  const b = L.analizza([['20,00', ''], ['x', '1,234']], { modo: 'separatore', decAng: 2, decAlt: 2 });
+  const b = L.analizza([['20,00', ''], ['x', '1,234']], { modo: 'separatore', decGra: 2, decDat: 2 });
   assert.equal(b.valido, false);
   assert.equal(b.errori.length, 3);
   assert.deepEqual(b.valori, []);
 });
 
-/* docs/2026-11-18-offline-liste-avvisi.md: angolo oltre 360, altezza molto diversa dalle vicine, coppia uguale */
+/* docs/2026-11-18-offline-liste-avvisi.md: grado oltre 360, dato molto diverso dai vicini, coppia uguale */
 test('avvisi sui valori sospetti', () => {
-  const IMP = { modo: 'separatore', decAng: 2, decAlt: 2 };
+  const IMP = { modo: 'separatore', decGra: 2, decDat: 2 };
   const tipi = (righe, imp = IMP) => L.analizza(righe, imp).avvisi.filter((a) => a.tipo !== 'negativo').map((a) => a.tipo + ' ' + (a.riga + 1));
 
-  // angolo: 360 no, 360.01 sì; anche con altri decimali e nel modo "come in macchina"
-  assert.deepEqual(tipi([['360', '1'], ['360.01', '2']]), ['angolo360 2']);
-  assert.deepEqual(tipi([['361', '1']], { modo: 'separatore', decAng: 0, decAlt: 2 }), ['angolo360 1']);
-  assert.deepEqual(tipi([['36000', '1'], ['36001', '2']], { modo: 'macchina', decAng: 2, decAlt: 2 }), ['angolo360 2']);
+  // grado: 360 no, 360.01 sì; anche con altri decimali e nel modo "come in macchina"
+  assert.deepEqual(tipi([['360', '1'], ['360.01', '2']]), ['grado360 2']);
+  assert.deepEqual(tipi([['361', '1']], { modo: 'separatore', decGra: 0, decDat: 2 }), ['grado360 1']);
+  assert.deepEqual(tipi([['36000', '1'], ['36001', '2']], { modo: 'macchina', decGra: 2, decDat: 2 }), ['grado360 2']);
   const a = L.analizza([['1', '1'], ['370', '2']], IMP).avvisi[0];
   assert.equal(a.col, 0);
-  assert.equal(a.testo, 'Angolo 2: 370.00 è oltre 360');
+  assert.equal(a.testo, 'Grado 2: 370.00 è oltre 360');
   // l'avviso non blocca niente
   assert.equal(L.analizza([['370', '1']], IMP).valido, true);
 
-  // altezza isolata 5 volte più grande o più piccola di tutte e due le vicine, che sono simili tra loro
-  assert.deepEqual(tipi([['1', '200'], ['2', '2000'], ['3', '205']]), ['altezza 2']);
-  assert.deepEqual(tipi([['1', '200'], ['2', '20'], ['3', '205']]), ['altezza 2']);
+  // dato isolato 5 volte più grande o più piccolo di tutti e due i vicini, che sono simili tra loro
+  assert.deepEqual(tipi([['1', '200'], ['2', '2000'], ['3', '205']]), ['dato 2']);
+  assert.deepEqual(tipi([['1', '200'], ['2', '20'], ['3', '205']]), ['dato 2']);
   assert.deepEqual(tipi([['1', '200'], ['2', '999'], ['3', '205']]), [], 'meno di 5 volte');
-  assert.deepEqual(tipi([['1', '20'], ['2', '200'], ['3', '2000']]), [], 'vicine diverse tra loro: salto vero');
-  assert.deepEqual(tipi([['1', '200'], ['2', '2000']]), [], 'servono almeno 3 altezze');
-  // prima e ultima riga: le due più vicine
-  assert.deepEqual(tipi([['1', '2000'], ['2', '200'], ['3', '205'], ['4', '210']]), ['altezza 1']);
-  assert.deepEqual(tipi([['1', '200'], ['2', '205'], ['3', '210'], ['4', '21']]), ['altezza 4']);
+  assert.deepEqual(tipi([['1', '20'], ['2', '200'], ['3', '2000']]), [], 'vicini diversi tra loro: salto vero');
+  assert.deepEqual(tipi([['1', '200'], ['2', '2000']]), [], 'servono almeno 3 dati');
+  // prima e ultima riga: i due più vicini
+  assert.deepEqual(tipi([['1', '2000'], ['2', '200'], ['3', '205'], ['4', '210']]), ['dato 1']);
+  assert.deepEqual(tipi([['1', '200'], ['2', '205'], ['3', '210'], ['4', '21']]), ['dato 4']);
   // zeri: niente confronto; negativi: conta la grandezza
   assert.deepEqual(tipi([['1', '0'], ['2', '2000'], ['3', '200'], ['4', '205']]), []);
   assert.deepEqual(tipi([['1', '200'], ['2', '0'], ['3', '205']]), []);
-  assert.deepEqual(tipi([['1', '-200'], ['2', '-2000'], ['3', '-205']]), ['altezza 2']);
-  // le righe con errori si saltano: le vicine sono le altezze valide più vicine
-  assert.deepEqual(tipi([['1', '200'], ['2', 'x'], ['3', '2000'], ['4', '205']]), ['altezza 3']);
+  assert.deepEqual(tipi([['1', '-200'], ['2', '-2000'], ['3', '-205']]), ['dato 2']);
+  // le righe con errori si saltano: i vicini sono i dati validi più vicini
+  assert.deepEqual(tipi([['1', '200'], ['2', 'x'], ['3', '2000'], ['4', '205']]), ['dato 3']);
   const h = L.analizza([['1', '200'], ['2', '2000'], ['3', '205']], IMP).avvisi[0];
   assert.equal(h.col, 1);
-  assert.equal(h.testo, 'Altezza 2: 2000.00 è molto diversa dalle vicine (200.00 e 205.00): controlla la virgola');
+  assert.equal(h.testo, 'Dato 2: 2000.00 è molto diverso dai vicini (200.00 e 205.00): controlla la virgola');
 
-  // coppia uguale: solo con angolo E altezza uguali alla coppia sopra (confronto sulle cifre: 20 = 20,00)
+  // coppia uguale: solo con grado E dato uguali alla coppia sopra (confronto sulle cifre: 20 = 20,00)
   assert.deepEqual(tipi([['20', '15'], ['20,00', '15.0']]), ['uguale 2']);
-  assert.deepEqual(tipi([['20', '15'], ['20', '16']]), [], 'solo angolo uguale');
-  assert.deepEqual(tipi([['20', '15'], ['21', '15']]), [], 'solo altezza uguale');
+  assert.deepEqual(tipi([['20', '15'], ['20', '16']]), [], 'solo grado uguale');
+  assert.deepEqual(tipi([['20', '15'], ['21', '15']]), [], 'solo dato uguale');
   assert.deepEqual(tipi([['20', '15'], ['21', '16'], ['20', '15']]), [], 'uguale ma non di seguito');
   assert.equal(L.analizza([['20', '15'], ['20', '15']], IMP).avvisi[0].testo, 'Coppia 2 uguale alla 1');
 
   // i negativi restano, con il loro tipo; tutti in ordine di riga
   const tutti = L.analizza([['-1', '200'], ['400', '210'], ['400', '210'], ['5', '205']], IMP).avvisi.map((x) => x.tipo + ' ' + (x.riga + 1));
-  assert.deepEqual(tutti, ['negativo 1', 'angolo360 2', 'angolo360 3', 'uguale 3']);
+  assert.deepEqual(tutti, ['negativo 1', 'grado360 2', 'grado360 3', 'uguale 3']);
 });
 
 test('Code 128: checksum e struttura', () => {
@@ -150,8 +150,8 @@ test('Code 128: checksum e struttura', () => {
 test('blocchi QR', () => {
   const valori = [];
   for (let i = 1; i <= 23; i++) {
-    valori.push({ cifre: 'A' + i, coppia: i, etichetta: 'Angolo ' + i });
-    valori.push({ cifre: 'H' + i, coppia: i, etichetta: 'Altezza ' + i });
+    valori.push({ cifre: 'A' + i, coppia: i, etichetta: 'Grado ' + i });
+    valori.push({ cifre: 'H' + i, coppia: i, etichetta: 'Dato ' + i });
   }
   const b = L.blocchiQR(valori, 10, false);
   assert.equal(b.length, 3);

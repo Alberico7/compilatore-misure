@@ -17,7 +17,18 @@ let browser;
 test.before(async () => { browser = await chromium.launch(process.env.CI ? {} : { channel: 'msedge' }); });
 test.after(async () => { await browser.close(); });
 
-async function apri(url = PAGINA, { telefono = false, ctx = null } = {}) {
+/* I test sono scritti con 2 decimali per gradi e dati (i predefiniti sono 0 / 1: docs/2026-11-23-gradi-e-dati.md). */
+async function usaDecimali(page, [gradi, dati]) {
+  await page.evaluate(([g, d]) => {
+    [['dec-gra', g], ['dec-dat', d]].forEach(([id, v]) => {
+      const el = document.getElementById(id);
+      el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  }, [gradi, dati]);
+}
+
+async function apri(url = PAGINA, { telefono = false, ctx = null, decimali = [2, 2] } = {}) {
   ctx = ctx || await browser.newContext(telefono
     ? { viewport: { width: 360, height: 740 }, isMobile: true, hasTouch: true, reducedMotion: 'reduce' }
     : { viewport: { width: 1200, height: 900 }, reducedMotion: 'reduce' });
@@ -25,11 +36,12 @@ async function apri(url = PAGINA, { telefono = false, ctx = null } = {}) {
   const erroriJs = [];
   page.on('pageerror', (e) => erroriJs.push(e.message));
   await page.goto(url);
+  if (decimali) await usaDecimali(page, decimali);
   page.erroriJs = erroriJs;
   return page;
 }
 
-/* Incolla come da Excel (colonne separate da TAB) a partire da Angolo 1. */
+/* Incolla come da Excel (colonne separate da TAB) a partire da Grado 1. */
 async function incolla(page, coppie) {
   const testo = coppie.map((c) => c.join('\t')).join('\r\n') + '\r\n';
   await page.evaluate((testo) => {
@@ -49,23 +61,23 @@ test('avvisi: caselle colorate, riquadro "Da controllare" con link, codici gener
   const page = await apri();
   await incolla(page, [['10', '200'], ['370', '2000'], ['20', '205'], ['20', '205'], ['-5', '210']]);
   const classi = async (r, c) => (await page.getAttribute(cella(r, c), 'class')) || '';
-  assert.match(await classi(1, 0), /avviso/, 'angolo oltre 360');
+  assert.match(await classi(1, 0), /avviso/, 'grado oltre 360');
   assert.match(await page.innerText('#ant-1-0'), /oltre 360!/);
-  assert.match(await classi(1, 1), /avviso/, 'altezza sospetta');
-  assert.match(await page.innerText('#ant-1-1'), /molto diversa dalle vicine!/);
-  assert.match(await classi(3, 0), /avviso/, 'coppia uguale: angolo');
-  assert.match(await classi(3, 1), /avviso/, 'coppia uguale: altezza');
+  assert.match(await classi(1, 1), /avviso/, 'dato sospetto');
+  assert.match(await page.innerText('#ant-1-1'), /molto diverso dai vicini!/);
+  assert.match(await classi(3, 0), /avviso/, 'coppia uguale: grado');
+  assert.match(await classi(3, 1), /avviso/, 'coppia uguale: dato');
   assert.match(await page.innerText('#ant-3-1'), /uguale alla coppia sopra!/);
   assert.doesNotMatch(await classi(0, 0), /avviso/);
   assert.doesNotMatch(await classi(2, 1), /avviso/, 'la prima delle due coppie uguali non è segnata');
   // riquadri: "Da controllare" (3 voci) e il solito dei negativi
   const voci = await page.$$eval('#da-controllare li', (li) => li.map((x) => x.textContent));
   assert.deepEqual(voci, [
-    'Angolo 2: 370.00 è oltre 360',
-    'Altezza 2: 2000.00 è molto diversa dalle vicine (200.00 e 205.00): controlla la virgola',
+    'Grado 2: 370.00 è oltre 360',
+    'Dato 2: 2000.00 è molto diverso dai vicini (200.00 e 205.00): controlla la virgola',
     'Coppia 4 uguale alla 3',
   ]);
-  assert.match(await page.innerText('#riepilogo'), /Valori negativi:[\s\S]*Angolo 5/);
+  assert.match(await page.innerText('#riepilogo'), /Valori negativi:[\s\S]*Grado 5/);
   // il link porta alla casella
   await page.click('#da-controllare li:nth-child(2) a');
   assert.equal(await page.evaluate(() => document.activeElement.id), 'cella-1-1');
@@ -146,12 +158,12 @@ test('liste: salva, modifiche non salvate, salva come con nome già usato, apri,
   assert.equal(await page.locator('#nome-lista').isVisible(), false);
   assert.equal(await page.innerText('#lista-attuale'), 'Lista: Flangia 1234');
 
-  // seconda lista, in "come in macchina" con 3 decimali sull'altezza
+  // seconda lista, in "come in macchina" con 3 decimali sui dati
   await page.click('#btn-svuota'); await page.click('#conferma-si');
   assert.equal(await page.locator('#lista-attuale').isVisible(), false, 'Svuota tutto chiude la lista');
   assert.match(await page.innerText('#elenco-liste'), /Flangia 1234/, '...ma non la cancella');
   await page.check('#modo-macchina');
-  await page.fill('#dec-alt', '3'); await page.dispatchEvent('#dec-alt', 'change');
+  await page.fill('#dec-dat', '3'); await page.dispatchEvent('#dec-dat', 'change');
   await incolla(page, [['9000', '1500']]);
   await salvaCome(page, 'Albero');
   // "Salva come" con un nome già usato (maiuscole diverse): chiede se sostituire
@@ -167,14 +179,14 @@ test('liste: salva, modifiche non salvate, salva come con nome già usato, apri,
   await page.click('#conferma-si');
   assert.deepEqual(await valoriTabella(page), [['20', '150'], ['45', '152']]);
   assert.equal(await page.isChecked('#modo-separatore'), true, 'il modo torna quello della lista');
-  assert.equal(await page.inputValue('#dec-alt'), '2');
+  assert.equal(await page.inputValue('#dec-dat'), '2');
   assert.equal(await page.innerText('#lista-attuale'), 'Lista: Flangia 1234');
   // valori già salvati in una lista: Apri non chiede niente
   await page.click('#elenco-liste button[data-apri="Albero"]');
   assert.equal(await page.locator('#conferma').isVisible(), false);
   assert.deepEqual(await valoriTabella(page), [['9000', '1500']]);
   assert.equal(await page.isChecked('#modo-macchina'), true);
-  assert.equal(await page.inputValue('#dec-alt'), '3');
+  assert.equal(await page.inputValue('#dec-dat'), '3');
   // la più recente in alto
   assert.deepEqual(await page.$$eval('#elenco-liste .nome', (n) => n.map((x) => x.firstChild.textContent.trim())), ['Albero', 'Flangia 1234']);
 
@@ -188,6 +200,36 @@ test('liste: salva, modifiche non salvate, salva come con nome già usato, apri,
   assert.equal(await page.locator('#lista-attuale').isVisible(), false);
   assert.deepEqual(await valoriTabella(page), [['9000', '1500']]);
   assert.deepEqual(await page.$$eval('#elenco-liste .nome', (n) => n.map((x) => x.firstChild.textContent.trim())), ['Flangia 1234']);
+  assert.deepEqual(page.erroriJs, []);
+  await page.context().close();
+});
+
+test('liste con i nomi vecchi (decAng / decAlt): salvate nel browser e importate da un file', async () => {
+  // docs/2026-11-23-gradi-e-dati.md: le liste di prima si leggono con i loro decimali
+  const page = await apri();
+  const vecchia = (nome, righe, decAng, decAlt) => ({ nome, righe, modo: 'macchina', decAng, decAlt, salvata: '2026-11-20T10:00:00.000Z' });
+  await page.evaluate((l) => localStorage.setItem('compilatore-misure-liste-v1', JSON.stringify(l)), [vecchia('Salvata prima', [['9000', '1500']], 2, 3)]);
+  await page.reload();
+  await page.click('#btn-liste');
+  await page.click('#elenco-liste button[data-apri="Salvata prima"]');
+  assert.deepEqual(await valoriTabella(page), [['9000', '1500']]);
+  assert.equal(await page.inputValue('#dec-gra'), '2');
+  assert.equal(await page.inputValue('#dec-dat'), '3');
+  // file esportato da una versione di prima
+  const file = path.join(os.tmpdir(), 'liste-vecchie-' + process.pid + '.json');
+  fs.writeFileSync(file, JSON.stringify({ formato: 'compilatore-misure-liste', versione: 1, liste: [vecchia('Da file', [['45', '151']], 0, 2)] }));
+  await page.evaluate(() => { document.getElementById('lista-file').value = ''; document.getElementById('esito-liste').textContent = ''; });
+  await page.setInputFiles('#lista-file', file);
+  await page.waitForFunction(() => document.getElementById('esito-liste').textContent !== '');
+  fs.unlinkSync(file);
+  assert.match(await page.innerText('#esito-liste'), /Importate 1 lista\./);
+  await page.click('#elenco-liste button[data-apri="Da file"]');
+  assert.deepEqual(await valoriTabella(page), [['45', '151']]);
+  assert.equal(await page.inputValue('#dec-gra'), '0');
+  assert.equal(await page.inputValue('#dec-dat'), '2');
+  // nel browser ora sono scritte con i nomi nuovi
+  const salvate = await page.evaluate(() => JSON.parse(localStorage.getItem('compilatore-misure-liste-v1')));
+  assert.deepEqual(salvate.map((l) => [l.nome, l.decGra, l.decDat, 'decAng' in l]).sort(), [['Da file', 0, 2, false], ['Salvata prima', 2, 3, false]]);
   assert.deepEqual(page.erroriJs, []);
   await page.context().close();
 });

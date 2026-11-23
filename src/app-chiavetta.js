@@ -14,7 +14,7 @@ var AppChiavetta = (function () {
 
     function imp() {
       var s = stato();
-      return { ritardoCarattere: s.chRitCar, ritardoInvio: s.chRitInv, coppiePerPressione: s.chCoppie, decAng: s.decAng, decAlt: s.decAlt };
+      return { ritardoCarattere: s.chRitCar, ritardoInvio: s.chRitInv, coppiePerPressione: s.chCoppie, decGra: s.decGra, decDat: s.decDat };
     }
 
     /* Testo e byte da mandare, oppure { errore }. */
@@ -115,7 +115,7 @@ var AppChiavetta = (function () {
         return c.invia(Chiavetta.pacchetti(x.byte, tipo === 'cavo' ? 1024 : 180)).then(function (r) {
           if (r.tipo === 'ok' && r.crc === x.crc && r.n === x.n) {
             esito('ok', 'Chiavetta' + codice(c) + ': ' + r.n + ' valori caricati, codice di controllo <span class="vis">' + esc(r.crc) +
-              '</span> uguale a quello del sito.<br>In macchina: cursore su <b>Angolo 1</b>, poi premi il pulsante della chiavetta.' +
+              '</span> uguale a quello del sito.<br>In macchina: cursore su <b>Grado 1</b>, poi premi il pulsante della chiavetta.' +
               (tipo === 'cavo' ? ' Prima scollegala e ricollegala <b>senza</b> premere il pulsante.' : ''));
           } else if (r.tipo === 'ok') {
             esito('errore', 'La chiavetta' + codice(c) + ' ha ricevuto dati diversi (' + r.n + ' valori, controllo ' + esc(r.crc) + ' invece di ' +

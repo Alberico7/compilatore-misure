@@ -70,7 +70,7 @@ test('vero Vosk: sei valori dettati di seguito con la pausa finiscono nelle case
     const secondi = (Date.now() - t0) / 1000;
     console.log(`  modello ${scaricato ? 'scaricato da Hugging Face' : 'preso dalla memoria del browser'}; pronto e microfono aperto in ${secondi.toFixed(1)} s`);
     if (!scaricato) assert.ok(secondi < 15, 'dalla memoria del browser il modello è pronto in pochi secondi');
-    // aspetta che arrivi l'ultimo valore (Altezza 3) o al massimo 60 s
+    // aspetta che arrivi l'ultimo valore (Dato 3) o al massimo 60 s
     await page.waitForFunction(() => document.getElementById('cella-2-1').value !== '', null, { timeout: 60000 }).catch(() => {});
     await page.waitForTimeout(1500);
     const letti = [];

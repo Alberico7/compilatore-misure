@@ -95,7 +95,7 @@ Si possono usare più chiavette nello stesso momento, ognuna con il suo telefono
 
 1. Carica i valori dal sito: scegli **Bluetooth** o **Cavo** e premi **Invia i valori**. Il sito controlla che il **codice di controllo** della chiavetta sia uguale al suo.
 2. Collega la chiavetta alla macchina **senza** premere il pulsante: il LED fa due lampi e poi resta acceso fisso (pronta).
-3. Metti il cursore sul campo **Angolo 1** della maschera.
+3. Metti il cursore sul campo **Grado 1** della maschera.
 4. **Premi il pulsante** (o Scrivi): dopo mezzo secondo inizia a scrivere.
 5. Controlla i valori sullo schermo della macchina **prima** di avviare la tastatura.
 

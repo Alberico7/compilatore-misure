@@ -45,9 +45,9 @@ function generaCoppie(n, seme) {
   const r = casuale(seme), coppie = [], attese = [];
   const conSep = (c, sep) => Math.floor(c / 100) + sep + String(c % 100).padStart(2, '0');
   for (let i = 0; i < n; i++) {
-    const ang = Math.floor(r() * 36000), alt = Math.floor(r() * 9000) + 1;
-    coppie.push([conSep(ang, i % 2 ? ',' : '.'), conSep(alt, i % 3 ? ',' : '.')]);
-    attese.push(String(ang), String(alt));
+    const gra = Math.floor(r() * 36000), dat = Math.floor(r() * 9000) + 1;
+    coppie.push([conSep(gra, i % 2 ? ',' : '.'), conSep(dat, i % 3 ? ',' : '.')]);
+    attese.push(String(gra), String(dat));
   }
   return { coppie, attese };
 }
@@ -76,7 +76,18 @@ function tastieraFinta() {
   window.__tastiera = (aperta) => { alta = aperta ? 300 : 0; vv.dispatchEvent(new Event('resize')); };
 }
 
-async function nuovaPagina(larghezza = 1200, { telefono = false, scheda = 'barre', tastiera = false } = {}) {
+/* I test sono scritti con 2 decimali per gradi e dati (i predefiniti sono 0 / 1: docs/2026-11-23-gradi-e-dati.md). */
+async function usaDecimali(page, [gradi, dati]) {
+  await page.evaluate(([g, d]) => {
+    [['dec-gra', g], ['dec-dat', d]].forEach(([id, v]) => {
+      const el = document.getElementById(id);
+      el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  }, [gradi, dati]);
+}
+
+async function nuovaPagina(larghezza = 1200, { telefono = false, scheda = 'barre', tastiera = false, decimali = [2, 2] } = {}) {
   const ctx = await browser.newContext(telefono
     ? { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, reducedMotion: 'reduce' }
     : { viewport: { width: larghezza, height: 900 }, deviceScaleFactor: 1, reducedMotion: 'reduce' });
@@ -85,12 +96,13 @@ async function nuovaPagina(larghezza = 1200, { telefono = false, scheda = 'barre
   const erroriJs = [];
   page.on('pageerror', (e) => erroriJs.push(e.message));
   await page.goto(PAGINA);
+  if (decimali) await usaDecimali(page, decimali);
   if (scheda) await page.click('#tab-' + scheda);
   page.erroriJs = erroriJs;
   return page;
 }
 
-/* Simula l'incolla da Excel (colonne separate da TAB, righe da CRLF) sulla casella Angolo/Altezza indicata. */
+/* Simula l'incolla da Excel (colonne separate da TAB, righe da CRLF) sulla casella Grado/Dato indicata. */
 async function incollaExcel(page, coppie, riga = 0, col = 0) {
   const testo = coppie.map((c) => c.join('\t')).join('\r\n') + '\r\n';
   await page.evaluate(({ testo, riga, col }) => {
@@ -116,7 +128,7 @@ async function leggiBarre(page) {
 
 function etichetteAttese(nCoppie) {
   const e = [];
-  for (let i = 1; i <= nCoppie; i++) e.push('Angolo ' + i, 'Altezza ' + i);
+  for (let i = 1; i <= nCoppie; i++) e.push('Grado ' + i, 'Dato ' + i);
   return e;
 }
 
@@ -163,7 +175,7 @@ test('QR a blocchi (5/10/20/25 coppie, con e senza INVIO finale): contenuto esat
         const attesoBlocco = attese.slice(b * perBlocco * 2, (b + 1) * perBlocco * 2);
         assert.equal(testo, attesoBlocco.join('\r') + (invioFinale ? '\r' : ''), `blocco ${b + 1}, ${perBlocco} coppie`);
         assert.ok(!testo.includes('\n'), 'nessun LF nel QR');
-        assert.match(await page.locator('.info-blocco').innerText(), new RegExp(`campo Angolo ${b * perBlocco + 1}\\.`));
+        assert.match(await page.locator('.info-blocco').innerText(), new RegExp(`campo Grado ${b * perBlocco + 1}\\.`));
         tuttiLetti.push(...(invioFinale ? testo.slice(0, -1) : testo).split('\r'));
         if (b < nBlocchi - 1) await page.click('#qr-succ');
       }
@@ -208,9 +220,9 @@ test('dati non validi: nessun codice, errori segnalati', async () => {
   assert.equal(await page.locator('#uscita-barre .vuoto-codici').count(), 1);
   const riep = await page.locator('#riepilogo').innerText();
   assert.match(riep, /3 caselle da correggere/);
-  assert.match(riep, /Altezza 1: Troppi decimali/);
-  assert.match(riep, /Angolo 2: Valore non numerico/);
-  assert.match(riep, /Altezza 2: Casella vuota/);
+  assert.match(riep, /Dato 1: Troppi decimali/);
+  assert.match(riep, /Grado 2: Valore non numerico/);
+  assert.match(riep, /Dato 2: Casella vuota/);
   // correggo e i codici compaiono
   await page.fill('#corpo-tabella input[data-r="0"][data-c="1"]', '15,12');
   await page.fill('#corpo-tabella input[data-r="1"][data-c="0"]', '7');
@@ -228,20 +240,20 @@ test('cambio dei decimali con i valori scritti: solo la colonna giusta, con mess
   await page.check('input[name=modo][value=separatore]');
   await incollaExcel(page, [['20,55', '15,59'], ['21,5', '16'], ['abc', '17,25']]);
   const cella = (r, c) => page.inputValue(`#corpo-tabella input[data-r="${r}"][data-c="${c}"]`);
-  await page.fill('#dec-ang', '1');
-  await page.dispatchEvent('#dec-ang', 'change');
+  await page.fill('#dec-gra', '1');
+  await page.dispatchEvent('#dec-gra', 'change');
   assert.deepEqual([await cella(0, 0), await cella(1, 0), await cella(2, 0)], ['20,5', '21,5', 'abc']);
   assert.deepEqual([await cella(0, 1), await cella(1, 1), await cella(2, 1)], ['15,59', '16', '17,25']);
-  assert.match(await page.locator('#riepilogo').innerText(), /Decimali angolo: 1\. Accorciato 1 valore\./);
-  // come in macchina: aggiungendo un decimale all'altezza si aggiunge lo zero in fondo
+  assert.match(await page.locator('#riepilogo').innerText(), /Decimali gradi: 1\. Accorciato 1 valore\./);
+  // come in macchina: aggiungendo un decimale ai dati si aggiunge lo zero in fondo
   await page.check('input[name=modo][value=macchina]');
   await page.fill('#corpo-tabella input[data-r="0"][data-c="1"]', '1559');
   await page.fill('#corpo-tabella input[data-r="1"][data-c="1"]', '1600');
   await page.fill('#corpo-tabella input[data-r="2"][data-c="1"]', '1725');
-  await page.fill('#dec-alt', '3');
-  await page.dispatchEvent('#dec-alt', 'change');
+  await page.fill('#dec-dat', '3');
+  await page.dispatchEvent('#dec-dat', 'change');
   assert.deepEqual([await cella(0, 1), await cella(1, 1), await cella(2, 1)], ['15590', '16000', '17250']);
-  assert.match(await page.locator('#riepilogo').innerText(), /Decimali altezza: 3\. Aggiunti gli zeri in fondo a 3 valori\./);
+  assert.match(await page.locator('#riepilogo').innerText(), /Decimali dati: 3\. Aggiunti gli zeri in fondo a 3 valori\./);
   assert.equal(await page.locator('#ant-0-1').innerText(), 'In macchina: 15.590');
   await page.reload();
   assert.equal(await cella(0, 1), '15590');
@@ -257,34 +269,34 @@ test('tastiera: INVIO e frecce come in macchina', async () => {
     await page.keyboard.press('Enter');
   }
   const attivo = () => page.evaluate(() => document.activeElement.getAttribute('aria-label'));
-  assert.equal(await attivo(), 'Angolo 3');
+  assert.equal(await attivo(), 'Grado 3');
   await page.keyboard.press('ArrowUp');
-  assert.equal(await attivo(), 'Angolo 2');
+  assert.equal(await attivo(), 'Grado 2');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('ArrowDown');
-  assert.equal(await attivo(), 'Angolo 4');
+  assert.equal(await attivo(), 'Grado 4');
   const { letti } = await leggiBarre(page);
   assert.deepEqual(letti, ['2000', '1500', '2100', '1650']);
-  // INVIO sull'ultima Altezza aggiunge una riga
+  // INVIO sull'ultimo Dato aggiunge una riga
   await page.fill('#num-righe', '2');
   await page.dispatchEvent('#num-righe', 'change');
   await page.click('#corpo-tabella input[data-r="1"][data-c="1"]');
   await page.keyboard.press('Enter');
   assert.equal(await page.locator('#corpo-tabella tr').count(), 3);
-  assert.equal(await attivo(), 'Angolo 3');
+  assert.equal(await attivo(), 'Grado 3');
   await page.context().close();
 });
 
 test('salvataggio automatico e "Svuota tutto" con conferma', async () => {
   const page = await nuovaPagina();
   await page.check('input[name=modo][value=separatore]');
-  await page.fill('#dec-alt', '3');
-  await page.dispatchEvent('#dec-alt', 'change');
+  await page.fill('#dec-dat', '3');
+  await page.dispatchEvent('#dec-dat', 'change');
   await incollaExcel(page, [['20,00', '1,234'], ['21,5', '2']]);
   await page.click('#tab-qr');
   await page.reload();
   assert.equal(await page.inputValue('#corpo-tabella input[data-r="0"][data-c="1"]'), '1,234');
-  assert.equal(await page.inputValue('#dec-alt'), '3');
+  assert.equal(await page.inputValue('#dec-dat'), '3');
   assert.equal(await page.locator('#pannello-qr').isVisible(), true);
   // annullo: resta tutto
   await page.click('#btn-svuota');
@@ -298,7 +310,7 @@ test('salvataggio automatico e "Svuota tutto" con conferma', async () => {
   assert.equal(await page.inputValue('#corpo-tabella input[data-r="0"][data-c="0"]'), '');
   await page.reload();
   assert.equal(await page.inputValue('#corpo-tabella input[data-r="0"][data-c="0"]'), '');
-  assert.equal(await page.inputValue('#dec-alt'), '3');
+  assert.equal(await page.inputValue('#dec-dat'), '3');
   await page.context().close();
 });
 
@@ -423,42 +435,42 @@ test('smartphone: un tocco sceglie la casella, due aprono il tastierino; barra I
   const attivo = () => page.evaluate(() => document.activeElement.getAttribute('aria-label'));
   // primo tocco: sceglie la casella, la tastiera resta chiusa
   await page.tap('#cella-0-0');
-  assert.equal(await attivo(), 'Angolo 1');
+  assert.equal(await attivo(), 'Grado 1');
   assert.equal(await page.locator('#barra-mobile').isVisible(), true);
   assert.equal(await modo('#cella-0-0'), 'none');
   assert.equal(await fondoBarra(), 844);
   // secondo tocco sulla stessa casella: tastiera
   await page.tap('#cella-0-0');
   assert.equal(await modo('#cella-0-0'), 'decimal');
-  assert.equal(await attivo(), 'Angolo 1');
+  assert.equal(await attivo(), 'Grado 1');
   await page.evaluate(() => window.__tastiera(true));
   assert.equal(await fondoBarra(), 844 - 300, 'la barra sta sopra la tastiera');
   await page.keyboard.type('20,5');
   await page.tap('#mob-avanti');
-  assert.equal(await attivo(), 'Altezza 1');
+  assert.equal(await attivo(), 'Dato 1');
   assert.equal(await modo('#cella-0-1'), 'decimal', 'Avanti lascia la tastiera aperta');
   await page.keyboard.type('3');
   await page.tap('#mob-segno');
   assert.equal(await page.inputValue('#cella-0-1'), '-3');
-  assert.equal(await attivo(), 'Altezza 1', 'il ± non toglie il fuoco alla casella');
+  assert.equal(await attivo(), 'Dato 1', 'il ± non toglie il fuoco alla casella');
   await page.tap('#mob-segno');
   assert.equal(await page.inputValue('#cella-0-1'), '3');
   await page.tap('#mob-avanti');
-  assert.equal(await attivo(), 'Angolo 2');
+  assert.equal(await attivo(), 'Grado 2');
   // tocco su un'altra casella con la tastiera aperta: resta aperta
   await page.tap('#cella-2-1');
-  assert.equal(await attivo(), 'Altezza 3');
+  assert.equal(await attivo(), 'Dato 3');
   assert.equal(await modo('#cella-2-1'), 'decimal');
   // tastiera chiusa (tasto Indietro di Android): Avanti e Indietro non la riaprono, la barra torna in fondo
   await page.evaluate(() => window.__tastiera(false));
   assert.equal(await fondoBarra(), 844);
   await page.tap('#mob-indietro');
-  assert.equal(await attivo(), 'Angolo 3');
+  assert.equal(await attivo(), 'Grado 3');
   assert.equal(await modo('#cella-2-0'), 'none');
   await page.tap('#mob-indietro');
-  assert.equal(await attivo(), 'Altezza 2');
+  assert.equal(await attivo(), 'Dato 2');
   await page.tap('#cella-0-0');
-  assert.equal(await attivo(), 'Angolo 1');
+  assert.equal(await attivo(), 'Grado 1');
   assert.equal(await modo('#cella-0-0'), 'none', 'tocco su un\'altra casella con la tastiera chiusa: resta chiusa');
   assert.equal(await page.locator('#ant-0-0').innerText(), 'In macchina: 20.50');
   // nel modo "come in macchina" il tastierino è solo numerico
@@ -529,6 +541,7 @@ test('senza localStorage la pagina funziona lo stesso', async () => {
   const html = fs.readFileSync(path.join(__dirname, '..', 'compilatore-misure.html'), 'utf8');
   await page.goto('about:blank'); // qui localStorage non è disponibile
   await page.setContent(html);
+  await usaDecimali(page, [2, 2]);
   assert.equal(await tema(page), 'scuro');
   assert.match(await page.locator('#stato-salvataggio').innerText(), /non disponibile/);
   const { coppie, attese } = generaCoppie(5, 17);

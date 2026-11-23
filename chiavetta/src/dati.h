@@ -9,7 +9,7 @@
 #include <stdint.h>
 
 #define DATI_MAX_TESTO   12000u  // byte del testo: 1000 valori da 9 cifre col segno ci stanno
-#define DATI_MAX_VALORI  1000u   // valori (angolo + altezza = 2 valori)
+#define DATI_MAX_VALORI  1000u   // valori (grado + dato = 2 valori)
 #define DATI_MAX_CIFRE   9u      // cifre per valore, segno escluso
 #define DATI_MAX_TASTI   (DATI_MAX_CIFRE + 2u) // segno + cifre + INVIO
 

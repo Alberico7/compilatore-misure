@@ -40,38 +40,38 @@ async function apri(larghezza, { telefono = true, salvato = null, altezza = 844 
   return page;
 }
 
-const UTENTE_CHE_TORNA = { righe: [['', ''], ['', ''], ['', ''], ['', ''], ['', '']], modo: 'separatore', decAng: 2, decAlt: 2 };
+const UTENTE_CHE_TORNA = { righe: [['', ''], ['', ''], ['', ''], ['', ''], ['', '']], modo: 'separatore', decGra: 2, decDat: 2 };
 
 test('prima volta: 5 righe e impostazioni aperte, con riepilogo che segue le scelte e si ricorda', async () => {
   const page = await apri(390);
   assert.equal(await page.locator('#corpo-tabella tr').count(), 5);
   assert.equal(await page.$eval('#imp-valori', (d) => d.open), true, 'aperte al primo uso');
-  assert.equal(await page.locator('#imp-riepilogo').innerText(), 'Con separatore · decimali 2 / 2 · 5 righe');
+  assert.equal(await page.locator('#imp-riepilogo').innerText(), 'Con separatore · decimali 0 / 1 · 5 righe');
   await page.tap('#modo-macchina');
-  await page.fill('#dec-alt', '3');
-  await page.dispatchEvent('#dec-alt', 'change');
-  assert.equal(await page.locator('#imp-riepilogo').innerText(), 'Come in macchina · decimali 2 / 3 · 5 righe');
+  await page.fill('#dec-dat', '3');
+  await page.dispatchEvent('#dec-dat', 'change');
+  assert.equal(await page.locator('#imp-riepilogo').innerText(), 'Come in macchina · decimali 0 / 3 · 5 righe');
   await page.tap('#imp-valori summary');
   assert.equal(await page.$eval('#imp-valori', (d) => d.open), false);
   await page.reload();
   assert.equal(await page.$eval('#imp-valori', (d) => d.open), false, 'chiuse dopo la ricarica');
-  assert.equal(await page.locator('#imp-riepilogo').innerText(), 'Come in macchina · decimali 2 / 3 · 5 righe');
+  assert.equal(await page.locator('#imp-riepilogo').innerText(), 'Come in macchina · decimali 0 / 3 · 5 righe');
   assert.deepEqual(page.erroriJs, []);
   await page.context().close();
 });
 
-test('chi torna: impostazioni chiuse e Angolo 1 visibile senza scorrere, anche su un telefono piccolo', async () => {
+test('chi torna: impostazioni chiuse e Grado 1 visibile senza scorrere, anche su un telefono piccolo', async () => {
   for (const [l, a] of [[390, 844], [360, 740]]) {
     const page = await apri(l, { salvato: UTENTE_CHE_TORNA, altezza: a });
     assert.equal(await page.$eval('#imp-valori', (d) => d.open), false);
     const box = await page.locator('#cella-0-0').boundingBox();
-    assert.ok(box.y + box.height <= a, `Angolo 1 visibile a ${l}×${a} (fondo a ${Math.round(box.y + box.height)})`);
+    assert.ok(box.y + box.height <= a, `Grado 1 visibile a ${l}×${a} (fondo a ${Math.round(box.y + box.height)})`);
     if (l === 390) await page.screenshot({ path: path.join(CARTELLA_SCREENSHOT, 'semplicita-apertura-telefono.png') });
     await page.context().close();
   }
 });
 
-test('righe: INVIO e Avanti sull\'ultima Altezza aggiungono una riga; pagina molto più corta', async () => {
+test('righe: INVIO e Avanti sull\'ultimo Dato aggiungono una riga; pagina molto più corta', async () => {
   const page = await apri(390, { salvato: UTENTE_CHE_TORNA });
   await page.tap('#cella-4-1');
   await page.keyboard.type('1');
@@ -86,7 +86,7 @@ test('righe: INVIO e Avanti sull\'ultima Altezza aggiungono una riga; pagina mol
   const due = [['214,94', '26,94'], ['313,16', '82,38']];
   const lunghezza = async (n) => {
     const righe = due.concat(Array.from({ length: n - 2 }, () => ['', '']));
-    const p = await apri(390, { salvato: { righe, modo: 'separatore', decAng: 2, decAlt: 2 } });
+    const p = await apri(390, { salvato: { righe, modo: 'separatore', decGra: 2, decDat: 2 } });
     const h = await p.evaluate(() => document.documentElement.scrollHeight);
     await p.context().close();
     return h;
@@ -184,6 +184,40 @@ test('pausa dopo INVIO: 30 ms predefiniti, i 200 ms di prima passano a 30 una vo
   await page.context().close();
 });
 
+test('decimali: 0 per i gradi e 1 per i dati; i 2 / 2 di prima passano a 0 / 1 solo con la tabella vuota', async () => {
+  // docs/2026-11-23-gradi-e-dati.md
+  const page = await apri(390);
+  const dec = async () => [await page.inputValue('#dec-gra'), await page.inputValue('#dec-dat')];
+  const salvaCon = (v) => page.evaluate(([k, v]) => localStorage.setItem(k, JSON.stringify(v)), [CHIAVE, v]);
+  assert.deepEqual(await dec(), ['0', '1'], 'prima volta');
+  const vuota = UTENTE_CHE_TORNA.righe;
+  const piena = [['20.00', '15.50'], ['', '']];
+  // impostazioni salvate con i nomi vecchi (decAng / decAlt)
+  await salvaCon({ righe: vuota, modo: 'separatore', decAng: 2, decAlt: 2 });
+  await page.reload();
+  assert.deepEqual(await dec(), ['0', '1'], '2 / 2 con la tabella vuota: si passa a 0 / 1');
+  await salvaCon({ righe: piena, modo: 'separatore', decAng: 2, decAlt: 2 });
+  await page.reload();
+  assert.deepEqual(await dec(), ['2', '2'], 'con dei valori restano 2 / 2');
+  assert.equal(await page.inputValue('#cella-0-0'), '20.00');
+  await salvaCon({ righe: vuota, modo: 'separatore', decAng: 1, decAlt: 3 });
+  await page.reload();
+  assert.deepEqual(await dec(), ['1', '3'], 'altri decimali scelti: restano');
+  // al primo salvataggio si scrivono i nomi nuovi
+  await page.evaluate(() => { document.getElementById('imp-valori').open = true; });
+  await page.check('#modo-macchina');
+  const salvato = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)), CHIAVE);
+  assert.equal(salvato.decGra, 1); assert.equal(salvato.decDat, 3);
+  assert.equal(salvato.decAng, undefined); assert.equal(salvato.decAlt, undefined);
+  assert.equal(salvato.decimali01, true);
+  // dopo il passaggio, 2 / 2 rimessi a mano restano anche con la tabella vuota
+  await salvaCon(Object.assign({}, salvato, { righe: vuota, decGra: 2, decDat: 2 }));
+  await page.reload();
+  assert.deepEqual(await dec(), ['2', '2']);
+  assert.deepEqual(page.erroriJs, []);
+  await page.context().close();
+});
+
 test('scheda Chiavetta: prima collegamento e pulsanti, impostazioni di scrittura chiuse con riepilogo', async () => {
   const page = await apri(390, { salvato: Object.assign({}, UTENTE_CHE_TORNA, { scheda: 'chiavetta', righe: [['1', '2']] }) });
   const ordine = await page.evaluate(() => ['ch-mezzo', 'btn-ch-invia', 'esito-chiavetta', 'ch-scrittura']
@@ -274,7 +308,7 @@ test('pagina più semplice: frecce, caselle, sicurezza, prova del lettore', asyn
   assert.equal(await freccia('#imp-valori > summary'), 'none', 'i riquadri "Cambia" hanno già la loro freccia');
   // sotto la casella solo "In macchina"
   await page.fill('#cella-0-1', '152,5');
-  assert.equal(await page.locator('#ant-0-1').innerText(), 'In macchina: 152.50');
+  assert.equal(await page.locator('#ant-0-1').innerText(), 'In macchina: 152.5');
   assert.deepEqual(page.erroriJs, []);
   await page.context().close();
 

@@ -42,7 +42,18 @@ function simulatore([modelloGiaScaricato, opzioni]) {
   };
 }
 
-async function nuovaPagina({ telefono = false, giaScaricato = true, simulato = true, voce = {}, prima = null } = {}) {
+/* I test sono scritti con 2 decimali per gradi e dati (i predefiniti sono 0 / 1: docs/2026-11-23-gradi-e-dati.md). */
+async function usaDecimali(page, [gradi, dati]) {
+  await page.evaluate(([g, d]) => {
+    [['dec-gra', g], ['dec-dat', d]].forEach(([id, v]) => {
+      const el = document.getElementById(id);
+      el.value = String(v);
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  }, [gradi, dati]);
+}
+
+async function nuovaPagina({ telefono = false, giaScaricato = true, simulato = true, voce = {}, prima = null, decimali = [2, 2] } = {}) {
   const ctx = await browser.newContext(telefono
     ? { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, reducedMotion: 'reduce' }
     : { viewport: { width: 1200, height: 900 }, reducedMotion: 'reduce' });
@@ -52,6 +63,7 @@ async function nuovaPagina({ telefono = false, giaScaricato = true, simulato = t
   page.erroriJs = [];
   page.on('pageerror', (e) => page.erroriJs.push(e.message));
   await page.goto(server.url);
+  if (decimali) await usaDecimali(page, decimali);
   return page;
 }
 
@@ -95,14 +107,14 @@ test('primo uso: conferma dello scaricamento, poi "tieni premuto" scrive e passa
   assert.equal(await page.evaluate(() => window.__voce.avviato), 0, 'il microfono non si apre senza tenere premuto');
   await tieniPremutoEDici(page, 'duecentoquattordici virgola nove quattro');
   assert.equal(await valore(page, 0, 0), '214,94');
-  assert.equal(await attivo(page), 'Altezza 1');
-  assert.match(await statoVoce(page), /Capito: 214,94 \(Angolo 1\) → in macchina 214\.94/);
+  assert.equal(await attivo(page), 'Dato 1');
+  assert.match(await statoVoce(page), /Capito: 214,94 \(Grado 1\) → in macchina 214\.94/);
   await tieniPremutoEDici(page, 'ventisei virgola nove quattro');
   assert.equal(await valore(page, 0, 1), '26,94');
-  assert.equal(await attivo(page), 'Angolo 2');
+  assert.equal(await attivo(page), 'Grado 2');
   await tieniPremutoEDici(page, 'buongiorno');
   assert.match(await statoVoce(page), /Non ho capito: «buongiorno»/);
-  assert.equal(await attivo(page), 'Angolo 2', 'parole non capite: la casella non cambia');
+  assert.equal(await attivo(page), 'Grado 2', 'parole non capite: la casella non cambia');
   assert.equal(await page.locator('#ant-0-0').innerText(), 'In macchina: 214.94');
   assert.deepEqual(page.erroriJs, []);
   await page.context().close();
@@ -113,15 +125,15 @@ test('"tieni premuto": un valore solo per pressione', async () => {
   await page.click('#cella-0-0');
   await tieniPremutoEDici(page, 'due settanta');
   assert.equal(await valore(page, 0, 0), '270');
-  assert.equal(await attivo(page), 'Altezza 1');
+  assert.equal(await attivo(page), 'Dato 1');
   await tieniPremutoEDici(page, 'due il settanta');
   assert.equal(await valore(page, 0, 1), '270');
-  assert.equal(await attivo(page), 'Angolo 2');
+  assert.equal(await attivo(page), 'Grado 2');
   await tieniPremutoEDici(page, 'venti trenta');
   assert.match(await statoVoce(page), /Ho sentito più numeri: 20 · 30\. Ridetta il valore\./);
   assert.equal(await valore(page, 1, 0), '');
   assert.equal(await valore(page, 1, 1), '');
-  assert.equal(await attivo(page), 'Angolo 2', 'niente scritto: la casella non cambia');
+  assert.equal(await attivo(page), 'Grado 2', 'niente scritto: la casella non cambia');
   await tieniPremutoEDici(page, 'trenta');
   assert.equal(await valore(page, 1, 0), '30');
   assert.deepEqual(page.erroriJs, []);
@@ -137,7 +149,7 @@ test('barra spaziatrice tenuta premuta nella tabella (PC)', async () => {
   await page.keyboard.up(' ');
   await page.waitForFunction(() => !window.__voce.attivo);
   assert.equal(await valore(page, 2, 1), '-1,5', 'nessuno spazio scritto nella casella');
-  assert.equal(await attivo(page), 'Angolo 4');
+  assert.equal(await attivo(page), 'Grado 4');
   assert.match(await page.locator('#riepilogo').innerText(), /Valori negativi/);
   await page.context().close();
 });
@@ -167,7 +179,7 @@ test('più valori con un tocco, separati dalla pausa: 20 coppie, "correggi" e "s
   for (let i = 0; i < 20; i++) {
     assert.deepEqual([await valore(page, i, 0), await valore(page, i, 1)], attesi[i], 'riga ' + (i + 1));
   }
-  assert.equal(await page.evaluate(() => document.activeElement.id), 'cella-20-0', 'pronta per Angolo 21');
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'cella-20-0', 'pronta per Grado 21');
   await page.evaluate(() => window.__voce.dici('stop'));
   await page.waitForFunction(() => !window.__voce.attivo);
   assert.equal(await valore(page, 20, 0), '', 'niente scritto con "stop"');
@@ -238,7 +250,7 @@ test('telefono: 🎤 nella barra in basso, la tastiera non si apre mentre si det
   assert.equal(await page.locator('#mob-voce').isVisible(), true);
   await tieniPremutoEDici(page, 'dodici virgola sette cinque', '#mob-voce');
   assert.equal(await valore(page, 0, 0), '12,75');
-  assert.equal(await attivo(page), 'Altezza 1');
+  assert.equal(await attivo(page), 'Dato 1');
   assert.equal(await page.getAttribute('#cella-0-1', 'inputmode'), 'none', 'tastiera chiusa durante la dettatura');
   await page.tap('#cella-1-0'); // un tocco sceglie la casella: la tastiera resta chiusa
   assert.equal(await page.getAttribute('#cella-1-0', 'inputmode'), 'none');

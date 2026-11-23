@@ -1,15 +1,15 @@
 # Compilatore misure
 
-Strumento d'officina: le coppie **Angolo / Altezza** da inserire nella maschera prima della tastatura diventano codici a barre (Code 128) o QR, che il lettore collegato alla macchina in modalità tastiera "digita" da solo. Sul PC della macchina non si installa niente.
+Strumento d'officina: le coppie **Grado / Dato** da inserire nella maschera prima della tastatura diventano codici a barre (Code 128) o QR, che il lettore collegato alla macchina in modalità tastiera "digita" da solo. Sul PC della macchina non si installa niente.
 
 **Sito:** https://alberico7.github.io/compilatore-misure/
 
 ## Cosa fa
 
-- Tabella Angolo | Altezza: INVIO e frecce come in macchina, incolla da Excel, anteprima "In macchina: 20.00" sotto ogni casella.
-- Valori scritti come in macchina (`2000`) o con il separatore (`20.00` / `20,00`); decimali di angolo e altezza impostabili.
+- Tabella Grado | Dato: INVIO e frecce come in macchina, incolla da Excel, anteprima "In macchina: 20.00" sotto ogni casella.
+- Valori scritti come in macchina (`2000`) o con il separatore (`20.00` / `20,00`); decimali di gradi e dati impostabili.
 - Controllo dei dati: caselle vuote, valori non numerici, troppi decimali. I codici si generano solo con tutti i dati corretti.
-- **Valori da controllare**, segnalati ma senza bloccare: negativi, angoli oltre 360, altezze almeno 5 volte diverse da tutte e due le vicine (la virgola sbagliata), coppie con angolo e altezza uguali alla precedente.
+- **Valori da controllare**, segnalati ma senza bloccare: negativi, gradi oltre 360, dati almeno 5 volte diversi da tutti e due i vicini (la virgola sbagliata), coppie con grado e dato uguali alla precedente.
 - **Liste salvate** con un nome (per esempio il codice del pezzo), da riaprire quando serve; **Esporta / Importa** in un file per passarle da un dispositivo all'altro.
 - **Confronta con la macchina**: la lista a caratteri grandi, da spuntare riga per riga mentre si controllano i valori sullo schermo della macchina.
 - Uscita: un **Code 128 per valore** (lettore 1D), anche "uno alla volta" a tutto schermo per leggerli dal telefono, oppure **QR a blocchi** di N coppie separate da INVIO (lettore 2D).

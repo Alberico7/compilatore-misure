@@ -36,7 +36,7 @@ const TESTI = [
   ['tenue', 'sfondo'], ['tenue', 'carta'], ['tenue', 'campo'],
   ['accento', 'sfondo'], ['accento', 'carta'], ['accento', 'campo'], ['accento', 'accento-chiaro'],
   ['su-accento', 'accento'], ['su-accento', 'errore'],
-  ['altezza', 'carta'], ['altezza', 'campo'],
+  ['dato', 'carta'], ['dato', 'campo'],
   ['errore', 'carta'], ['errore', 'errore-chiaro'],
   ['avviso', 'carta'], ['avviso', 'avviso-chiaro'],
   ['ok', 'carta'], ['ok', 'ok-chiaro'],
