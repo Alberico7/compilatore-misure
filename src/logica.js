@@ -197,6 +197,26 @@ var Logica = (function () {
     return simboli;
   }
 
+  /* docs/2026-11-23-codice-da-testo.md: un testo (il nome del programma) si può mettere in un codice a barre?
+     Ritorna { ok: true } oppure { ok: false, messaggio }. */
+  var MAX_TESTO_CODICE = 40;
+  function testoPerCodice(testo) {
+    var s = String(testo || '');
+    if (!s.trim()) return { ok: false, messaggio: 'Nome vuoto.' };
+    for (var k = 0; k < s.length; k++) {
+      var cc = s.charCodeAt(k);
+      if (cc < 32 || cc > 126) {
+        var car = s.charAt(k);
+        if (cc >= 0xD800 && cc <= 0xDBFF) car = s.substr(k, 2);   // emoji e simili: due unità
+        return { ok: false, messaggio: '"' + car + '" non si può mettere in un codice a barre: solo lettere senza accento, cifre, spazio e segni come - . / _' };
+      }
+    }
+    if (s.length > MAX_TESTO_CODICE) {
+      return { ok: false, messaggio: 'Il nome ha ' + s.length + ' caratteri: nel codice a barre ne stanno al massimo ' + MAX_TESTO_CODICE + '.' };
+    }
+    return { ok: true };
+  }
+
   /* Larghezze dei moduli alternate barra/spazio, iniziando da barra. */
   function code128Larghezze(testo) {
     return code128Simboli(testo).map(function (v) { return PATTERN[v]; }).join('').split('').map(Number);
@@ -333,6 +353,7 @@ var Logica = (function () {
     code128Simboli: code128Simboli,
     code128Larghezze: code128Larghezze,
     code128Svg: code128Svg,
+    testoPerCodice: testoPerCodice,
     blocchiQR: blocchiQR,
     qrSvg: qrSvg,
     confronta: confronta

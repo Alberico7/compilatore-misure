@@ -135,6 +135,20 @@ test('avvisi sui valori sospetti', () => {
   assert.deepEqual(tutti, ['negativo 1', 'grado360 2', 'grado360 3', 'uguale 3']);
 });
 
+test('nome del programma: si può mettere in un codice a barre?', () => {
+  // docs/2026-11-23-codice-da-testo.md
+  assert.deepEqual(L.testoPerCodice('FLANGIA-1234'), { ok: true });
+  assert.deepEqual(L.testoPerCodice('Albero 2/B_x.1'), { ok: true });
+  assert.deepEqual(L.testoPerCodice('A'.repeat(40)), { ok: true });
+  assert.equal(L.testoPerCodice('').ok, false);
+  assert.equal(L.testoPerCodice('   ').ok, false);
+  assert.match(L.testoPerCodice('Perù 3').messaggio, /^"ù" non si può mettere in un codice a barre/);
+  assert.match(L.testoPerCodice('10€').messaggio, /^"€" non si può/);
+  assert.match(L.testoPerCodice('90°').messaggio, /^"°" non si può/);
+  assert.match(L.testoPerCodice('pezzo 😀').messaggio, /^"😀" non si può/);
+  assert.equal(L.testoPerCodice('A'.repeat(41)).messaggio, 'Il nome ha 41 caratteri: nel codice a barre ne stanno al massimo 40.');
+});
+
 test('Code 128: checksum e struttura', () => {
   // "2000" in set C: start C(105), 20, 00 -> checksum (105 + 1*20 + 2*0) % 103 = 22
   assert.deepEqual(L.code128Simboli('2000'), [105, 20, 0, 22, 106]);

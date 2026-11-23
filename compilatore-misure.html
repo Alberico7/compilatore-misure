@@ -187,6 +187,12 @@ table.misure input.avviso { border-color: var(--bordo-avviso); background: var(-
 .cella-barra .cornice { margin: 6px auto 4px; }
 .cella-barra .valore { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .cifre { font-size: 13px; color: var(--tenue); }
+/* nome del programma (docs/2026-11-23-codice-da-testo.md) */
+.nome-programma { margin: 0 0 14px; padding-bottom: 12px; border-bottom: 1px solid var(--bordo); }
+.nome-programma .titolo-nome { font-weight: 700; font-size: 17px; margin-bottom: 4px; }
+.nome-programma .cornice { margin: 4px 0; }
+.nome-programma .valore-nome { font-size: 22px; font-weight: 700; overflow-wrap: anywhere; }
+.nome-programma .nota, .nome-programma .messaggio { margin: 4px 0 0; }
 
 /* QR */
 .barra-qr { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: flex-end; margin-bottom: 14px; }
@@ -441,6 +447,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
   <!-- 2. CODICI -->
   <section class="blocco" id="sez-codici">
     <h2><span class="num">2</span>In macchina: chiavetta o codici</h2>
+    <div class="nome-programma" id="nome-programma"></div>
     <div class="schede" role="tablist">
       <button type="button" role="tab" id="tab-chiavetta" data-scheda="chiavetta">Chiavetta</button>
       <button type="button" role="tab" id="tab-barre" data-scheda="barre">Codici a barre</button>
@@ -577,7 +584,8 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     <details>
       <summary>Liste salvate</summary>
       <ul>
-        <li><b>Liste</b>, accanto a "Svuota tutto", salva la tabella con un nome (per esempio il codice del pezzo) e la riapre quando serve. Con le coppie si salvano anche il modo di scrivere i valori e i decimali.</li>
+        <li><b>Liste</b>, accanto a "Svuota tutto", salva la tabella con il <b>nome del programma</b> e la riapre quando serve. Con le coppie si salvano anche il modo di scrivere i valori e i decimali.</li>
+        <li>Con una lista aperta, in cima alla sezione 2 c'è il <b>codice a barre del nome del programma</b>: in macchina, nella pagina del caricatore, metti il cursore sul campo del nome e leggilo. Il nome può avere lettere senza accento, cifre, spazio e segni come - . / _, fino a 40 caratteri.</li>
         <li><b>Salva</b> aggiorna la lista aperta; <b>Salva come…</b> chiede un nome nuovo. Sopra la tabella vedi quale lista è aperta e se hai modifiche non salvate.</li>
         <li><b>Esporta</b> scarica tutte le liste in un file; <b>Importa</b> le aggiunge su un altro dispositivo, senza cancellare niente. Le liste stanno nella memoria del browser: esportale ogni tanto, come copia di sicurezza.</li>
       </ul>
@@ -665,7 +673,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
 
 <div class="velo" id="nome-lista" hidden>
   <form class="finestra" role="dialog" aria-modal="true" aria-labelledby="nome-lista-testo" id="nome-lista-form">
-    <p id="nome-lista-testo">Nome della lista</p>
+    <p id="nome-lista-testo">Nome del programma</p>
     <input type="text" id="nome-lista-campo" maxlength="60" autocomplete="off" enterkeyhint="done" aria-labelledby="nome-lista-testo">
     <div class="pulsanti">
       <button type="button" id="nome-lista-no">Annulla</button>
@@ -3184,6 +3192,26 @@ var Logica = (function () {
     return simboli;
   }
 
+  /* docs/2026-11-23-codice-da-testo.md: un testo (il nome del programma) si può mettere in un codice a barre?
+     Ritorna { ok: true } oppure { ok: false, messaggio }. */
+  var MAX_TESTO_CODICE = 40;
+  function testoPerCodice(testo) {
+    var s = String(testo || '');
+    if (!s.trim()) return { ok: false, messaggio: 'Nome vuoto.' };
+    for (var k = 0; k < s.length; k++) {
+      var cc = s.charCodeAt(k);
+      if (cc < 32 || cc > 126) {
+        var car = s.charAt(k);
+        if (cc >= 0xD800 && cc <= 0xDBFF) car = s.substr(k, 2);   // emoji e simili: due unità
+        return { ok: false, messaggio: '"' + car + '" non si può mettere in un codice a barre: solo lettere senza accento, cifre, spazio e segni come - . / _' };
+      }
+    }
+    if (s.length > MAX_TESTO_CODICE) {
+      return { ok: false, messaggio: 'Il nome ha ' + s.length + ' caratteri: nel codice a barre ne stanno al massimo ' + MAX_TESTO_CODICE + '.' };
+    }
+    return { ok: true };
+  }
+
   /* Larghezze dei moduli alternate barra/spazio, iniziando da barra. */
   function code128Larghezze(testo) {
     return code128Simboli(testo).map(function (v) { return PATTERN[v]; }).join('').split('').map(Number);
@@ -3320,6 +3348,7 @@ var Logica = (function () {
     code128Simboli: code128Simboli,
     code128Larghezze: code128Larghezze,
     code128Svg: code128Svg,
+    testoPerCodice: testoPerCodice,
     blocchiQR: blocchiQR,
     qrSvg: qrSvg,
     confronta: confronta
@@ -4792,12 +4821,39 @@ var AppChiavetta = (function () {
   /* Nome della lista aperta sopra la tabella, con "modifiche non salvate". */
   function mostraListaAttuale() {
     var p = $('lista-attuale');
-    if (!stato.listaNome) { p.hidden = true; return; }
-    var liste = leggiListe(), i = trovaLista(liste, stato.listaNome);
-    if (i < 0) { stato.listaNome = ''; p.hidden = true; return; }
+    var liste = stato.listaNome ? leggiListe() : [], i = stato.listaNome ? trovaLista(liste, stato.listaNome) : -1;
+    if (i < 0) { stato.listaNome = ''; p.hidden = true; mostraNomeProgramma(''); return; }
     var modificata = !stessoContenuto(liste[i], contenutoAttuale());
     p.innerHTML = 'Lista: <b>' + esc(liste[i].nome) + '</b>' + (modificata ? ' <span class="modificata">· modifiche non salvate</span>' : '');
     p.hidden = false;
+    mostraNomeProgramma(liste[i].nome);
+  }
+
+  /* docs/2026-11-23-codice-da-testo.md: in cima alla sezione 2, il codice a barre del nome della lista aperta
+     (il nome del programma), da leggere in macchina nella pagina del caricatore. */
+  var nomeMostrato = null;
+  function mostraNomeProgramma(nome) {
+    var box = $('nome-programma');
+    var larg = Math.min(($('sez-codici').clientWidth || 600) - 40, 700);
+    var chiave = nome + '|' + larg;
+    if (chiave === nomeMostrato) return;   // aggiorna() gira a ogni tasto: il codice si ridisegna solo se cambia
+    nomeMostrato = chiave;
+    if (!nome) {
+      box.innerHTML = '<p class="nota">Per il codice a barre del <b>nome del programma</b>, salva la tabella con <b>Liste → Salva</b>.</p>';
+      return;
+    }
+    var c = Logica.testoPerCodice(nome);
+    var h = '<div class="titolo-nome">Nome del programma</div>';
+    if (!c.ok) {
+      h += '<div class="valore-nome">' + esc(nome) + '</div>' +
+        '<div class="messaggio avviso">' + esc(c.messaggio) + ' Rinomina la lista con <b>Liste → Salva come…</b></div>';
+    } else {
+      h += '<div class="cornice" id="codice-nome">' + Logica.code128Svg(nome, moduloBarre(nome, larg, 4), 70) + '</div>' +
+        '<div class="valore-nome">' + esc(nome) + '</div>' +
+        '<p class="nota">In macchina, nella pagina del caricatore: cursore sul campo del nome, poi leggi questo codice.' +
+        (/[^A-Za-z0-9 ]/.test(nome) ? ' Prova una volta che i segni escano giusti.' : '') + '</p>';
+    }
+    box.innerHTML = h;
   }
 
   function mostraListe() {
@@ -4864,7 +4920,7 @@ var AppChiavetta = (function () {
     });
   }
   function salvaComeLista() {
-    return chiediNome('Nome della lista (per esempio il codice del pezzo)', stato.listaNome).then(function (nome) {
+    return chiediNome('Nome del programma (come in macchina)', stato.listaNome).then(function (nome) {
       if (nome) return salvaCon(nome, true);
     });
   }

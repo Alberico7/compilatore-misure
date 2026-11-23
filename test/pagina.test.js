@@ -437,6 +437,54 @@ async function controllaTelefono(page, nome) {
   assert.ok(font >= 16, `${nome}: testo delle caselle almeno 16 px (${font})`);
 }
 
+test('nome del programma: codice a barre della lista aperta, in cima alla sezione 2', async () => {
+  // docs/2026-11-23-codice-da-testo.md
+  for (const telefono of [false, true]) {
+    const page = await nuovaPagina(1200, { telefono, scheda: telefono ? 'chiavetta' : 'barre' });
+    const box = page.locator('#nome-programma');
+    const salvaCome = async (nome) => {
+      await page.click('#btn-liste');
+      await page.click('#lista-salva-come');
+      assert.equal(await page.innerText('#nome-lista-testo'), 'Nome del programma (come in macchina)');
+      await page.fill('#nome-lista-campo', nome);
+      await page.click('#nome-lista-form button[type=submit]');
+      await page.click('#btn-liste');
+    };
+    assert.match(await box.innerText(), /salva la tabella con Liste → Salva/);
+    assert.equal(await box.locator('svg').count(), 0);
+    await incollaExcel(page, [['20', '15']]);
+    await salvaCome('FLANGIA-1234');
+    assert.equal(await page.locator('#codice-nome svg').count(), 1);
+    assert.equal(await decodifica(await page.locator('#codice-nome svg').screenshot(), BarcodeFormat.CODE_128), 'FLANGIA-1234');
+    assert.match(await box.innerText(), /nella pagina del caricatore/);
+    assert.match(await box.innerText(), /segni escano giusti/, 'nel nome c\'è il trattino');
+    // dentro lo schermo, anche sul telefono
+    const b = await page.locator('#codice-nome').boundingBox();
+    const largPagina = await page.evaluate(() => document.documentElement.clientWidth);
+    assert.ok(b.x >= 0 && b.x + b.width <= largPagina, `codice dentro lo schermo (${Math.round(b.x + b.width)} su ${largPagina})`);
+    // si vede con tutte le schede
+    for (const s of ['chiavetta', 'qr', 'barre']) {
+      await page.click('#tab-' + s);
+      assert.equal(await page.locator('#codice-nome').isVisible(), true, 'scheda ' + s);
+    }
+    // solo lettere e cifre: niente nota sui segni
+    await salvaCome('ALBERO7');
+    assert.equal(await decodifica(await page.locator('#codice-nome svg').screenshot(), BarcodeFormat.CODE_128), 'ALBERO7');
+    assert.doesNotMatch(await box.innerText(), /segni/);
+    // lettera accentata: la lista si salva, il codice no
+    await salvaCome('Perù 3');
+    assert.match(await page.innerText('#lista-attuale'), /Perù 3/);
+    assert.equal(await box.locator('svg').count(), 0);
+    assert.match(await box.innerText(), /"ù" non si può mettere in un codice a barre[\s\S]*Salva come/);
+    // Svuota tutto chiude la lista: il codice sparisce
+    await page.click('#btn-svuota');
+    await page.click('#conferma-si');
+    assert.match(await box.innerText(), /salva la tabella/);
+    assert.deepEqual(page.erroriJs, []);
+    await page.context().close();
+  }
+});
+
 test('smartphone: impaginazione, nessuno scorrimento orizzontale, comandi grandi', async () => {
   const page = await nuovaPagina(390, { telefono: true });
   const { coppie } = generaCoppie(20, 7);

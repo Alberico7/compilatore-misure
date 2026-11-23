@@ -525,12 +525,39 @@
   /* Nome della lista aperta sopra la tabella, con "modifiche non salvate". */
   function mostraListaAttuale() {
     var p = $('lista-attuale');
-    if (!stato.listaNome) { p.hidden = true; return; }
-    var liste = leggiListe(), i = trovaLista(liste, stato.listaNome);
-    if (i < 0) { stato.listaNome = ''; p.hidden = true; return; }
+    var liste = stato.listaNome ? leggiListe() : [], i = stato.listaNome ? trovaLista(liste, stato.listaNome) : -1;
+    if (i < 0) { stato.listaNome = ''; p.hidden = true; mostraNomeProgramma(''); return; }
     var modificata = !stessoContenuto(liste[i], contenutoAttuale());
     p.innerHTML = 'Lista: <b>' + esc(liste[i].nome) + '</b>' + (modificata ? ' <span class="modificata">· modifiche non salvate</span>' : '');
     p.hidden = false;
+    mostraNomeProgramma(liste[i].nome);
+  }
+
+  /* docs/2026-11-23-codice-da-testo.md: in cima alla sezione 2, il codice a barre del nome della lista aperta
+     (il nome del programma), da leggere in macchina nella pagina del caricatore. */
+  var nomeMostrato = null;
+  function mostraNomeProgramma(nome) {
+    var box = $('nome-programma');
+    var larg = Math.min(($('sez-codici').clientWidth || 600) - 40, 700);
+    var chiave = nome + '|' + larg;
+    if (chiave === nomeMostrato) return;   // aggiorna() gira a ogni tasto: il codice si ridisegna solo se cambia
+    nomeMostrato = chiave;
+    if (!nome) {
+      box.innerHTML = '<p class="nota">Per il codice a barre del <b>nome del programma</b>, salva la tabella con <b>Liste → Salva</b>.</p>';
+      return;
+    }
+    var c = Logica.testoPerCodice(nome);
+    var h = '<div class="titolo-nome">Nome del programma</div>';
+    if (!c.ok) {
+      h += '<div class="valore-nome">' + esc(nome) + '</div>' +
+        '<div class="messaggio avviso">' + esc(c.messaggio) + ' Rinomina la lista con <b>Liste → Salva come…</b></div>';
+    } else {
+      h += '<div class="cornice" id="codice-nome">' + Logica.code128Svg(nome, moduloBarre(nome, larg, 4), 70) + '</div>' +
+        '<div class="valore-nome">' + esc(nome) + '</div>' +
+        '<p class="nota">In macchina, nella pagina del caricatore: cursore sul campo del nome, poi leggi questo codice.' +
+        (/[^A-Za-z0-9 ]/.test(nome) ? ' Prova una volta che i segni escano giusti.' : '') + '</p>';
+    }
+    box.innerHTML = h;
   }
 
   function mostraListe() {
@@ -597,7 +624,7 @@
     });
   }
   function salvaComeLista() {
-    return chiediNome('Nome della lista (per esempio il codice del pezzo)', stato.listaNome).then(function (nome) {
+    return chiediNome('Nome del programma (come in macchina)', stato.listaNome).then(function (nome) {
       if (nome) return salvaCon(nome, true);
     });
   }
