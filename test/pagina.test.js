@@ -8,6 +8,7 @@ const fs = require('fs');
 const { pathToFileURL } = require('url');
 const { chromium } = require('playwright');
 const zxing = require('zxing-wasm/reader');
+const { usaDecimali } = require('./aiuti-pagina');
 
 const PAGINA = pathToFileURL(path.join(__dirname, '..', 'compilatore-misure.html')).href;
 const CARTELLA_SCREENSHOT = path.join(__dirname, 'screenshot');
@@ -74,19 +75,6 @@ function tastieraFinta() {
   });
   Object.defineProperty(window, 'visualViewport', { get: () => vv, configurable: true });
   window.__tastiera = (aperta) => { alta = aperta ? 300 : 0; vv.dispatchEvent(new Event('resize')); };
-}
-
-/* I test sono scritti con 2 decimali per gradi e dati (i predefiniti sono 0 / 1: docs/2026-11-23-gradi-e-dati.md),
-   e cambiano modo e decimali dal riquadro Cambia, che ora parte chiuso: qui si apre. */
-async function usaDecimali(page, [gradi, dati]) {
-  await page.evaluate(([g, d]) => {
-    document.getElementById('imp-valori').open = true;
-    [['dec-gra', g], ['dec-dat', d]].forEach(([id, v]) => {
-      const el = document.getElementById(id);
-      el.value = String(v);
-      el.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-  }, [gradi, dati]);
 }
 
 async function nuovaPagina(larghezza = 1200, { telefono = false, scheda = 'barre', tastiera = false, decimali = [2, 2] } = {}) {
@@ -543,6 +531,40 @@ test('casella Nome del programma e Salva accanto: codice subito, un tocco per sa
   await page.click('#nome-lista-no');
   assert.deepEqual(page.erroriJs, []);
   await page.context().close();
+});
+
+test('affilatura in testa: secondo codice con il nome e ".t"', async () => {
+  // docs/2026-11-23-secondo-codice-punto-t.md
+  for (const telefono of [false, true]) {
+    const page = await nuovaPagina(1200, { telefono, scheda: 'barre' });
+    const box = page.locator('#nome-programma');
+    const leggi = async (id) => decodifica(await page.locator(id + ' svg').screenshot(), BarcodeFormat.CODE_128);
+    await page.fill('#programma', 'FRESA-1234');
+    assert.equal(await leggi('#codice-nome'), 'FRESA-1234');
+    assert.equal(await leggi('#codice-nome-t'), 'FRESA-1234.t');
+    assert.match(await box.innerText(), /Programma[\s\S]*FRESA-1234[\s\S]*Affilatura in testa[\s\S]*FRESA-1234\.t/);
+    assert.match(await box.innerText(), /segni escano giusti/, 'il trattino può uscire diverso');
+    const largPagina = await page.evaluate(() => document.documentElement.clientWidth);
+    for (const id of ['#codice-nome', '#codice-nome-t']) {
+      const b = await page.locator(id).boundingBox();
+      assert.ok(b.x >= 0 && b.x + b.width <= largPagina, `${id} dentro lo schermo`);
+    }
+    // solo lettere, cifre e punto: niente nota sui segni
+    await page.fill('#programma', 'ALBERO7');
+    assert.equal(await leggi('#codice-nome-t'), 'ALBERO7.t');
+    assert.doesNotMatch(await box.innerText(), /segni/);
+    // il nome finisce già con ".t": un codice solo
+    await page.fill('#programma', 'FRESA.t');
+    assert.equal(await leggi('#codice-nome'), 'FRESA.t');
+    assert.equal(await page.locator('#codice-nome-t').count(), 0);
+    // 39 caratteri: il primo c'è, il secondo no
+    await page.fill('#programma', 'A'.repeat(39));
+    assert.equal(await page.locator('#codice-nome').count(), 1);
+    assert.equal(await page.locator('#codice-nome-t').count(), 0);
+    assert.match(await box.innerText(), /Con "\.t" il nome ha 41 caratteri: nel codice a barre ne stanno al massimo 40\./);
+    assert.deepEqual(page.erroriJs, []);
+    await page.context().close();
+  }
 });
 
 test('nome del programma: chi aveva una lista aperta lo trova nella casella', async () => {

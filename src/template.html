@@ -192,6 +192,7 @@ table.misure input.avviso { border-color: var(--bordo-avviso); background: var(-
 .nome-programma { margin: 0 0 14px; padding-bottom: 12px; border-bottom: 1px solid var(--bordo); }
 .nome-programma .titolo-nome { font-weight: 700; font-size: 17px; margin-bottom: 4px; }
 .nome-programma .cornice { margin: 4px 0; }
+.nome-programma .codice-nome + .codice-nome { margin-top: 12px; }
 .nome-programma .valore-nome { font-size: 22px; font-weight: 700; overflow-wrap: anywhere; }
 .nome-programma .nota, .nome-programma .messaggio { margin: 4px 0 0; }
 
@@ -297,13 +298,13 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
 .riga-programma { display: flex; gap: 8px; }
 .riga-programma input { flex: 1 1 auto; min-width: 0; font-size: 18px; }
 .riga-programma button { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
-.riga-programma button#btn-salva { min-width: 7.5em; }
+.riga-programma #btn-salva { min-width: 7.5em; }
 .icona { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
 .programma .liste { margin: 10px 0 0; }
 @media (max-width: 640px) {
   /* sul telefono solo il simbolo: la casella del nome ha più spazio */
   .riga-programma .testo { display: none; }
-  .riga-programma button, .riga-programma button#btn-salva { min-width: 52px; padding-left: 12px; padding-right: 12px; }
+  .riga-programma button, .riga-programma #btn-salva { min-width: 52px; padding-left: 12px; padding-right: 12px; }
 }
 #avviso-programma .messaggio, #esito-programma .messaggio { margin: 6px 0 0; }
 
@@ -438,8 +439,8 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
       <label for="programma">Nome del programma</label>
       <div class="riga-programma">
         <input type="text" id="programma" maxlength="60" autocomplete="off" spellcheck="false" enterkeyhint="done" placeholder="per esempio FRESA-1234">
-        <button type="button" class="primario con-icona" id="btn-salva" title="Salva" aria-label="Salva"><svg class="icona" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 3h11.5L21 7.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7.5 3v5h8V3"/><path d="M7 21v-7h10v7"/></svg> <span class="testo">Salva</span></button>
-        <button type="button" class="con-icona" id="btn-apri" title="Apri una lista salvata" aria-label="Apri una lista salvata" aria-expanded="false" aria-controls="liste"><svg class="icona" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 18V6a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v2"/><path d="M3 18l2.6-6.4A1 1 0 0 1 6.5 11H21a1 1 0 0 1 .9 1.4l-2.6 6A1 1 0 0 1 18.4 19H4a1 1 0 0 1-1-1z"/></svg> <span class="testo">Apri</span></button>
+        <button type="button" class="primario" id="btn-salva" title="Salva" aria-label="Salva"><svg class="icona" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 3h11.5L21 7.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7.5 3v5h8V3"/><path d="M7 21v-7h10v7"/></svg> <span class="testo">Salva</span></button>
+        <button type="button" id="btn-apri" title="Apri una lista salvata" aria-label="Apri una lista salvata" aria-expanded="false" aria-controls="liste"><svg class="icona" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 18V6a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v2"/><path d="M3 18l2.6-6.4A1 1 0 0 1 6.5 11H21a1 1 0 0 1 .9 1.4l-2.6 6A1 1 0 0 1 18.4 19H4a1 1 0 0 1-1-1z"/></svg> <span class="testo">Apri</span></button>
       </div>
       <div id="avviso-programma"></div>
       <div id="esito-programma" aria-live="polite"></div>
@@ -602,7 +603,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     <details>
       <summary>Liste salvate</summary>
       <ul>
-        <li>Sopra la tabella scrivi il <b>nome del programma</b>: in cima alla sezione 2 compare subito il suo <b>codice a barre</b>. In macchina, nella pagina del caricatore, metti il cursore sul campo del nome e leggilo. Il nome può avere lettere senza accento, cifre, spazio e segni come - . / _, fino a 40 caratteri.</li>
+        <li>Sopra la tabella scrivi il <b>nome del programma</b>: in cima alla sezione 2 compaiono subito il suo <b>codice a barre</b> e quello del programma per l'<b>affilatura in testa</b> (il nome con ".t" in fondo). In macchina, nella pagina del caricatore, metti il cursore sul campo giusto e leggi il codice. Il nome può avere lettere senza accento, cifre, spazio e segni come - . / _, fino a 40 caratteri.</li>
         <li><b>Salva</b>, accanto al nome, salva la tabella come lista con quel nome. Dice <b>✓ Salvata</b> quando è tutto salvato; si riaccende appena cambi un valore o il nome. Con le coppie si salvano anche il modo di scrivere i valori e i decimali.</li>
         <li><b>Apri</b>, accanto a Salva, mostra le liste salvate: un tocco sul nome la apre. Lì ci sono anche <b>Salva come…</b>, che salva con un nome nuovo, ed <b>Elimina</b>.</li>
         <li><b>Esporta</b> scarica tutte le liste in un file; <b>Importa</b> le aggiunge su un altro dispositivo, senza cancellare niente. Le liste stanno nella memoria del browser: esportale ogni tanto, come copia di sicurezza.</li>

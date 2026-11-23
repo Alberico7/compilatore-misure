@@ -10,7 +10,7 @@ const { chromium } = require('playwright');
 
 const PAGINA = pathToFileURL(path.join(__dirname, '..', 'compilatore-misure.html')).href;
 const CARTELLA_SCREENSHOT = path.join(__dirname, 'screenshot');
-const CHIAVE = 'compilatore-misure-v1';
+const { CHIAVE } = require('./aiuti-pagina');
 
 let browser;
 test.before(async () => {

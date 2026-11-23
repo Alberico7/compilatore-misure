@@ -25,7 +25,9 @@ var AppChiavetta = (function () {
       if (errore) return { errore: errore };
       var byte = Chiavetta.codifica(Chiavetta.testo(a.valori, imp()));
       if (byte.length > Chiavetta.MAX_TESTO) return { errore: 'Troppi dati per la chiavetta.' };
-      return { byte: byte, crc: Chiavetta.esa(Chiavetta.crc32(byte)), n: a.valori.length };
+      // le chiavette caricate fino al sito 1.15.0 hanno lo stesso testo con il commento di allora
+      var crcPrima = Chiavetta.esa(Chiavetta.crc32(Chiavetta.codifica(Chiavetta.testo(a.valori, imp(), true))));
+      return { byte: byte, crc: Chiavetta.esa(Chiavetta.crc32(byte)), crcPrima: crcPrima, n: a.valori.length };
     }
 
     function disponibili() {
@@ -140,7 +142,7 @@ var AppChiavetta = (function () {
       righe.push(avanzamento);
       if (r.n > 0) {
         if (x.errore) { righe.push('La tabella ha errori: non posso confrontare.'); classe = 'avviso'; }
-        else if (r.crc === x.crc && r.n === x.n) righe.push('<b>Uguali ai valori e alle impostazioni della tabella.</b>');
+        else if ((r.crc === x.crc || r.crc === x.crcPrima) && r.n === x.n) righe.push('<b>Uguali ai valori e alle impostazioni della tabella.</b>');
         else { righe.push('<b>Diversi dalla tabella</b> (valori o impostazioni): reinvia i valori.'); classe = 'avviso'; }
       } else classe = 'avviso';
       var pubblicata = Chiavetta.versionePubblicata();

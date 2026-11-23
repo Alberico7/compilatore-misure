@@ -8,6 +8,7 @@ const fs = require('fs');
 const path = require('path');
 const { chromium } = require('playwright');
 const { avviaServer } = require('./server');
+const { usaDecimali } = require('./aiuti-pagina');
 const { versioneFirmware, compilatoreOSalta, compila, avviaSimulatore, CHIAVETTA } = require('./chiavetta-sim');
 
 const { cc, salta } = compilatoreOSalta();
@@ -114,19 +115,6 @@ function dispositiviFinti(opzioni) {
   };
   Object.defineProperty(navigator, 'usb', { value: opzioni.senzaUsb ? undefined : usb, configurable: true });
   Object.defineProperty(navigator, 'bluetooth', { value: opzioni.senzaBt ? undefined : bluetooth, configurable: true });
-}
-
-/* I test sono scritti con 2 decimali per gradi e dati (i predefiniti sono 0 / 1: docs/2026-11-23-gradi-e-dati.md),
-   e cambiano modo e decimali dal riquadro Cambia, che ora parte chiuso: qui si apre. */
-async function usaDecimali(page, [gradi, dati]) {
-  await page.evaluate(([g, d]) => {
-    document.getElementById('imp-valori').open = true;
-    [['dec-gra', g], ['dec-dat', d]].forEach(([id, v]) => {
-      const el = document.getElementById(id);
-      el.value = String(v);
-      el.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-  }, [gradi, dati]);
 }
 
 async function nuovaPagina(sim, opzioni = {}, { telefono = false, decimali = [2, 2] } = {}) {
@@ -332,6 +320,14 @@ test('Controlla la chiavetta: avanzamento, confronto con la tabella (valori e im
     t = await page.locator('#esito-chiavetta .messaggio').filter({ hasText: 'Fermata' }).innerText();
     assert.match(t, /Fermata dopo il valore 2 di 6: una pressione breve riprende/);
     assert.deepEqual(await sim.comando('STATO'), ['S FERMATO 2 6'], 'controllare non cambia niente');
+
+    // chiavetta caricata fino al sito 1.15.0: stesso testo con il commento "angolo / altezza" di allora
+    await page.evaluate(() => { window.__testo = Chiavetta.testo; Chiavetta.testo = (v, i) => window.__testo(v, i, true); });
+    await premi(page, 'bluetooth', 'invia');
+    await esito(page, 'ok');
+    await page.evaluate(() => { Chiavetta.testo = window.__testo; });
+    await page.click('#btn-ch-controlla');
+    assert.match(await esito(page, 'ok'), /Uguali ai valori e alle impostazioni della tabella/, 'chiavetta caricata con il sito di prima');
 
     // un valore diverso nella tabella
     await page.click('#tab-barre');

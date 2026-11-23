@@ -4,7 +4,7 @@
   var CHIAVE = 'compilatore-misure-v1';
   var CHIAVE_LISTE = 'compilatore-misure-liste-v1';   // liste salvate con un nome
   var MAX_RIGHE = 500;
-  var RIGHE_INIZIALI = 5;   // le altre si aggiungono da sole con INVIO / Avanti sull'ultima casella
+  var RIGHE_INIZIALI = 5;   // le altre si aggiungono da sole: rigaVuotaInFondo(), e INVIO / Avanti sull'ultima casella
 
   /* La chiavetta si carica via Bluetooth o cavo: senza nessuno dei due (Firefox, iPhone) si parte dai codici */
   function schedaPredefinita() {
@@ -89,7 +89,7 @@
     if (isNaN(n)) return def;
     return Math.min(max, Math.max(min, n));
   }
-  function cella(r, c) { return document.querySelector('#corpo-tabella input[data-r="' + r + '"][data-c="' + c + '"]'); }
+  function cella(r, c) { return document.getElementById('cella-' + r + '-' + c); }
   function vai(r, c) {
     var el = cella(r, c);
     if (el) { el.focus(); el.select(); }
@@ -251,7 +251,7 @@
         }
       }
     }
-    mostraListaAttuale();
+    aggiornaProgramma();
     if (!$('verifica').hidden) mostraVerifica();
     mostraRiepilogo(usate.length);
     riepilogoImpostazioni();
@@ -480,7 +480,13 @@
   /* ---------- liste salvate (docs/2026-11-18-offline-liste-avvisi.md) ---------- */
   /* In memoria, così "modifiche non salvate" non rilegge tutto a ogni tasto; un'altra scheda che salva la svuota. */
   var listeLette = null;
-  window.addEventListener('storage', function (e) { if (e.key === CHIAVE_LISTE || e.key === null) { listeLette = null; mostraListaAttuale(); } });
+  /* Un'altra scheda ha cambiato le liste: se ha eliminato quella aperta, qui si chiude. */
+  window.addEventListener('storage', function (e) {
+    if (e.key !== CHIAVE_LISTE && e.key !== null) return;
+    listeLette = null;
+    if (stato.listaNome && trovaLista(leggiListe(), stato.listaNome) < 0) stato.listaNome = '';
+    aggiornaProgramma();
+  });
   function leggiListe() {
     if (!listeLette) {
       try {
@@ -515,9 +521,8 @@
     for (var i = 0; i < liste.length; i++) if (liste[i].nome.trim().toLowerCase() === k) return i;
     return -1;
   }
-  function esitoListe(tipo, testo) {
-    $('esito-liste').innerHTML = testo ? '<div class="messaggio ' + tipo + '">' + esc(testo) + '</div>' : '';
-  }
+  function htmlMessaggio(tipo, testo) { return testo ? '<div class="messaggio ' + tipo + '">' + esc(testo) + '</div>' : ''; }
+  function esitoListe(tipo, testo) { $('esito-liste').innerHTML = htmlMessaggio(tipo, testo); }
   function plurale(n, uno, tanti) { return n + ' ' + (n === 1 ? uno : tanti); }
   function dataBreve(iso) {
     var d = new Date(iso);
@@ -526,26 +531,28 @@
     return due(d.getDate()) + '/' + due(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + due(d.getHours()) + ':' + due(d.getMinutes());
   }
 
-  /* docs/2026-11-23-casella-nome-programma.md: il pulsante Salva accanto al nome dice se la tabella è salvata
-     con quel nome (✓ Salvata) o no (Salva); sotto il nome, il carattere che non va nel codice a barre. */
-  function mostraListaAttuale() {
+  /* docs/2026-11-23-casella-nome-programma.md: dopo ogni modifica dei valori o del nome.
+     Il pulsante Salva accanto al nome dice se la tabella è salvata con quel nome (✓ Salvata) o no (Salva);
+     sotto il nome, il carattere che non va nel codice a barre; in cima alla sezione 2, i codici del nome. */
+  var ICONA_SALVA = $('btn-salva').querySelector('svg').outerHTML;   // il disegno sta solo nel template
+  var avvisoNome = '';
+  function aggiornaProgramma() {
     var nome = stato.programma.trim(), c = contenutoAttuale();
-    if (stato.listaNome && trovaLista(leggiListe(), stato.listaNome) < 0) stato.listaNome = '';
     var liste = nome ? leggiListe() : [], i = nome ? trovaLista(liste, nome) : -1;
     var salvata = i >= 0 && c.righe.length > 0 && stessoContenuto(liste[i], c);
     var b = $('btn-salva'), etichetta = salvata ? 'Salvata' : 'Salva';
     if (b.getAttribute('aria-label') !== etichetta) {
-      b.innerHTML = (salvata ? '<span class="icona-testo" aria-hidden="true">✓</span>' : ICONA_SALVA) + ' <span class="testo">' + etichetta + '</span>';
+      b.innerHTML = (salvata ? '<span aria-hidden="true">✓</span>' : ICONA_SALVA) + ' <span class="testo">' + etichetta + '</span>';
       b.setAttribute('aria-label', etichetta);
       b.title = etichetta;
     }
     b.disabled = salvata || !c.righe.length;
     b.classList.toggle('primario', !b.disabled);
     var v = nome ? Logica.testoPerCodice(nome) : { ok: true };
-    $('avviso-programma').innerHTML = v.ok ? '' : '<div class="messaggio avviso">' + esc(v.messaggio) + '</div>';
-    mostraNomeProgramma(nome);
+    var avviso = v.ok ? '' : htmlMessaggio('avviso', v.messaggio);
+    if (avviso !== avvisoNome) $('avviso-programma').innerHTML = avvisoNome = avviso;   // aggiorna() gira a ogni tasto
+    mostraNomeProgramma(nome, v);
   }
-  var ICONA_SALVA = '<svg class="icona" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 3h11.5L21 7.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7.5 3v5h8V3"/><path d="M7 21v-7h10v7"/></svg>';
   function scriviProgramma(nome) {
     stato.programma = nome;
     $('programma').value = nome;
@@ -554,7 +561,7 @@
   var tempoEsito = null;
   function esitoSalva(tipo, testo) {
     if ($('liste').hidden) {
-      $('esito-programma').innerHTML = '<div class="messaggio ' + tipo + '">' + esc(testo) + '</div>';
+      $('esito-programma').innerHTML = htmlMessaggio(tipo, testo);
       clearTimeout(tempoEsito);
       tempoEsito = setTimeout(function () { $('esito-programma').innerHTML = ''; }, 4000);
     } else esitoListe(tipo, testo);
@@ -562,28 +569,43 @@
 
   /* docs/2026-11-23-codice-da-testo.md: in cima alla sezione 2, il codice a barre del nome della lista aperta
      (il nome del programma), da leggere in macchina nella pagina del caricatore. */
-  var nomeMostrato = null;
-  function mostraNomeProgramma(nome) {
+  /* aggiorna() gira a ogni tasto: i codici si ridisegnano solo se cambiano il nome o la larghezza.
+     La larghezza si misura una volta e di nuovo quando cambia la finestra (misurarla a ogni tasto
+     costringe il browser a ricalcolare l'impaginazione di tutta la tabella). */
+  var nomeMostrato = null, largNome = 0;
+  function mostraNomeProgramma(nome, controllo) {
     var box = $('nome-programma');
-    var larg = Math.min(($('sez-codici').clientWidth || 600) - 40, 700);
-    var chiave = nome + '|' + larg;
-    if (chiave === nomeMostrato) return;   // aggiorna() gira a ogni tasto: il codice si ridisegna solo se cambia
+    if (!largNome) largNome = Math.min(($('sez-codici').clientWidth || 600) - 40, 700);
+    var larg = largNome, chiave = nome + '|' + larg;
+    if (chiave === nomeMostrato) return;
     nomeMostrato = chiave;
     if (!nome) {
       box.innerHTML = '<p class="nota">Scrivi il <b>nome del programma</b> sopra la tabella per avere il suo codice a barre.</p>';
       return;
     }
-    var c = Logica.testoPerCodice(nome);
-    var h = '<div class="titolo-nome">Nome del programma</div>';
-    if (!c.ok) {
-      h += '<div class="valore-nome">' + esc(nome) + '</div>' +
-        '<div class="messaggio avviso">' + esc(c.messaggio) + ' Cambia il nome sopra la tabella.</div>';
-    } else {
-      h += '<div class="cornice" id="codice-nome">' + Logica.code128Svg(nome, moduloBarre(nome, larg, 4), 70) + '</div>' +
-        '<div class="valore-nome">' + esc(nome) + '</div>' +
-        '<p class="nota">In macchina, nella pagina del caricatore: cursore sul campo del nome, poi leggi questo codice.' +
-        (/[^A-Za-z0-9 ]/.test(nome) ? ' Prova una volta che i segni escano giusti.' : '') + '</p>';
+    function codice(titolo, testo, id) {
+      return '<div class="codice-nome"><div class="titolo-nome">' + titolo + '</div>' +
+        '<div class="cornice" id="' + id + '">' + Logica.code128Svg(testo, moduloBarre(testo, larg, 4), 70) + '</div>' +
+        '<div class="valore-nome">' + esc(testo) + '</div></div>';
     }
+    var c = controllo || Logica.testoPerCodice(nome);
+    if (!c.ok) {
+      box.innerHTML = '<div class="titolo-nome">Programma</div><div class="valore-nome">' + esc(nome) + '</div>' +
+        '<div class="messaggio avviso">' + esc(c.messaggio) + ' Cambia il nome sopra la tabella.</div>';
+      return;
+    }
+    /* docs/2026-11-23-secondo-codice-punto-t.md: anche il programma per l'affilatura in testa, nome + ".t"
+       (se il nome finisce già con ".t" il codice è uno solo) */
+    var h = codice('Programma', nome, 'codice-nome');
+    var conT = /\.t$/i.test(nome) ? '' : nome + '.t';
+    if (conT) {
+      // il nome va bene, quindi con ".t" può essere solo troppo lungo
+      h += conT.length <= Logica.MAX_TESTO_CODICE ? codice('Affilatura in testa', conT, 'codice-nome-t')
+        : '<div class="codice-nome"><div class="titolo-nome">Affilatura in testa</div>' +
+          htmlMessaggio('avviso', 'Con ".t" il nome ha ' + conT.length + ' caratteri: nel codice a barre ne stanno al massimo ' + Logica.MAX_TESTO_CODICE + '.') + '</div>';
+    }
+    h += '<p class="nota">In macchina, nella pagina del caricatore: cursore sul campo del programma o dell\'affilatura in testa, poi leggi il codice giusto.' +
+      (Logica.segniDaProvare(nome) ? ' Prova una volta che i segni escano giusti.' : '') + '</p>';
     box.innerHTML = h;
   }
 
@@ -648,7 +670,7 @@
       scriviProgramma(nome);
       salva();
       esitoSalva('ok', 'Salvata "' + nome + '": ' + plurale(c.righe.length, 'coppia', 'coppie') + '.');
-      mostraListe(); mostraListaAttuale();
+      mostraListe(); aggiornaProgramma();
     });
   }
   function chiudiListe() {
@@ -705,7 +727,7 @@
       if (!scriviListe(liste)) return;
       if (stato.listaNome && stato.listaNome.toLowerCase() === tolta.nome.toLowerCase()) { stato.listaNome = ''; salva(); }
       esitoListe('ok', 'Eliminata "' + tolta.nome + '".');
-      mostraListe(); mostraListaAttuale();
+      mostraListe(); aggiornaProgramma();
     });
   }
 
@@ -754,7 +776,7 @@
     esitoListe(aggiunte ? 'ok' : 'avviso', 'Importate ' + plurale(aggiunte, 'lista', 'liste') +
       (saltate ? ', ' + plurale(saltate, 'saltata perché già presente', 'saltate perché già presenti') : '') +
       (scartate ? ', ' + plurale(scartate, 'scartata perché non valida', 'scartate perché non valide') : '') + '.');
-    mostraListe(); mostraListaAttuale();
+    mostraListe(); aggiornaProgramma();
   }
 
   /* ---------- senza rete (service worker, solo dal sito) ---------- */
@@ -1389,7 +1411,7 @@
       stato.programma = this.value;
       $('esito-programma').innerHTML = '';
       salva();
-      mostraListaAttuale();
+      aggiornaProgramma();
     });
     $('programma').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { e.preventDefault(); this.blur(); }
@@ -1419,6 +1441,7 @@
       clearTimeout(timerRidim);
       timerRidim = setTimeout(function () {
         mostraBarre(); mostraQR(); aggiornaBarraMobile();
+        largNome = 0; mostraNomeProgramma(stato.programma.trim());
         if (!$('lettura').hidden) mostraLettura();
       }, 150);
     });

@@ -170,13 +170,21 @@ var Logica = (function () {
   ];
   var START_B = 104, START_C = 105, CODE_B = 100, STOP = 106;
 
+  /* Primo carattere che il Code 128 (set B) non può contenere, o '' se vanno tutti bene:
+     si accettano solo i caratteri ASCII stampabili, da 32 (spazio) a 126 (~). */
+  function primoNonCodificabile(s) {
+    for (var k = 0; k < s.length; k++) {
+      var cc = s.charCodeAt(k);
+      if (cc < 32 || cc > 126) return cc >= 0xD800 && cc <= 0xDBFF ? s.substr(k, 2) : s.charAt(k);   // emoji: due unità
+    }
+    return '';
+  }
+
   /* Ritorna i valori dei simboli (start + dati + checksum + stop). */
   function code128Simboli(testo) {
     var s = String(testo), simboli = [];
-    for (var k = 0; k < s.length; k++) {
-      var cc = s.charCodeAt(k);
-      if (cc < 32 || cc > 126) throw new Error('Carattere non codificabile: ' + s.charAt(k));
-    }
+    var car = primoNonCodificabile(s);
+    if (car) throw new Error('Carattere non codificabile: ' + car);
     var soloCifre = /^\d+$/.test(s);
     if (soloCifre && s.length >= 2) {
       simboli.push(START_C);
@@ -203,19 +211,16 @@ var Logica = (function () {
   function testoPerCodice(testo) {
     var s = String(testo || '');
     if (!s.trim()) return { ok: false, messaggio: 'Nome vuoto.' };
-    for (var k = 0; k < s.length; k++) {
-      var cc = s.charCodeAt(k);
-      if (cc < 32 || cc > 126) {
-        var car = s.charAt(k);
-        if (cc >= 0xD800 && cc <= 0xDBFF) car = s.substr(k, 2);   // emoji e simili: due unità
-        return { ok: false, messaggio: '"' + car + '" non si può mettere in un codice a barre: solo lettere senza accento, cifre, spazio e segni come - . / _' };
-      }
-    }
+    var car = primoNonCodificabile(s);
+    if (car) return { ok: false, messaggio: '"' + car + '" non si può mettere in un codice a barre: solo lettere senza accento, cifre, spazio e segni come - . / _' };
     if (s.length > MAX_TESTO_CODICE) {
       return { ok: false, messaggio: 'Il nome ha ' + s.length + ' caratteri: nel codice a barre ne stanno al massimo ' + MAX_TESTO_CODICE + '.' };
     }
     return { ok: true };
   }
+  /* Il lettore "scrive" come una tastiera: lettere, cifre, spazio e punto escono uguali con la tastiera
+     italiana e con quella americana; gli altri segni possono uscire diversi (docs/2026-11-23-secondo-codice-punto-t.md). */
+  function segniDaProvare(testo) { return /[^A-Za-z0-9 .]/.test(String(testo)); }
 
   /* Larghezze dei moduli alternate barra/spazio, iniziando da barra. */
   function code128Larghezze(testo) {
@@ -354,6 +359,8 @@ var Logica = (function () {
     code128Larghezze: code128Larghezze,
     code128Svg: code128Svg,
     testoPerCodice: testoPerCodice,
+    MAX_TESTO_CODICE: MAX_TESTO_CODICE,
+    segniDaProvare: segniDaProvare,
     blocchiQR: blocchiQR,
     qrSvg: qrSvg,
     confronta: confronta

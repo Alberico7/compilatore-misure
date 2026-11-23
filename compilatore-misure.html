@@ -191,6 +191,7 @@ table.misure input.avviso { border-color: var(--bordo-avviso); background: var(-
 .nome-programma { margin: 0 0 14px; padding-bottom: 12px; border-bottom: 1px solid var(--bordo); }
 .nome-programma .titolo-nome { font-weight: 700; font-size: 17px; margin-bottom: 4px; }
 .nome-programma .cornice { margin: 4px 0; }
+.nome-programma .codice-nome + .codice-nome { margin-top: 12px; }
 .nome-programma .valore-nome { font-size: 22px; font-weight: 700; overflow-wrap: anywhere; }
 .nome-programma .nota, .nome-programma .messaggio { margin: 4px 0 0; }
 
@@ -296,13 +297,13 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
 .riga-programma { display: flex; gap: 8px; }
 .riga-programma input { flex: 1 1 auto; min-width: 0; font-size: 18px; }
 .riga-programma button { flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
-.riga-programma button#btn-salva { min-width: 7.5em; }
+.riga-programma #btn-salva { min-width: 7.5em; }
 .icona { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
 .programma .liste { margin: 10px 0 0; }
 @media (max-width: 640px) {
   /* sul telefono solo il simbolo: la casella del nome ha più spazio */
   .riga-programma .testo { display: none; }
-  .riga-programma button, .riga-programma button#btn-salva { min-width: 52px; padding-left: 12px; padding-right: 12px; }
+  .riga-programma button, .riga-programma #btn-salva { min-width: 52px; padding-left: 12px; padding-right: 12px; }
 }
 #avviso-programma .messaggio, #esito-programma .messaggio { margin: 6px 0 0; }
 
@@ -436,8 +437,8 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
       <label for="programma">Nome del programma</label>
       <div class="riga-programma">
         <input type="text" id="programma" maxlength="60" autocomplete="off" spellcheck="false" enterkeyhint="done" placeholder="per esempio FRESA-1234">
-        <button type="button" class="primario con-icona" id="btn-salva" title="Salva" aria-label="Salva"><svg class="icona" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 3h11.5L21 7.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7.5 3v5h8V3"/><path d="M7 21v-7h10v7"/></svg> <span class="testo">Salva</span></button>
-        <button type="button" class="con-icona" id="btn-apri" title="Apri una lista salvata" aria-label="Apri una lista salvata" aria-expanded="false" aria-controls="liste"><svg class="icona" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 18V6a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v2"/><path d="M3 18l2.6-6.4A1 1 0 0 1 6.5 11H21a1 1 0 0 1 .9 1.4l-2.6 6A1 1 0 0 1 18.4 19H4a1 1 0 0 1-1-1z"/></svg> <span class="testo">Apri</span></button>
+        <button type="button" class="primario" id="btn-salva" title="Salva" aria-label="Salva"><svg class="icona" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 3h11.5L21 7.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7.5 3v5h8V3"/><path d="M7 21v-7h10v7"/></svg> <span class="testo">Salva</span></button>
+        <button type="button" id="btn-apri" title="Apri una lista salvata" aria-label="Apri una lista salvata" aria-expanded="false" aria-controls="liste"><svg class="icona" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 18V6a2 2 0 0 1 2-2h4l2 2h7a2 2 0 0 1 2 2v2"/><path d="M3 18l2.6-6.4A1 1 0 0 1 6.5 11H21a1 1 0 0 1 .9 1.4l-2.6 6A1 1 0 0 1 18.4 19H4a1 1 0 0 1-1-1z"/></svg> <span class="testo">Apri</span></button>
       </div>
       <div id="avviso-programma"></div>
       <div id="esito-programma" aria-live="polite"></div>
@@ -602,7 +603,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     <details>
       <summary>Liste salvate</summary>
       <ul>
-        <li>Sopra la tabella scrivi il <b>nome del programma</b>: in cima alla sezione 2 compare subito il suo <b>codice a barre</b>. In macchina, nella pagina del caricatore, metti il cursore sul campo del nome e leggilo. Il nome può avere lettere senza accento, cifre, spazio e segni come - . / _, fino a 40 caratteri.</li>
+        <li>Sopra la tabella scrivi il <b>nome del programma</b>: in cima alla sezione 2 compaiono subito il suo <b>codice a barre</b> e quello del programma per l'<b>affilatura in testa</b> (il nome con ".t" in fondo). In macchina, nella pagina del caricatore, metti il cursore sul campo giusto e leggi il codice. Il nome può avere lettere senza accento, cifre, spazio e segni come - . / _, fino a 40 caratteri.</li>
         <li><b>Salva</b>, accanto al nome, salva la tabella come lista con quel nome. Dice <b>✓ Salvata</b> quando è tutto salvato; si riaccende appena cambi un valore o il nome. Con le coppie si salvano anche il modo di scrivere i valori e i decimali.</li>
         <li><b>Apri</b>, accanto a Salva, mostra le liste salvate: un tocco sul nome la apre. Lì ci sono anche <b>Salva come…</b>, che salva con un nome nuovo, ed <b>Elimina</b>.</li>
         <li><b>Esporta</b> scarica tutte le liste in un file; <b>Importa</b> le aggiunge su un altro dispositivo, senza cancellare niente. Le liste stanno nella memoria del browser: esportale ogni tanto, come copia di sicurezza.</li>
@@ -3183,13 +3184,21 @@ var Logica = (function () {
   ];
   var START_B = 104, START_C = 105, CODE_B = 100, STOP = 106;
 
+  /* Primo carattere che il Code 128 (set B) non può contenere, o '' se vanno tutti bene:
+     si accettano solo i caratteri ASCII stampabili, da 32 (spazio) a 126 (~). */
+  function primoNonCodificabile(s) {
+    for (var k = 0; k < s.length; k++) {
+      var cc = s.charCodeAt(k);
+      if (cc < 32 || cc > 126) return cc >= 0xD800 && cc <= 0xDBFF ? s.substr(k, 2) : s.charAt(k);   // emoji: due unità
+    }
+    return '';
+  }
+
   /* Ritorna i valori dei simboli (start + dati + checksum + stop). */
   function code128Simboli(testo) {
     var s = String(testo), simboli = [];
-    for (var k = 0; k < s.length; k++) {
-      var cc = s.charCodeAt(k);
-      if (cc < 32 || cc > 126) throw new Error('Carattere non codificabile: ' + s.charAt(k));
-    }
+    var car = primoNonCodificabile(s);
+    if (car) throw new Error('Carattere non codificabile: ' + car);
     var soloCifre = /^\d+$/.test(s);
     if (soloCifre && s.length >= 2) {
       simboli.push(START_C);
@@ -3216,19 +3225,16 @@ var Logica = (function () {
   function testoPerCodice(testo) {
     var s = String(testo || '');
     if (!s.trim()) return { ok: false, messaggio: 'Nome vuoto.' };
-    for (var k = 0; k < s.length; k++) {
-      var cc = s.charCodeAt(k);
-      if (cc < 32 || cc > 126) {
-        var car = s.charAt(k);
-        if (cc >= 0xD800 && cc <= 0xDBFF) car = s.substr(k, 2);   // emoji e simili: due unità
-        return { ok: false, messaggio: '"' + car + '" non si può mettere in un codice a barre: solo lettere senza accento, cifre, spazio e segni come - . / _' };
-      }
-    }
+    var car = primoNonCodificabile(s);
+    if (car) return { ok: false, messaggio: '"' + car + '" non si può mettere in un codice a barre: solo lettere senza accento, cifre, spazio e segni come - . / _' };
     if (s.length > MAX_TESTO_CODICE) {
       return { ok: false, messaggio: 'Il nome ha ' + s.length + ' caratteri: nel codice a barre ne stanno al massimo ' + MAX_TESTO_CODICE + '.' };
     }
     return { ok: true };
   }
+  /* Il lettore "scrive" come una tastiera: lettere, cifre, spazio e punto escono uguali con la tastiera
+     italiana e con quella americana; gli altri segni possono uscire diversi (docs/2026-11-23-secondo-codice-punto-t.md). */
+  function segniDaProvare(testo) { return /[^A-Za-z0-9 .]/.test(String(testo)); }
 
   /* Larghezze dei moduli alternate barra/spazio, iniziando da barra. */
   function code128Larghezze(testo) {
@@ -3367,6 +3373,8 @@ var Logica = (function () {
     code128Larghezze: code128Larghezze,
     code128Svg: code128Svg,
     testoPerCodice: testoPerCodice,
+    MAX_TESTO_CODICE: MAX_TESTO_CODICE,
+    segniDaProvare: segniDaProvare,
     blocchiQR: blocchiQR,
     qrSvg: qrSvg,
     confronta: confronta
@@ -3880,11 +3888,14 @@ var Chiavetta = (function () {
   /* Testo per la chiavetta (solo caratteri ASCII).
      valori: [{cifre}], imp: {ritardoCarattere, ritardoInvio, coppiePerPressione, decGra, decDat}
      Niente data né ora: stessi valori e impostazioni = stesso testo = stesso codice di controllo,
-     così "Controlla la chiavetta" può confrontarlo con la tabella. */
-  function testo(valori, imp) {
+     così "Controlla la chiavetta" può confrontarlo con la tabella.
+     nomiPrima: il commento scritto fino al sito 1.15.0 ("angolo" / "altezza"): il codice di controllo comprende
+     anche i commenti, e le chiavette caricate prima hanno quello (docs/2026-11-23-gradi-e-dati.md). */
+  function testo(valori, imp, nomiPrima) {
     var righe = [
       '# Compilatore misure - valori per la chiavetta',
-      '# ' + valori.length / 2 + ' coppie - decimali gradi ' + imp.decGra + ', dati ' + imp.decDat
+      '# ' + valori.length / 2 + ' coppie - decimali ' + (nomiPrima ? 'angolo ' : 'gradi ') + imp.decGra +
+        (nomiPrima ? ', altezza ' : ', dati ') + imp.decDat
     ];
     IMPOSTAZIONI.forEach(function (x) { righe.push(x.nome + ' = ' + imp[x.campo]); });
     valori.forEach(function (v) { righe.push(v.cifre); });
@@ -4100,7 +4111,9 @@ var AppChiavetta = (function () {
       if (errore) return { errore: errore };
       var byte = Chiavetta.codifica(Chiavetta.testo(a.valori, imp()));
       if (byte.length > Chiavetta.MAX_TESTO) return { errore: 'Troppi dati per la chiavetta.' };
-      return { byte: byte, crc: Chiavetta.esa(Chiavetta.crc32(byte)), n: a.valori.length };
+      // le chiavette caricate fino al sito 1.15.0 hanno lo stesso testo con il commento di allora
+      var crcPrima = Chiavetta.esa(Chiavetta.crc32(Chiavetta.codifica(Chiavetta.testo(a.valori, imp(), true))));
+      return { byte: byte, crc: Chiavetta.esa(Chiavetta.crc32(byte)), crcPrima: crcPrima, n: a.valori.length };
     }
 
     function disponibili() {
@@ -4215,7 +4228,7 @@ var AppChiavetta = (function () {
       righe.push(avanzamento);
       if (r.n > 0) {
         if (x.errore) { righe.push('La tabella ha errori: non posso confrontare.'); classe = 'avviso'; }
-        else if (r.crc === x.crc && r.n === x.n) righe.push('<b>Uguali ai valori e alle impostazioni della tabella.</b>');
+        else if ((r.crc === x.crc || r.crc === x.crcPrima) && r.n === x.n) righe.push('<b>Uguali ai valori e alle impostazioni della tabella.</b>');
         else { righe.push('<b>Diversi dalla tabella</b> (valori o impostazioni): reinvia i valori.'); classe = 'avviso'; }
       } else classe = 'avviso';
       var pubblicata = Chiavetta.versionePubblicata();
@@ -4318,7 +4331,7 @@ var AppChiavetta = (function () {
   var CHIAVE = 'compilatore-misure-v1';
   var CHIAVE_LISTE = 'compilatore-misure-liste-v1';   // liste salvate con un nome
   var MAX_RIGHE = 500;
-  var RIGHE_INIZIALI = 5;   // le altre si aggiungono da sole con INVIO / Avanti sull'ultima casella
+  var RIGHE_INIZIALI = 5;   // le altre si aggiungono da sole: rigaVuotaInFondo(), e INVIO / Avanti sull'ultima casella
 
   /* La chiavetta si carica via Bluetooth o cavo: senza nessuno dei due (Firefox, iPhone) si parte dai codici */
   function schedaPredefinita() {
@@ -4403,7 +4416,7 @@ var AppChiavetta = (function () {
     if (isNaN(n)) return def;
     return Math.min(max, Math.max(min, n));
   }
-  function cella(r, c) { return document.querySelector('#corpo-tabella input[data-r="' + r + '"][data-c="' + c + '"]'); }
+  function cella(r, c) { return document.getElementById('cella-' + r + '-' + c); }
   function vai(r, c) {
     var el = cella(r, c);
     if (el) { el.focus(); el.select(); }
@@ -4565,7 +4578,7 @@ var AppChiavetta = (function () {
         }
       }
     }
-    mostraListaAttuale();
+    aggiornaProgramma();
     if (!$('verifica').hidden) mostraVerifica();
     mostraRiepilogo(usate.length);
     riepilogoImpostazioni();
@@ -4794,7 +4807,13 @@ var AppChiavetta = (function () {
   /* ---------- liste salvate (docs/2026-11-18-offline-liste-avvisi.md) ---------- */
   /* In memoria, così "modifiche non salvate" non rilegge tutto a ogni tasto; un'altra scheda che salva la svuota. */
   var listeLette = null;
-  window.addEventListener('storage', function (e) { if (e.key === CHIAVE_LISTE || e.key === null) { listeLette = null; mostraListaAttuale(); } });
+  /* Un'altra scheda ha cambiato le liste: se ha eliminato quella aperta, qui si chiude. */
+  window.addEventListener('storage', function (e) {
+    if (e.key !== CHIAVE_LISTE && e.key !== null) return;
+    listeLette = null;
+    if (stato.listaNome && trovaLista(leggiListe(), stato.listaNome) < 0) stato.listaNome = '';
+    aggiornaProgramma();
+  });
   function leggiListe() {
     if (!listeLette) {
       try {
@@ -4829,9 +4848,8 @@ var AppChiavetta = (function () {
     for (var i = 0; i < liste.length; i++) if (liste[i].nome.trim().toLowerCase() === k) return i;
     return -1;
   }
-  function esitoListe(tipo, testo) {
-    $('esito-liste').innerHTML = testo ? '<div class="messaggio ' + tipo + '">' + esc(testo) + '</div>' : '';
-  }
+  function htmlMessaggio(tipo, testo) { return testo ? '<div class="messaggio ' + tipo + '">' + esc(testo) + '</div>' : ''; }
+  function esitoListe(tipo, testo) { $('esito-liste').innerHTML = htmlMessaggio(tipo, testo); }
   function plurale(n, uno, tanti) { return n + ' ' + (n === 1 ? uno : tanti); }
   function dataBreve(iso) {
     var d = new Date(iso);
@@ -4840,26 +4858,28 @@ var AppChiavetta = (function () {
     return due(d.getDate()) + '/' + due(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + due(d.getHours()) + ':' + due(d.getMinutes());
   }
 
-  /* docs/2026-11-23-casella-nome-programma.md: il pulsante Salva accanto al nome dice se la tabella è salvata
-     con quel nome (✓ Salvata) o no (Salva); sotto il nome, il carattere che non va nel codice a barre. */
-  function mostraListaAttuale() {
+  /* docs/2026-11-23-casella-nome-programma.md: dopo ogni modifica dei valori o del nome.
+     Il pulsante Salva accanto al nome dice se la tabella è salvata con quel nome (✓ Salvata) o no (Salva);
+     sotto il nome, il carattere che non va nel codice a barre; in cima alla sezione 2, i codici del nome. */
+  var ICONA_SALVA = $('btn-salva').querySelector('svg').outerHTML;   // il disegno sta solo nel template
+  var avvisoNome = '';
+  function aggiornaProgramma() {
     var nome = stato.programma.trim(), c = contenutoAttuale();
-    if (stato.listaNome && trovaLista(leggiListe(), stato.listaNome) < 0) stato.listaNome = '';
     var liste = nome ? leggiListe() : [], i = nome ? trovaLista(liste, nome) : -1;
     var salvata = i >= 0 && c.righe.length > 0 && stessoContenuto(liste[i], c);
     var b = $('btn-salva'), etichetta = salvata ? 'Salvata' : 'Salva';
     if (b.getAttribute('aria-label') !== etichetta) {
-      b.innerHTML = (salvata ? '<span class="icona-testo" aria-hidden="true">✓</span>' : ICONA_SALVA) + ' <span class="testo">' + etichetta + '</span>';
+      b.innerHTML = (salvata ? '<span aria-hidden="true">✓</span>' : ICONA_SALVA) + ' <span class="testo">' + etichetta + '</span>';
       b.setAttribute('aria-label', etichetta);
       b.title = etichetta;
     }
     b.disabled = salvata || !c.righe.length;
     b.classList.toggle('primario', !b.disabled);
     var v = nome ? Logica.testoPerCodice(nome) : { ok: true };
-    $('avviso-programma').innerHTML = v.ok ? '' : '<div class="messaggio avviso">' + esc(v.messaggio) + '</div>';
-    mostraNomeProgramma(nome);
+    var avviso = v.ok ? '' : htmlMessaggio('avviso', v.messaggio);
+    if (avviso !== avvisoNome) $('avviso-programma').innerHTML = avvisoNome = avviso;   // aggiorna() gira a ogni tasto
+    mostraNomeProgramma(nome, v);
   }
-  var ICONA_SALVA = '<svg class="icona" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 3h11.5L21 7.5V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M7.5 3v5h8V3"/><path d="M7 21v-7h10v7"/></svg>';
   function scriviProgramma(nome) {
     stato.programma = nome;
     $('programma').value = nome;
@@ -4868,7 +4888,7 @@ var AppChiavetta = (function () {
   var tempoEsito = null;
   function esitoSalva(tipo, testo) {
     if ($('liste').hidden) {
-      $('esito-programma').innerHTML = '<div class="messaggio ' + tipo + '">' + esc(testo) + '</div>';
+      $('esito-programma').innerHTML = htmlMessaggio(tipo, testo);
       clearTimeout(tempoEsito);
       tempoEsito = setTimeout(function () { $('esito-programma').innerHTML = ''; }, 4000);
     } else esitoListe(tipo, testo);
@@ -4876,28 +4896,43 @@ var AppChiavetta = (function () {
 
   /* docs/2026-11-23-codice-da-testo.md: in cima alla sezione 2, il codice a barre del nome della lista aperta
      (il nome del programma), da leggere in macchina nella pagina del caricatore. */
-  var nomeMostrato = null;
-  function mostraNomeProgramma(nome) {
+  /* aggiorna() gira a ogni tasto: i codici si ridisegnano solo se cambiano il nome o la larghezza.
+     La larghezza si misura una volta e di nuovo quando cambia la finestra (misurarla a ogni tasto
+     costringe il browser a ricalcolare l'impaginazione di tutta la tabella). */
+  var nomeMostrato = null, largNome = 0;
+  function mostraNomeProgramma(nome, controllo) {
     var box = $('nome-programma');
-    var larg = Math.min(($('sez-codici').clientWidth || 600) - 40, 700);
-    var chiave = nome + '|' + larg;
-    if (chiave === nomeMostrato) return;   // aggiorna() gira a ogni tasto: il codice si ridisegna solo se cambia
+    if (!largNome) largNome = Math.min(($('sez-codici').clientWidth || 600) - 40, 700);
+    var larg = largNome, chiave = nome + '|' + larg;
+    if (chiave === nomeMostrato) return;
     nomeMostrato = chiave;
     if (!nome) {
       box.innerHTML = '<p class="nota">Scrivi il <b>nome del programma</b> sopra la tabella per avere il suo codice a barre.</p>';
       return;
     }
-    var c = Logica.testoPerCodice(nome);
-    var h = '<div class="titolo-nome">Nome del programma</div>';
-    if (!c.ok) {
-      h += '<div class="valore-nome">' + esc(nome) + '</div>' +
-        '<div class="messaggio avviso">' + esc(c.messaggio) + ' Cambia il nome sopra la tabella.</div>';
-    } else {
-      h += '<div class="cornice" id="codice-nome">' + Logica.code128Svg(nome, moduloBarre(nome, larg, 4), 70) + '</div>' +
-        '<div class="valore-nome">' + esc(nome) + '</div>' +
-        '<p class="nota">In macchina, nella pagina del caricatore: cursore sul campo del nome, poi leggi questo codice.' +
-        (/[^A-Za-z0-9 ]/.test(nome) ? ' Prova una volta che i segni escano giusti.' : '') + '</p>';
+    function codice(titolo, testo, id) {
+      return '<div class="codice-nome"><div class="titolo-nome">' + titolo + '</div>' +
+        '<div class="cornice" id="' + id + '">' + Logica.code128Svg(testo, moduloBarre(testo, larg, 4), 70) + '</div>' +
+        '<div class="valore-nome">' + esc(testo) + '</div></div>';
     }
+    var c = controllo || Logica.testoPerCodice(nome);
+    if (!c.ok) {
+      box.innerHTML = '<div class="titolo-nome">Programma</div><div class="valore-nome">' + esc(nome) + '</div>' +
+        '<div class="messaggio avviso">' + esc(c.messaggio) + ' Cambia il nome sopra la tabella.</div>';
+      return;
+    }
+    /* docs/2026-11-23-secondo-codice-punto-t.md: anche il programma per l'affilatura in testa, nome + ".t"
+       (se il nome finisce già con ".t" il codice è uno solo) */
+    var h = codice('Programma', nome, 'codice-nome');
+    var conT = /\.t$/i.test(nome) ? '' : nome + '.t';
+    if (conT) {
+      // il nome va bene, quindi con ".t" può essere solo troppo lungo
+      h += conT.length <= Logica.MAX_TESTO_CODICE ? codice('Affilatura in testa', conT, 'codice-nome-t')
+        : '<div class="codice-nome"><div class="titolo-nome">Affilatura in testa</div>' +
+          htmlMessaggio('avviso', 'Con ".t" il nome ha ' + conT.length + ' caratteri: nel codice a barre ne stanno al massimo ' + Logica.MAX_TESTO_CODICE + '.') + '</div>';
+    }
+    h += '<p class="nota">In macchina, nella pagina del caricatore: cursore sul campo del programma o dell\'affilatura in testa, poi leggi il codice giusto.' +
+      (Logica.segniDaProvare(nome) ? ' Prova una volta che i segni escano giusti.' : '') + '</p>';
     box.innerHTML = h;
   }
 
@@ -4962,7 +4997,7 @@ var AppChiavetta = (function () {
       scriviProgramma(nome);
       salva();
       esitoSalva('ok', 'Salvata "' + nome + '": ' + plurale(c.righe.length, 'coppia', 'coppie') + '.');
-      mostraListe(); mostraListaAttuale();
+      mostraListe(); aggiornaProgramma();
     });
   }
   function chiudiListe() {
@@ -5019,7 +5054,7 @@ var AppChiavetta = (function () {
       if (!scriviListe(liste)) return;
       if (stato.listaNome && stato.listaNome.toLowerCase() === tolta.nome.toLowerCase()) { stato.listaNome = ''; salva(); }
       esitoListe('ok', 'Eliminata "' + tolta.nome + '".');
-      mostraListe(); mostraListaAttuale();
+      mostraListe(); aggiornaProgramma();
     });
   }
 
@@ -5068,7 +5103,7 @@ var AppChiavetta = (function () {
     esitoListe(aggiunte ? 'ok' : 'avviso', 'Importate ' + plurale(aggiunte, 'lista', 'liste') +
       (saltate ? ', ' + plurale(saltate, 'saltata perché già presente', 'saltate perché già presenti') : '') +
       (scartate ? ', ' + plurale(scartate, 'scartata perché non valida', 'scartate perché non valide') : '') + '.');
-    mostraListe(); mostraListaAttuale();
+    mostraListe(); aggiornaProgramma();
   }
 
   /* ---------- senza rete (service worker, solo dal sito) ---------- */
@@ -5703,7 +5738,7 @@ var AppChiavetta = (function () {
       stato.programma = this.value;
       $('esito-programma').innerHTML = '';
       salva();
-      mostraListaAttuale();
+      aggiornaProgramma();
     });
     $('programma').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { e.preventDefault(); this.blur(); }
@@ -5733,6 +5768,7 @@ var AppChiavetta = (function () {
       clearTimeout(timerRidim);
       timerRidim = setTimeout(function () {
         mostraBarre(); mostraQR(); aggiornaBarraMobile();
+        largNome = 0; mostraNomeProgramma(stato.programma.trim());
         if (!$('lettura').hidden) mostraLettura();
       }, 150);
     });

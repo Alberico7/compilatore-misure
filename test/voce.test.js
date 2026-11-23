@@ -5,6 +5,7 @@ const assert = require('node:assert/strict');
 const path = require('path');
 const { chromium } = require('playwright');
 const { avviaServer } = require('./server');
+const { usaDecimali } = require('./aiuti-pagina');
 
 let browser, server;
 test.before(async () => {
@@ -40,19 +41,6 @@ function simulatore([modelloGiaScaricato, opzioni]) {
     window.__voce.parziale = (t) => m.g.onParziale(t);
     return m;
   };
-}
-
-/* I test sono scritti con 2 decimali per gradi e dati (i predefiniti sono 0 / 1: docs/2026-11-23-gradi-e-dati.md),
-   e cambiano modo e decimali dal riquadro Cambia, che ora parte chiuso: qui si apre. */
-async function usaDecimali(page, [gradi, dati]) {
-  await page.evaluate(([g, d]) => {
-    document.getElementById('imp-valori').open = true;
-    [['dec-gra', g], ['dec-dat', d]].forEach(([id, v]) => {
-      const el = document.getElementById(id);
-      el.value = String(v);
-      el.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-  }, [gradi, dati]);
 }
 
 async function nuovaPagina({ telefono = false, giaScaricato = true, simulato = true, voce = {}, prima = null, decimali = [2, 2] } = {}) {

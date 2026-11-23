@@ -86,11 +86,14 @@ var Chiavetta = (function () {
   /* Testo per la chiavetta (solo caratteri ASCII).
      valori: [{cifre}], imp: {ritardoCarattere, ritardoInvio, coppiePerPressione, decGra, decDat}
      Niente data né ora: stessi valori e impostazioni = stesso testo = stesso codice di controllo,
-     così "Controlla la chiavetta" può confrontarlo con la tabella. */
-  function testo(valori, imp) {
+     così "Controlla la chiavetta" può confrontarlo con la tabella.
+     nomiPrima: il commento scritto fino al sito 1.15.0 ("angolo" / "altezza"): il codice di controllo comprende
+     anche i commenti, e le chiavette caricate prima hanno quello (docs/2026-11-23-gradi-e-dati.md). */
+  function testo(valori, imp, nomiPrima) {
     var righe = [
       '# Compilatore misure - valori per la chiavetta',
-      '# ' + valori.length / 2 + ' coppie - decimali gradi ' + imp.decGra + ', dati ' + imp.decDat
+      '# ' + valori.length / 2 + ' coppie - decimali ' + (nomiPrima ? 'angolo ' : 'gradi ') + imp.decGra +
+        (nomiPrima ? ', altezza ' : ', dati ') + imp.decDat
     ];
     IMPOSTAZIONI.forEach(function (x) { righe.push(x.nome + ' = ' + imp[x.campo]); });
     valori.forEach(function (v) { righe.push(v.cifre); });

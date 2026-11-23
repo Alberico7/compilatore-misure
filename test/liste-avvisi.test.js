@@ -9,6 +9,7 @@ const os = require('os');
 const http = require('http');
 const { pathToFileURL } = require('url');
 const { chromium } = require('playwright');
+const { usaDecimali } = require('./aiuti-pagina');
 
 const PAGINA = pathToFileURL(path.join(__dirname, '..', 'compilatore-misure.html')).href;
 const SITO = path.join(__dirname, '..', 'sito');
@@ -16,19 +17,6 @@ const SITO = path.join(__dirname, '..', 'sito');
 let browser;
 test.before(async () => { browser = await chromium.launch(process.env.CI ? {} : { channel: 'msedge' }); });
 test.after(async () => { await browser.close(); });
-
-/* I test sono scritti con 2 decimali per gradi e dati (i predefiniti sono 0 / 1: docs/2026-11-23-gradi-e-dati.md),
-   e cambiano modo e decimali dal riquadro Cambia, che ora parte chiuso: qui si apre. */
-async function usaDecimali(page, [gradi, dati]) {
-  await page.evaluate(([g, d]) => {
-    document.getElementById('imp-valori').open = true;
-    [['dec-gra', g], ['dec-dat', d]].forEach(([id, v]) => {
-      const el = document.getElementById(id);
-      el.value = String(v);
-      el.dispatchEvent(new Event('change', { bubbles: true }));
-    });
-  }, [gradi, dati]);
-}
 
 async function apri(url = PAGINA, { telefono = false, ctx = null, decimali = [2, 2] } = {}) {
   ctx = ctx || await browser.newContext(telefono

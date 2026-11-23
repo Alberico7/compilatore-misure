@@ -6,6 +6,7 @@ Stato: **realizzato il 2026-11-23** (sito 1.16.0), confermato dall'utente il 202
 Note di realizzazione:
 
 - **Nomi vecchi:** la funzione `nomiNuovi()` in `src/app.js` passa `decAng` / `decAlt` a `decGra` / `decDat`. Si usa per le impostazioni salvate, per le liste salvate nel browser e per i file importati.
+- **Codice di controllo della chiavetta (corretto nel sito 1.20.0):** il commento in testa al file della chiavetta è passato da "decimali angolo …, altezza …" a "decimali gradi …, dati …". Il codice di controllo comprende anche i commenti. Così, dalla 1.16.0 alla 1.19.0, una chiavetta caricata con il sito di prima risultava "Diversi dalla tabella" in **Controlla la chiavetta**, anche con gli stessi valori. Dalla 1.20.0 il sito accetta anche il codice calcolato con il commento di prima (`Chiavetta.testo(valori, imp, true)`). Il programma della chiavetta non cambia.
 - **Test:** i test di prima erano scritti con 2 decimali, che erano i predefiniti. Ora le funzioni che aprono la pagina nei test mettono 2 e 2 (opzione `decimali`), così i test controllano le stesse cose di prima. I test nuovi provano i predefiniti 0 e 1, il passaggio da 2 / 2 e le liste con i nomi vecchi (`test/semplicita.test.js`, `test/liste-avvisi.test.js`).
 
 L'utente ha controllato in macchina:
