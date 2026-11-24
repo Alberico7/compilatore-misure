@@ -4,6 +4,7 @@
   var CHIAVE = 'compilatore-misure-v1';
   var CHIAVE_LISTE = 'compilatore-misure-liste-v1';   // liste salvate con un nome
   var MAX_RIGHE = 500;
+  var MAX_AGGIUNTA = 10;    // caratteri dell'aggiunta per l'affilatura in testa (uguale al maxlength della casella)
   var RIGHE_INIZIALI = 5;   // le altre si aggiungono da sole: rigaVuotaInFondo(), e INVIO / Avanti sull'ultima casella
 
   /* La chiavetta si carica via Bluetooth o cavo: senza nessuno dei due (Firefox, iPhone) si parte dai codici */
@@ -21,6 +22,7 @@
       chRitCar: 30, chRitInv: 30, chCoppie: 0, chMezzo: 'bluetooth',
       listaNome: '',     // lista salvata aperta nella tabella ('' = nessuna)
       programma: '',     // nome del programma scritto sopra la tabella (docs/2026-11-23-casella-nome-programma.md)
+      aggiuntaTesta: '.t',  // aggiunta al nome per l'affilatura in testa, '' = niente secondo codice (docs/2026-11-24-aggiunta-affilatura-impostabile.md)
       impAperte: false,  // riquadro delle impostazioni chiuso, anche al primo uso (docs/2026-11-23-righe-automatiche.md)
       schedaChiavetta: true,  // segno: lo spostamento una tantum sulla Chiavetta è già fatto
       pausaInvio30: true,     // segno: il passaggio una tantum da 200 a 30 ms dopo INVIO è già fatto
@@ -69,6 +71,7 @@
         /* docs/2026-11-23-casella-nome-programma.md: chi aveva una lista aperta trova il suo nome nella casella */
         if (s.programma === undefined) base.programma = s.listaNome;
         base.programma = typeof base.programma === 'string' ? base.programma : '';
+        base.aggiuntaTesta = typeof base.aggiuntaTesta === 'string' ? base.aggiuntaTesta.slice(0, MAX_AGGIUNTA) : '.t';
         /* docs/2026-11-23-gradi-e-dati.md: una volta sola, con i 2 / 2 di prima e la tabella vuota, si passa
            a 0 / 1 come in macchina. Con dei valori scritti restano: cambiarli cambierebbe quello che si scrive. */
         var vuota = base.righe.every(function (r) { return !r[0].trim() && !r[1].trim(); });
@@ -609,10 +612,17 @@
      La larghezza si misura una volta e di nuovo quando cambia la finestra (misurarla a ogni tasto
      costringe il browser a ricalcolare l'impaginazione di tutta la tabella). */
   var nomeMostrato = null, largNome = 0;
+  /* docs/2026-11-24-aggiunta-affilatura-impostabile.md: l'aggiunta per l'affilatura in testa */
+  function aggiuntaValida(a) { return !!a && Logica.testoPerCodice(a).ok; }
+  function aggiornaAggiunta() {
+    var a = stato.aggiuntaTesta, v = a ? Logica.testoPerCodice(a) : { ok: true };
+    $('aggiunta-riepilogo').innerHTML = 'Aggiunta per l\'affilatura in testa: ' + (a ? '<b>' + esc(a) + '</b>' : 'nessuna');
+    $('avviso-aggiunta').innerHTML = v.ok ? '' : htmlMessaggio('avviso', v.messaggio + ' Finché non la correggi, il secondo codice non c\'è.');
+  }
   function mostraNomeProgramma(nome, controllo) {
     var box = $('nome-programma');
     if (!largNome) largNome = Math.min(($('sez-codici').clientWidth || 600) - 40, 700);
-    var larg = largNome, chiave = nome + '|' + larg;
+    var agg = stato.aggiuntaTesta, larg = largNome, chiave = nome + '|' + agg + '|' + larg;
     if (chiave === nomeMostrato) return;
     nomeMostrato = chiave;
     if (!nome) {
@@ -630,18 +640,20 @@
         '<div class="messaggio avviso">' + esc(c.messaggio) + ' Cambia il nome sopra la tabella.</div>';
       return;
     }
-    /* docs/2026-11-23-secondo-codice-punto-t.md: anche il programma per l'affilatura in testa, nome + ".t"
-       (se il nome finisce già con ".t" il codice è uno solo) */
+    /* docs/2026-11-23-secondo-codice-punto-t.md e docs/2026-11-24-aggiunta-affilatura-impostabile.md: anche il
+       programma per l'affilatura in testa, nome + aggiunta (di solito ".t"). Niente secondo codice se l'aggiunta
+       è vuota o non va bene (l'avviso è sotto la sua casella), o se il nome finisce già con l'aggiunta. */
     var h = codice('Programma', nome, 'codice-nome');
-    var conT = /\.t$/i.test(nome) ? '' : nome + '.t';
+    var conT = aggiuntaValida(agg) && nome.slice(-agg.length).toLowerCase() !== agg.toLowerCase() ? nome + agg : '';
     if (conT) {
-      // il nome va bene, quindi con ".t" può essere solo troppo lungo
+      // nome e aggiunta vanno bene, quindi insieme possono essere solo troppo lunghi
       h += conT.length <= Logica.MAX_TESTO_CODICE ? codice('Affilatura in testa', conT, 'codice-nome-t')
         : '<div class="codice-nome"><div class="titolo-nome">Affilatura in testa</div>' +
-          htmlMessaggio('avviso', 'Con ".t" il nome ha ' + conT.length + ' caratteri: nel codice a barre ne stanno al massimo ' + Logica.MAX_TESTO_CODICE + '.') + '</div>';
+          htmlMessaggio('avviso', 'Con "' + agg + '" il nome ha ' + conT.length + ' caratteri: nel codice a barre ne stanno al massimo ' + Logica.MAX_TESTO_CODICE + '.') + '</div>';
     }
-    h += '<p class="nota">In macchina, nella pagina del caricatore: cursore sul campo del programma o dell\'affilatura in testa, poi leggi il codice giusto.' +
-      (Logica.segniDaProvare(nome) ? ' Prova una volta che i segni escano giusti.' : '') + '</p>';
+    h += '<p class="nota">In macchina, nella pagina del caricatore: ' +
+      (conT ? 'cursore sul campo del programma o dell\'affilatura in testa, poi leggi il codice giusto.' : 'cursore sul campo del programma, poi leggi il codice.') +
+      (Logica.segniDaProvare(conT || nome) ? ' Prova una volta che i segni escano giusti.' : '') + '</p>';
     box.innerHTML = h;
   }
 
@@ -1457,6 +1469,15 @@
     $('programma').addEventListener('keydown', function (e) {
       if (e.key === 'Enter') { e.preventDefault(); this.blur(); }
     });
+    $('aggiunta-testa').addEventListener('input', function () {
+      stato.aggiuntaTesta = this.value.slice(0, MAX_AGGIUNTA);
+      salva();
+      aggiornaAggiunta();
+      mostraNomeProgramma(stato.programma.trim());
+    });
+    $('aggiunta-testa').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') { e.preventDefault(); this.blur(); }
+    });
     $('lista-salva-come').addEventListener('click', salvaComeLista);
     $('lista-cerca').addEventListener('input', mostraListe);
     $('elenco-liste').addEventListener('click', function (e) {
@@ -1515,6 +1536,8 @@
     $('invio-finale').checked = !!stato.invioFinale;
     $('imp-valori').open = !!stato.impAperte;
     $('programma').value = stato.programma;
+    $('aggiunta-testa').value = stato.aggiuntaTesta;
+    aggiornaAggiunta();
     chiavetta.applicaImpostazioni();
     applicaTema();
   }

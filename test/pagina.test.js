@@ -609,6 +609,77 @@ test('affilatura in testa: secondo codice con il nome e ".t"', async () => {
   }
 });
 
+test('affilatura in testa: l\'aggiunta si imposta', async () => {
+  // docs/2026-11-24-aggiunta-affilatura-impostabile.md
+  for (const telefono of [false, true]) {
+    const page = await nuovaPagina(1200, { telefono, scheda: 'barre' });
+    const box = page.locator('#nome-programma');
+    const leggi = async (id) => decodifica(await page.locator(id + ' svg').screenshot(), BarcodeFormat.CODE_128);
+    const aggiunta = async (testo) => {
+      if (!await page.locator('#aggiunta-testa').isVisible()) await page.click('#imp-aggiunta > summary');
+      await page.fill('#aggiunta-testa', testo);
+    };
+    // predefinita ".t", riquadro chiuso
+    assert.equal(await page.locator('#aggiunta-testa').isVisible(), false);
+    assert.match(await page.innerText('#aggiunta-riepilogo'), /affilatura in testa: \.t$/);
+    await page.fill('#programma', 'FRESA-1234');
+    assert.equal(await leggi('#codice-nome-t'), 'FRESA-1234.t');
+    // un'altra aggiunta
+    await aggiunta('_T');
+    assert.equal(await leggi('#codice-nome-t'), 'FRESA-1234_T');
+    assert.match(await page.innerText('#aggiunta-riepilogo'), /: _T$/);
+    // il nome finisce già con l'aggiunta (maiuscole o minuscole): un codice solo
+    await page.fill('#programma', 'FRESA_t');
+    assert.equal(await leggi('#codice-nome'), 'FRESA_t');
+    assert.equal(await page.locator('#codice-nome-t').count(), 0);
+    // vuota: un codice solo, senza messaggi
+    await page.fill('#programma', 'ALBERO7');
+    await aggiunta('');
+    assert.equal(await page.locator('#codice-nome-t').count(), 0);
+    assert.equal(await box.locator('.messaggio').count(), 0);
+    assert.match(await page.innerText('#aggiunta-riepilogo'), /nessuna/);
+    assert.match(await box.innerText(), /cursore sul campo del programma, poi leggi il codice\./);
+    // carattere non ammesso: avviso sotto la casella, niente secondo codice
+    await aggiunta('.è');
+    assert.match(await page.innerText('#avviso-aggiunta'), /"è" non si può mettere in un codice a barre/);
+    assert.equal(await page.locator('#codice-nome-t').count(), 0);
+    // un segno nell'aggiunta fa comparire la nota sui segni, anche con un nome di sole lettere e cifre
+    await aggiunta('-TESTA');
+    assert.equal(await page.innerText('#avviso-aggiunta'), '');
+    assert.equal(await leggi('#codice-nome-t'), 'ALBERO7-TESTA');
+    assert.match(await box.innerText(), /segni escano giusti/);
+    // troppo lungo con l'aggiunta: il primo c'è, al posto del secondo il messaggio
+    await page.fill('#programma', 'A'.repeat(36));
+    assert.equal(await page.locator('#codice-nome').count(), 1);
+    assert.equal(await page.locator('#codice-nome-t').count(), 0);
+    assert.match(await box.innerText(), /Con "-TESTA" il nome ha 42 caratteri: nel codice a barre ne stanno al massimo 40\./);
+    // dentro lo schermo
+    const largPagina = await page.evaluate(() => document.documentElement.clientWidth);
+    for (const id of ['#imp-aggiunta', '#aggiunta-testa']) {
+      const b = await page.locator(id).boundingBox();
+      assert.ok(b.x >= 0 && b.x + b.width <= largPagina, `${id} dentro lo schermo`);
+    }
+    // resta dopo un ricaricamento
+    await page.reload();
+    assert.equal(await page.inputValue('#aggiunta-testa'), '-TESTA');
+    await page.fill('#programma', 'FRESA');
+    assert.equal(await leggi('#codice-nome-t'), 'FRESA-TESTA');
+    assert.deepEqual(page.erroriJs, []);
+    await page.context().close();
+  }
+});
+
+test('affilatura in testa: impostazioni di prima senza aggiunta → ".t"', async () => {
+  const page = await nuovaPagina(1200, { scheda: 'barre' });
+  await page.evaluate(() => {
+    localStorage.setItem('compilatore-misure-v1', JSON.stringify({ righe: [['', '']], modo: 'separatore', decGra: 0, decDat: 1, programma: 'FRESA' }));
+  });
+  await page.reload();
+  assert.equal(await page.inputValue('#aggiunta-testa'), '.t');
+  assert.equal(await decodifica(await page.locator('#codice-nome-t svg').screenshot(), BarcodeFormat.CODE_128), 'FRESA.t');
+  await page.context().close();
+});
+
 test('nome del programma: chi aveva una lista aperta lo trova nella casella', async () => {
   const page = await nuovaPagina(1200, { scheda: 'barre' });
   await page.evaluate(() => {

@@ -195,6 +195,7 @@ table.misure input.avviso { border-color: var(--bordo-avviso); background: var(-
 .nome-programma .codice-nome + .codice-nome { margin-top: 12px; }
 .nome-programma .valore-nome { font-size: 22px; font-weight: 700; overflow-wrap: anywhere; }
 .nome-programma .nota, .nome-programma .messaggio { margin: 4px 0 0; }
+#aggiunta-testa { width: 10em; max-width: 100%; }
 
 /* QR */
 .barra-qr { display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: flex-end; margin-bottom: 14px; }
@@ -367,7 +368,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
 @media print {
   :root { --sfondo: #fff; --carta: #fff; --testo: #000; --tenue: #333; --bordo: #999; --bordo-campo: #999; --accento: #000; --dato: #000; color-scheme: light; }
   body { font-size: 12pt; }
-  nav.indice, #sez-dati, #sez-prova, #sez-guida, .schede, .barra-qr, .pulsanti, footer, header.testata .sottotitolo, #btn-tema, .barra-mobile, .lettura, .nota, .velo { display: none !important; }
+  nav.indice, #sez-dati, #sez-prova, #sez-guida, .schede, .barra-qr, .pulsanti, footer, header.testata .sottotitolo, #btn-tema, .barra-mobile, .lettura, .nota, .velo, #imp-aggiunta { display: none !important; }
   section.blocco { border: 0; padding: 0; margin: 0; }
   .sicurezza { border: 1px solid #000; background: #fff; }
 }
@@ -473,6 +474,16 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
   <section class="blocco" id="sez-codici">
     <h2><span class="num">2</span>In macchina: chiavetta o codici</h2>
     <div class="nome-programma" id="nome-programma"></div>
+    <!-- docs/2026-11-24-aggiunta-affilatura-impostabile.md -->
+    <details class="riquadro" id="imp-aggiunta">
+      <summary><span id="aggiunta-riepilogo"></span><span class="cambia">Cambia</span></summary>
+      <div class="impostazioni">
+        <label class="campo"><span>Aggiunta per l'affilatura in testa</span>
+          <input type="text" id="aggiunta-testa" maxlength="10" autocomplete="off" autocapitalize="off" spellcheck="false"></label>
+      </div>
+      <div id="avviso-aggiunta"></div>
+      <p class="nota">Il secondo codice è il nome del programma con questa aggiunta in fondo. Lasciala vuota se non serve il secondo codice.</p>
+    </details>
     <div class="schede" role="tablist">
       <button type="button" role="tab" id="tab-chiavetta" data-scheda="chiavetta">Chiavetta</button>
       <button type="button" role="tab" id="tab-barre" data-scheda="barre">Codici a barre</button>
@@ -607,7 +618,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
     <details>
       <summary>Liste salvate</summary>
       <ul>
-        <li>Sopra la tabella scrivi il <b>nome del programma</b>: in cima alla sezione 2 compaiono subito il suo <b>codice a barre</b> e quello del programma per l'<b>affilatura in testa</b> (il nome con ".t" in fondo). In macchina, nella pagina del caricatore, metti il cursore sul campo giusto e leggi il codice. Il nome può avere lettere senza accento, cifre, spazio e segni come - . / _, fino a 40 caratteri.</li>
+        <li>Sopra la tabella scrivi il <b>nome del programma</b>: in cima alla sezione 2 compaiono subito il suo <b>codice a barre</b> e quello del programma per l'<b>affilatura in testa</b> (il nome con l'aggiunta in fondo, di solito ".t": si cambia sotto i codici). In macchina, nella pagina del caricatore, metti il cursore sul campo giusto e leggi il codice. Il nome può avere lettere senza accento, cifre, spazio e segni come - . / _, fino a 40 caratteri.</li>
         <li><b>Salva</b>, accanto al nome, salva la tabella come lista con quel nome. Dice <b>✓ Salvata</b> quando è tutto salvato; si riaccende appena cambi un valore o il nome. Con le coppie si salvano anche il modo di scrivere i valori e i decimali.</li>
         <li><b>Apri</b>, accanto a Salva, mostra le liste salvate: un tocco sul nome la apre. Lì ci sono anche <b>Salva come…</b>, che salva con un nome nuovo, ed <b>Elimina</b>.</li>
         <li><b>Esporta</b> scarica tutte le liste in un file; <b>Importa</b> le aggiunge su un altro dispositivo, senza cancellare niente. Le liste stanno nella memoria del browser: esportale ogni tanto, come copia di sicurezza.</li>
