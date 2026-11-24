@@ -83,8 +83,24 @@ const impronta = require('crypto').createHash('sha256');
 for (const f of FILE_SENZA_RETE.subito.slice(1).concat(FILE_SENZA_RETE.alBisogno)) impronta.update(fs.readFileSync(path.join(sito, f)));
 const sw = leggi('sw.js');
 impronta.update(sw);
-for (const s of ['__VERSIONE__', '__FILE__']) if (sw.split(s).length !== 2) throw new Error('Segnaposto ' + s + ' assente o ripetuto in sw.js');
-scrivi(path.join(sito, 'sw.js'), sw.replace('__VERSIONE__', impronta.digest('hex').slice(0, 16)).replace('__FILE__', JSON.stringify(FILE_SENZA_RETE)));
+// Indirizzo e cache del modello della dettatura: gli stessi di voce.js (docs/2026-11-24-dettatura-copie-modello.md)
+function costanteVoce(nome) {
+  const m = leggi('voce.js').match(new RegExp('var ' + nome + " = '([^']+)'"));
+  if (!m) throw new Error(nome + ' non trovato in voce.js');
+  return m[1];
+}
+const segnaposto = {
+  __VERSIONE__: impronta.digest('hex').slice(0, 16),
+  __FILE__: JSON.stringify(FILE_SENZA_RETE),
+  __MODELLO__: costanteVoce('CHIAVE_MODELLO'),
+  __CACHE_VOCE__: costanteVoce('CACHE'),
+};
+let swFinale = sw;
+for (const s in segnaposto) {
+  if (sw.split(s).length !== 2) throw new Error('Segnaposto ' + s + ' assente o ripetuto in sw.js');
+  swFinale = swFinale.replace(s, segnaposto[s]);
+}
+scrivi(path.join(sito, 'sw.js'), swFinale);
 
 // Firmware della chiavetta, se compilato (in GitHub Actions: CHIAVETTA_UF2)
 const uf2 = process.env.CHIAVETTA_UF2 || path.join(radice, 'chiavetta', 'build', 'chiavetta.uf2');

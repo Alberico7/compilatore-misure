@@ -1,7 +1,8 @@
 /* Motore vocale: Vosk (vosk-browser 0.0.8) con il modello italiano small-it-0.22.
    Come nel progetto "stampa etichette webusb" (src/voice/): modello dalla copia su Hugging Face con
    impronta controllata, zip convertito in tar.gz nel browser e conservato in Cache Storage,
-   audio mono a 16 kHz. Le librerie (voce/vosk.js, voce/fflate.js) si caricano solo al primo uso.
+   audio mono a 16 kHz. Vosk riceve il modello da un indirizzo fisso e tiene una sola copia estratta
+   (docs/2026-11-24-dettatura-copie-modello.md). Le librerie (voce/vosk.js, voce/fflate.js) si caricano solo al primo uso.
    Funziona solo dal sito (https): da file locale il worker di Vosk non legge il modello.
    Vedi docs/2026-11-12-dettatura-vosk.md. */
 var Voce = (function () {
@@ -79,7 +80,52 @@ var Voce = (function () {
 
   function mb(n) { return (n / 1e6).toFixed(1).replace('.', ',') + ' MB'; }
 
-  /* URL (blob:) del modello in tar.gz: dalla cache del browser, o scaricato e convertito. */
+  /* ---------- archivio del worker di Vosk (docs/2026-11-24-dettatura-copie-modello.md) ----------
+     Il worker tiene il modello estratto in IndexedDB (database "/vosk", contenuto "FILE_DATA"), in una cartella
+     col nome dell'indirizzo del modello, e all'avvio rilegge in memoria TUTTO l'archivio. Con un indirizzo
+     blob: (diverso ogni volta) le copie da 91 MB si accumulavano fino a far chiudere la scheda. */
+  var ARCHIVIO = '/vosk', ARCHIVIO_DATI = 'FILE_DATA';
+  function cartellaVosk(url) { return ARCHIVIO + '/' + url.replace(/[\W]/g, '_'); }
+
+  /* Toglie dall'archivio tutto quello che non sta nella cartella "tieni"; risponde true se lì c'è il modello
+     già estratto. Non crea l'archivio se non c'è; se qualcosa va storto risponde false e basta. */
+  function archivioVosk(tieni) {
+    return new Promise(function (ok) {
+      var finito = false, timer = setTimeout(function () { fine(false); }, 5000), q;
+      function fine(v) { if (!finito) { finito = true; clearTimeout(timer); ok(v); } }
+      try { q = indexedDB.open(ARCHIVIO); } catch (e) { fine(false); return; }
+      q.onupgradeneeded = function () { q.transaction.abort(); };   // non esisteva: lo si lascia non esistere
+      q.onerror = function (e) { if (e && e.preventDefault) e.preventDefault(); fine(false); };
+      q.onsuccess = function () {
+        var db = q.result, estratto = false;
+        if (finito || !db.objectStoreNames.contains(ARCHIVIO_DATI)) { db.close(); fine(false); return; }
+        var tx = db.transaction(ARCHIVIO_DATI, 'readwrite');
+        tx.objectStore(ARCHIVIO_DATI).openCursor().onsuccess = function (e) {
+          var c = e.target.result;
+          if (!c) return;
+          var k = String(c.key);
+          if (k === tieni + '/extracted.ok') estratto = true;
+          else if (k !== tieni && k.indexOf(tieni + '/') !== 0 && k !== ARCHIVIO) c.delete();
+          c.continue();
+        };
+        tx.oncomplete = function () { db.close(); fine(estratto); };
+        tx.onerror = tx.onabort = function () { db.close(); fine(false); };
+      };
+    });
+  }
+
+  /* Modello di Vosk dall'indirizzo dato. Vosk.createModel non risponde mai se il caricamento fallisce
+     (il worker manda "error", non "load"): qui si ascoltano tutti e due e il worker fallito si chiude. */
+  function apriModello(url) {
+    return new Promise(function (ok, ko) {
+      var m = new Vosk.Model(url, -1);
+      function no(msg) { m.terminate(); ko(new Error(msg || 'modello non caricato')); }
+      m.on('load', function (r) { if (r.result) ok(m); else no(); });
+      m.on('error', function (r) { no(r && r.error); });
+    });
+  }
+
+  /* Il modello in tar.gz (Blob): dalla cache del browser, o scaricato e convertito (e messo nella cache). */
   function fileModello(avanzamento) {
     var cache;
     return apriCache().then(function (c) {
@@ -111,7 +157,32 @@ var Voce = (function () {
           return (cache ? cache.put(chiaveModello(), new Response(blob)).catch(function () {}) : Promise.resolve()).then(function () { return blob; });
         });
       });
-    }).then(function (blob) { return URL.createObjectURL(blob); });
+    });
+  }
+
+  /* Modello di Vosk pronto. Con l'indirizzo fisso (chiaveModello) Vosk riusa la copia già estratta; la prima volta
+     il file glielo dà il service worker dalla cache (sw.js). Senza service worker, o se l'indirizzo fisso non
+     funziona: indirizzo blob: ed estrazione come prima, poi quella copia si toglie dall'archivio. */
+  function modelloVosk(avanzamento) {
+    var fisso = chiaveModello(), cartella = cartellaVosk(fisso);
+    function conBlob() {
+      return fileModello(avanzamento).then(function (blob) {
+        avanzamento('Preparazione del riconoscimento…');
+        var url = URL.createObjectURL(blob);
+        return apriModello(url).then(function (m) {
+          URL.revokeObjectURL(url);
+          return archivioVosk(cartella).then(function () { return m; });
+        }, function (e) { URL.revokeObjectURL(url); throw e; });
+      });
+    }
+    return archivioVosk(cartella).then(function (estratto) {
+      if (estratto) { avanzamento('Preparazione del riconoscimento…'); return apriModello(fisso).catch(conBlob); }
+      if (!(navigator.serviceWorker && navigator.serviceWorker.controller)) return conBlob();
+      return fileModello(avanzamento).then(function () {   // il modello deve essere nella cache del sito
+        avanzamento('Preparazione del riconoscimento…');
+        return apriModello(fisso).catch(conBlob);
+      });
+    });
   }
 
   /* Raccolta dell'audio fuori dalla pagina (AudioWorklet), pezzi da 1024 campioni; "flush" manda l'ultimo pezzo. */
@@ -149,23 +220,19 @@ var Voce = (function () {
     avanzamento = avanzamento || function () {};
     if (!this.pronto) {
       this.pronto = Promise.all([caricaScript('voce/fflate.js'), caricaScript('voce/vosk.js')]).then(function () {
-        return fileModello(avanzamento);
-      }).then(function (url) {
-        avanzamento('Preparazione del riconoscimento…');
-        return Vosk.createModel(url, -1).then(function (modello) {
-          URL.revokeObjectURL(url);
-          var rec = new modello.KaldiRecognizer(FREQ);
-          rec.on('partialresult', function (m) {
-            var t = m.result.partial;
-            if (t && self.ascolta && self.onParziale) self.onParziale(t);
-          });
-          rec.on('result', function (m) {
-            var t = m.result.text;
-            if (self.attesaFine) { var f = self.attesaFine; self.attesaFine = null; f(t || ''); return; }
-            if (t && self.onRisultato) self.onRisultato(t);
-          });
-          self.rec = rec;
+        return modelloVosk(avanzamento);
+      }).then(function (modello) {
+        var rec = new modello.KaldiRecognizer(FREQ);
+        rec.on('partialresult', function (m) {
+          var t = m.result.partial;
+          if (t && self.ascolta && self.onParziale) self.onParziale(t);
         });
+        rec.on('result', function (m) {
+          var t = m.result.text;
+          if (self.attesaFine) { var f = self.attesaFine; self.attesaFine = null; f(t || ''); return; }
+          if (t && self.onRisultato) self.onRisultato(t);
+        });
+        self.rec = rec;
       }).catch(function (e) { self.pronto = null; throw e; });
     }
     return this.pronto;
@@ -245,6 +312,9 @@ var Voce = (function () {
     modelloScaricato: function () { return window.__motoreVoceSimulato ? Promise.resolve(!!window.__modelloSimulatoScaricato) : modelloScaricato(); },
     creaMotore: creaMotore,
     creaTar: creaTar,
-    ricampiona: ricampiona
+    ricampiona: ricampiona,
+    archivioVosk: archivioVosk,
+    cartellaVosk: cartellaVosk,
+    chiaveModello: chiaveModello
   };
 })();

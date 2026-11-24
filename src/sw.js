@@ -3,15 +3,18 @@
      dettatura le salva al primo uso).
    - Con la rete risponde con la versione nuova (e aggiorna la copia); se la rete non risponde entro
      ATTESA ms, o non c'è, usa la copia salvata.
-   - Non tocca il modello della dettatura: è in un'altra cache ("compilatore-misure-voce"), gestita da voce.js,
-     e arriva da un altro sito (Hugging Face), che qui non si intercetta.
-   build.js sostituisce i segnaposto di VERSIONE e FILE. */
+   - Il modello della dettatura è in un'altra cache ("compilatore-misure-voce"), gestita da voce.js. Qui si
+     risponde solo al suo indirizzo fisso, con quella copia, per il worker di Vosk
+     (docs/2026-11-24-dettatura-copie-modello.md); se non c'è: "non trovato", senza rete.
+   build.js sostituisce i segnaposto di VERSIONE, FILE, MODELLO e CACHE_VOCE (questi due presi da voce.js). */
 'use strict';
 var VERSIONE = '__VERSIONE__';
 var PREFISSO = 'compilatore-sito-';
 var CACHE = PREFISSO + VERSIONE;
 var FILE = __FILE__;   // { subito: [...], alBisogno: [...] }
 var ATTESA = 3000;
+var MODELLO = new URL('__MODELLO__', self.registration.scope).href;
+var CACHE_VOCE = '__CACHE_VOCE__';
 
 // "subito": si salvano all'installazione. "alBisogno": le librerie della dettatura (5,6 MB), salvate al primo uso del 🎤,
 // che richiede comunque la rete per scaricare il modello.
@@ -38,6 +41,11 @@ self.addEventListener('fetch', function (e) {
   var req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
   var indirizzo = req.url.split('?')[0].split('#')[0];
+  if (indirizzo === MODELLO) {
+    e.respondWith(caches.open(CACHE_VOCE).then(function (c) { return c.match(MODELLO); }).catch(function () { return null; })
+      .then(function (r) { return r || new Response('modello non presente', { status: 404 }); }));
+    return;
+  }
   var daSalvare = salvati.indexOf(indirizzo) >= 0;   // solo i file del sito (non il firmware)
 
   e.respondWith(new Promise(function (risposta) {

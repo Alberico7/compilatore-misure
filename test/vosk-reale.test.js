@@ -11,6 +11,7 @@ const os = require('os');
 const { execFileSync } = require('child_process');
 const { chromium } = require('playwright');
 const { avviaServer } = require('./server');
+const { usaDecimali } = require('./aiuti-pagina');
 
 /* Frasi dettate, con una pausa fra l'una e l'altra (separatore "pausa"), e i valori attesi nella tabella. */
 const FRASI = [
@@ -54,6 +55,7 @@ test('vero Vosk: sei valori dettati di seguito con la pausa finiscono nelle case
     await page.goto(server.url);
     await page.evaluate(() => localStorage.clear());
     await page.reload();
+    await usaDecimali(page, [2, 2]);   // le frasi hanno due decimali; apre anche il riquadro Cambia
     await page.selectOption('#voce-modo', 'continuo');
     assert.equal(await page.inputValue('#voce-separatore'), 'pausa');
     await page.click('#cella-0-0');
@@ -81,6 +83,27 @@ test('vero Vosk: sei valori dettati di seguito con la pausa finiscono nelle case
     await page.locator('#sez-dati').screenshot({ path: path.join(__dirname, 'screenshot', 'pc-vosk-reale.png') });
     await page.click('#btn-voce'); // ferma
     assert.deepEqual(letti, FRASI.map((f) => f[1]));
+
+    // docs/2026-11-24-dettatura-copie-modello.md: nell'archivio di Vosk una sola copia, con l'indirizzo fisso;
+    // la volta dopo Vosk la riusa senza estrarre.
+    const cartelle = () => page.evaluate(() => new Promise((ok) => {
+      const q = indexedDB.open('/vosk');
+      q.onsuccess = () => {
+        const r = q.result.transaction('FILE_DATA').objectStore('FILE_DATA').getAllKeys();
+        r.onsuccess = () => { q.result.close(); ok([...new Set(r.result.map((k) => String(k).split('/').slice(0, 3).join('/')))].filter((k) => k !== '/vosk').sort()); };
+      };
+    }));
+    const fissa = await page.evaluate(() => Voce.cartellaVosk(Voce.chiaveModello()));
+    assert.deepEqual(await cartelle(), [fissa]);
+    await page.reload();
+    const prep = await page.evaluate(async () => {
+      const passi = [], t0 = performance.now();
+      await Voce.creaMotore().prepara((m) => passi.push(m));
+      return { passi, ms: Math.round(performance.now() - t0) };
+    });
+    console.log(`  seconda preparazione (copia già estratta): ${prep.ms} ms, passi: ${prep.passi.join(' / ')}`);
+    assert.deepEqual(prep.passi, ['Preparazione del riconoscimento…'], 'niente cache né estrazione');
+    assert.deepEqual(await cartelle(), [fissa]);
     assert.deepEqual(errori, []);
   } finally {
     await ctx.close();

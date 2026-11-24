@@ -418,3 +418,70 @@ test('preparazione all\'apertura non riuscita: nessun errore a schermo, il tocco
   await page.context().close();
   await p2.context().close();
 });
+
+/* ---------- archivio del worker di Vosk (docs/2026-11-24-dettatura-copie-modello.md) ---------- */
+
+/* Crea l'archivio "/vosk" come lo fa il worker di Vosk (IDBFS: versione 21, contenuto FILE_DATA) con le chiavi date. */
+function creaArchivio(chiavi) {
+  return new Promise((ok, ko) => {
+    const q = indexedDB.open('/vosk', 21);
+    q.onupgradeneeded = () => q.result.createObjectStore('FILE_DATA').createIndex('timestamp', 'timestamp', { unique: false });
+    q.onerror = ko;
+    q.onsuccess = () => {
+      const db = q.result, tx = db.transaction('FILE_DATA', 'readwrite');
+      for (const k of chiavi) tx.objectStore('FILE_DATA').put({ timestamp: new Date(), mode: 33206, contents: new Uint8Array(4) }, k);
+      tx.oncomplete = () => { db.close(); ok(); };
+    };
+  });
+}
+function chiaviArchivio() {
+  return new Promise((ok) => {
+    const q = indexedDB.open('/vosk');
+    q.onsuccess = () => {
+      const db = q.result, r = db.transaction('FILE_DATA').objectStore('FILE_DATA').getAllKeys();
+      r.onsuccess = () => { db.close(); ok(r.result.map(String).sort()); };
+    };
+  });
+}
+
+test('archivio di Vosk: resta solo la cartella del modello in uso, e si sa se è già estratto', async () => {
+  const page = await nuovaPagina({ decimali: null });
+  await page.evaluate(creaArchivio, ['/vosk', '/vosk/fisso', '/vosk/fisso/extracted.ok', '/vosk/fisso/am/final.mdl',
+    '/vosk/blob_1', '/vosk/blob_1/extracted.ok', '/vosk/blob_1/am/final.mdl', '/vosk/blob_2/am/final.mdl', '/vosk/fissoaltro/x']);
+  assert.equal(await page.evaluate(() => Voce.archivioVosk('/vosk/fisso')), true);
+  assert.deepEqual(await page.evaluate(chiaviArchivio), ['/vosk', '/vosk/fisso', '/vosk/fisso/am/final.mdl', '/vosk/fisso/extracted.ok']);
+  // un altro modello: la copia vecchia sparisce, e il nuovo non è ancora estratto
+  assert.equal(await page.evaluate(() => Voce.archivioVosk('/vosk/nuovo')), false);
+  assert.deepEqual(await page.evaluate(chiaviArchivio), ['/vosk']);
+  // la cartella ha il nome che le dà il worker di Vosk: l'indirizzo con i segni cambiati in "_"
+  assert.equal(await page.evaluate(() => Voce.cartellaVosk('https://a.b/c-d/m.tar.gz')), '/vosk/https___a_b_c_d_m_tar_gz');
+  assert.deepEqual(page.erroriJs, []);
+  await page.context().close();
+});
+
+test('archivio di Vosk: se non esiste non lo si crea', async () => {
+  const page = await nuovaPagina({ decimali: null });
+  assert.equal(await page.evaluate(() => Voce.archivioVosk('/vosk/fisso')), false);
+  assert.deepEqual(await page.evaluate(async () => (await indexedDB.databases()).map((d) => d.name)), []);
+  await page.context().close();
+});
+
+test('service worker: dà il modello a Vosk dalla cache, senza rete; se non c\'è risponde "non trovato"', async () => {
+  const page = await nuovaPagina({ decimali: null });
+  await page.evaluate(() => navigator.serviceWorker.ready);
+  await page.reload();
+  await page.waitForFunction(() => !!navigator.serviceWorker.controller);
+  const prova = () => page.evaluate(async () => {
+    // come il worker di Vosk: un worker da indirizzo blob: che chiede il modello all'indirizzo fisso
+    const codice = 'fetch(' + JSON.stringify(Voce.chiaveModello()) + ').then(async (r) => postMessage(r.status + " " + await r.text()))';
+    const w = new Worker(URL.createObjectURL(new Blob([codice], { type: 'text/javascript' })));
+    return new Promise((ok) => { w.onmessage = (e) => { w.terminate(); ok(e.data); }; });
+  });
+  assert.equal(await prova(), '404 modello non presente');
+  const prima = server.richieste.length;
+  await page.evaluate(async () => (await caches.open('compilatore-misure-voce')).put(Voce.chiaveModello(), new Response('modello finto')));
+  assert.equal(await prova(), '200 modello finto');
+  assert.equal(server.richieste.slice(prima).some((u) => u.includes('vosk-model')), false, 'nessuna richiesta al server per il modello');
+  assert.deepEqual(page.erroriJs, []);
+  await page.context().close();
+});
