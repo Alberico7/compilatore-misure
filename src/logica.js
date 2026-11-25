@@ -103,9 +103,10 @@ var Logica = (function () {
         avvisi.push({ riga: i, col: 0, tipo: 'uguale', testo: 'Coppia ' + (i + 1) + ' uguale alla ' + i });
       }
     });
-    // dati compilati, nell'ordine: i vicini sono quello prima e quello dopo (agli estremi, i due più vicini)
+    // dati scritti (non quelli riempiti dalla divisione), nell'ordine: i vicini sono quello prima e quello dopo
+    // (agli estremi, i due più vicini)
     var dati = [];
-    celle.forEach(function (c, i) { if (ok(c[1])) dati.push({ riga: i, v: Math.abs(Number(c[1].cifre)), r: c[1] }); });
+    celle.forEach(function (c, i) { if (ok(c[1]) && !c[1].divisione) dati.push({ riga: i, v: Math.abs(Number(c[1].cifre)), r: c[1] }); });
     if (dati.length < 3) return avvisi;
     dati.forEach(function (a, k) {
       var n = dati.length;
@@ -123,26 +124,64 @@ var Logica = (function () {
     return avvisi;
   }
 
+  /* Dati ripetuti per divisioni (docs/2026-11-25-dati-ripetuti.md). I dati scritti dalla coppia 1 fino
+     al primo dato vuoto sono la prima divisione; dopo, un dato vuoto in una coppia con il grado prende
+     il dato della divisione nella stessa posizione, ricominciando dal primo a ogni divisione.
+     I dati vuoti vanno solo in fondo: un dato vuoto in mezzo a dati scritti è sempre un errore ("Casella vuota").
+     Cambia le celle dei dati vuoti e ritorna { lunghezza, divisioni, riempiti, errore } o null. */
+  function divisioni(celle) {
+    var n = celle.length, L = 0, i;
+    while (L < n && celle[L][1].stato !== 'vuoto') L++;
+    if (L === n) return null;                                            // tutti i dati scritti: come prima
+    if (L === 0) {
+      celle[0][1] = { stato: 'errore', messaggio: 'Il primo dato va scritto: i dati vuoti ripetono la prima divisione' };
+      return null;
+    }
+    for (i = L + 1; i < n; i++) if (celle[i][1].stato !== 'vuoto') return null;   // vuoto in mezzo: errori come prima
+    var riempiti = 0;
+    for (i = L; i < n; i++) {
+      var pos = i % L, fonte = celle[pos][1];
+      if (celle[i][0].stato === 'vuoto') continue;                       // coppia tutta vuota: "Casella vuota" come prima
+      var div = { n: Math.floor(i / L) + 1, pos: pos + 1 };
+      // dato della prima divisione con un errore: l'errore si conta una volta sola, su quello scritto
+      celle[i][1] = fonte.stato === 'ok'
+        ? { stato: 'ok', cifre: fonte.cifre, display: fonte.display, negativo: fonte.negativo, divisione: div }
+        : { stato: 'errore', messaggio: 'Ripete il dato ' + (pos + 1) + ', da correggere', divisione: div, ripetuto: true };
+      riempiti++;
+    }
+    var resto = n % L, errore = null;
+    if (resto) {
+      // con il lavoro fatto bene l'ultima divisione è completa: altrimenti manca o avanza qualcosa
+      errore = { riga: n - 1, col: 1, testo: 'Ultima divisione incompleta: ' + resto + (resto === 1 ? ' dato' : ' dati') + ' su ' + L + '. Controlla i gradi e i dati' };
+      var ultima = celle[n - 1][1];
+      if (ultima.stato === 'ok') celle[n - 1][1] = { stato: 'errore', messaggio: errore.testo, display: ultima.display, divisione: ultima.divisione, ripetuto: true };
+    }
+    return { lunghezza: L, divisioni: Math.ceil(n / L), riempiti: riempiti, errore: errore };
+  }
+
   /* Analizza tutta la tabella. righe: [[grado, dato], ...]
      imp: { modo, decGra, decDat } */
   function analizza(righe, imp) {
     var celle = [], errori = [], avvisi = [], valori = [];
     var separatoriInMacchina = 0;
     for (var i = 0; i < righe.length; i++) {
-      var rg = converti(righe[i][0], imp.modo, imp.decGra);
-      var rd = converti(righe[i][1], imp.modo, imp.decDat);
-      celle.push([rg, rd]);
-      [[rg, 'Grado', 0], [rd, 'Dato', 1]].forEach(function (x) {
+      celle.push([converti(righe[i][0], imp.modo, imp.decGra), converti(righe[i][1], imp.modo, imp.decDat)]);
+    }
+    var div = divisioni(celle);
+    celle.forEach(function (cc, i) {
+      [[cc[0], 'Grado', 0], [cc[1], 'Dato', 1]].forEach(function (x) {
         var r = x[0], nome = x[1] + ' ' + (i + 1);
         if (r.stato !== 'ok') {
-          errori.push({ riga: i, col: x[2], testo: nome + ': ' + r.messaggio });
+          // le caselle che ripetono un dato sbagliato, e l'ultima divisione incompleta, si contano a parte
+          if (!r.ripetuto) errori.push({ riga: i, col: x[2], testo: nome + ': ' + r.messaggio });
           if (/separatore/.test(r.messaggio)) separatoriInMacchina++;
         } else {
-          if (r.negativo) avvisi.push({ riga: i, col: x[2], tipo: 'negativo', testo: nome + ': valore negativo (' + r.display + ')' });
+          if (r.negativo && !r.divisione) avvisi.push({ riga: i, col: x[2], tipo: 'negativo', testo: nome + ': valore negativo (' + r.display + ')' });
           valori.push({ etichetta: nome, tipo: x[1], coppia: i + 1, cifre: r.cifre, display: r.display });
         }
       });
-    }
+    });
+    if (div && div.errore) errori.push(div.errore);
     avvisi = avvisi.concat(sospetti(celle, imp)).sort(function (a, b) { return a.riga - b.riga || a.col - b.col; });
     return {
       celle: celle,
@@ -150,7 +189,8 @@ var Logica = (function () {
       avvisi: avvisi,
       valido: righe.length > 0 && errori.length === 0,
       valori: errori.length === 0 ? valori : [],
-      suggerisciSeparatore: separatoriInMacchina > 0
+      suggerisciSeparatore: separatoriInMacchina > 0,
+      divisione: div && { lunghezza: div.lunghezza, divisioni: div.divisioni, riempiti: div.riempiti }
     };
   }
 

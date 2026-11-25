@@ -216,7 +216,7 @@ test('dati non validi: nessun codice, errori segnalati', async () => {
   assert.match(riep, /3 caselle da correggere/);
   assert.match(riep, /Dato 1: Troppi decimali/);
   assert.match(riep, /Grado 2: Valore non numerico/);
-  assert.match(riep, /Dato 2: Casella vuota/);
+  assert.match(riep, /Dato 2: Casella vuota/, 'un dato vuoto in mezzo a dati scritti è un errore (docs/2026-11-25-dati-ripetuti.md)');
   // correggo e i codici compaiono
   await page.fill('#corpo-tabella input[data-r="0"][data-c="1"]', '15,12');
   await page.fill('#corpo-tabella input[data-r="1"][data-c="0"]', '7');
@@ -409,6 +409,69 @@ test("righe: sempre una vuota in fondo quando l'ultima è completa, fino a 500",
   assert.deepEqual(page.erroriJs, []);
   await page.context().close();
 });
+
+/* docs/2026-11-25-dati-ripetuti.md: dei dati si scrive la prima divisione, le caselle vuote la ripetono */
+for (const telefono of [false, true]) {
+  test('dati ripetuti per divisioni' + (telefono ? ' (telefono)' : ''), async () => {
+    const page = await nuovaPagina(1200, { telefono, decimali: [0, 1] });
+    await incollaExcel(page, [['0', '12,5'], ['30', '13'], ['60', '14,2'], ['90', ''], ['120', ''], ['150', '']]);
+    // il dato riempito: in grigio nella casella vuota e scritto sotto, ↻ dove la divisione ricomincia
+    assert.equal(await page.inputValue('#cella-3-1'), '');
+    assert.equal(await page.getAttribute('#cella-3-1', 'placeholder'), '12.5');
+    assert.equal(await page.innerText('#ant-3-1'), '↻ Divisione 2, 1° dato: 12.5');
+    assert.equal(await page.innerText('#ant-4-1'), 'Divisione 2, 2° dato: 13.0');
+    assert.equal(await page.getAttribute('#cella-2-1', 'placeholder'), '', 'i dati scritti non hanno il grigio');
+    assert.equal(await page.innerText('#ant-2-1'), 'In macchina: 14.2');
+    // un dato scritto dopo i vuoti: quelli in mezzo diventano errori, finché non lo si toglie
+    await page.fill('#cella-4-1', '9');
+    assert.equal(await page.innerText('#ant-3-1'), 'Casella vuota');
+    assert.equal(await page.getAttribute('#cella-3-1', 'placeholder'), '');
+    await page.fill('#cella-4-1', '');
+    assert.equal(await page.innerText('#ant-3-1'), '↻ Divisione 2, 1° dato: 12.5');
+    // alla macchina va sempre il valore intero
+    assert.deepEqual((await leggiBarre(page)).letti, ['0', '125', '30', '130', '60', '142', '90', '125', '120', '130', '150', '142']);
+    assert.match(await page.innerText('#riepilogo-divisioni'), /^2 divisioni da 3 dati: scritta la prima, 3 dati riempiti\.$/);
+    // si corregge un dato della prima divisione: cambia in tutte
+    await page.fill('#cella-0-1', '11');
+    assert.equal(await page.getAttribute('#cella-3-1', 'placeholder'), '11.0');
+    assert.equal(await page.innerText('#ant-3-1'), '↻ Divisione 2, 1° dato: 11.0');
+    // controllo a spunte: ↻ sui dati riempiti
+    await page.click('#btn-verifica');
+    assert.equal(await page.locator('#verifica-elenco [data-i="2"] .rip').count(), 0);
+    assert.equal(await page.locator('#verifica-elenco [data-i="3"] .rip').count(), 1);
+    assert.match(await page.getAttribute('#verifica-elenco [data-i="3"]', 'aria-label'), /dato 11\.0 ripetuto dalla divisione/);
+    await page.click('#verifica-chiudi');
+    // grado, INVIO, INVIO: si passa al grado dopo e compare la riga nuova; ultima divisione incompleta = errore
+    if (!telefono) {
+      await page.click('#cella-6-0');
+      await page.keyboard.type('180');
+      await page.keyboard.press('Enter');
+      await page.keyboard.press('Enter');
+      assert.equal(await page.evaluate(() => document.activeElement.id), 'cella-7-0');
+    } else {
+      await page.fill('#cella-6-0', '180');
+    }
+    assert.equal(await page.locator('#corpo-tabella tr').count(), 8);
+    assert.match(await page.innerText('#riepilogo'), /1 casella da correggere[\s\S]*Ultima divisione incompleta: 1 dato su 3\. Controlla i gradi e i dati/);
+    assert.equal(await page.innerText('#ant-6-1'), 'Ultima divisione incompleta: 1 dato su 3. Controlla i gradi e i dati');
+    assert.equal(await page.getAttribute('#cella-6-1', 'placeholder'), '11.0', 'il valore si vede anche con l\'errore');
+    await page.waitForTimeout(PAUSA_SEZIONE2);
+    assert.equal(await page.locator('#uscita-barre .cella-barra').count(), 0, 'niente codici');
+    await page.fill('#cella-7-0', '210');
+    assert.match(await page.innerText('#riepilogo'), /2 dati su 3/);
+    await page.fill('#cella-8-0', '240');
+    const { letti } = await leggiBarre(page);
+    assert.equal(letti.length, 18);
+    assert.deepEqual(letti.slice(12), ['180', '110', '210', '130', '240', '142']);
+    if (telefono) await controllaTelefono(page, 'divisioni');
+    // dopo un ricaricamento le caselle restano vuote, con il grigio
+    await page.reload();
+    assert.equal(await page.inputValue('#cella-5-1'), '');
+    assert.equal(await page.getAttribute('#cella-5-1', 'placeholder'), '14.2');
+    assert.deepEqual(page.erroriJs, []);
+    await page.context().close();
+  });
+}
 
 /* ---------- tema ---------- */
 const tema = (page) => page.evaluate(() => document.documentElement.getAttribute('data-tema'));

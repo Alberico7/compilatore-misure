@@ -207,6 +207,34 @@ test('liste: salva, modifiche non salvate, salva come con nome già usato, apri,
   await page.context().close();
 });
 
+/* docs/2026-11-25-dati-ripetuti.md: la lista si salva come è scritta, con i dati vuoti delle divisioni */
+test('liste: i dati vuoti delle divisioni restano vuoti salvando e riaprendo', async () => {
+  const page = await apri(PAGINA, { decimali: [0, 1] });
+  const apriElenco = async () => { if (!(await page.locator('#liste').isVisible())) await page.click('#btn-apri'); };
+  await incolla(page, [['0', '5'], ['90', '6'], ['180', ''], ['270', '']]);
+  await apriElenco();
+  await salvaCome(page, 'Divisioni');
+  const salvata = await page.evaluate(() => JSON.parse(localStorage.getItem('compilatore-misure-liste-v1'))[0].righe);
+  assert.deepEqual(salvata, [['0', '5'], ['90', '6'], ['180', ''], ['270', '']]);
+  // un'altra lista con tutti i dati scritti, poi si riapre la prima
+  await page.click('#btn-svuota'); await page.click('#conferma-si');
+  await incolla(page, [['1', '2'], ['3', '4'], ['5', '6']]);
+  await apriElenco();
+  await salvaCome(page, 'Tutti scritti');
+  await apriElenco();
+  await page.click('#elenco-liste button[data-apri="Divisioni"]');
+  assert.deepEqual(await valoriTabella(page), [['0', '5'], ['90', '6'], ['180', ''], ['270', '']]);
+  assert.equal(await page.getAttribute(cella(3, 1), 'placeholder'), '6.0');
+  assert.match(await page.innerText('#riepilogo'), /2 divisioni da 2 dati: scritta la prima, 2 dati riempiti/);
+  // quella con tutti i dati si apre come prima, senza divisioni
+  await apriElenco();
+  await page.click('#elenco-liste button[data-apri="Tutti scritti"]');
+  assert.deepEqual(await valoriTabella(page), [['1', '2'], ['3', '4'], ['5', '6']]);
+  assert.equal(await page.locator('#riepilogo-divisioni').count(), 0);
+  assert.deepEqual(page.erroriJs, []);
+  await page.context().close();
+});
+
 test('liste con i nomi vecchi (decAng / decAlt): salvate nel browser e importate da un file', async () => {
   // docs/2026-11-23-gradi-e-dati.md: le liste di prima si leggono con i loro decimali
   const page = await apri();

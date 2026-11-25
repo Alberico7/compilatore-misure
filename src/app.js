@@ -175,10 +175,12 @@
   }
 
   /* docs/2026-11-23-righe-automatiche.md: quando l'ultima riga ha grado e dato, sotto ne compare una vuota.
+     Il dato può anche essere vuoto, se lo riempie la divisione (c'è il primo dato: docs/2026-11-25-dati-ripetuti.md).
      Si aggiunge in fondo alla tabella senza ridisegnarla: chi sta scrivendo non perde il cursore. */
   function rigaVuotaInFondo() {
     var n = stato.righe.length, ultima = stato.righe[n - 1];
-    if (n >= MAX_RIGHE || !ultima || !ultima[0].trim() || !ultima[1].trim()) return;
+    if (n >= MAX_RIGHE || !ultima || !ultima[0].trim()) return;
+    if (!ultima[1].trim() && (n < 2 || !stato.righe[0][1].trim())) return;
     stato.righe.push(['', '']);
     var corpo = $('corpo-tabella');
     if (corpo.rows.length === n) corpo.insertAdjacentHTML('beforeend', htmlRiga(n, modoInput()));
@@ -253,17 +255,21 @@
         var inp = cella(i, c), ant = $('ant-' + i + '-' + c);
         if (!inp) continue;
         var r = i < usate.length ? analisi.celle[i][c] : null;
-        var tipo = '', html = '';
+        var tipo = '', html = '', d = r && r.divisione;
         if (r && r.stato !== 'ok') { tipo = 'errore'; html = esc(r.messaggio); }
         else if (r) {
           var note = segni[i + ',' + c];
           if (note) tipo = 'avviso';
-          html = 'In macchina: <b>' + esc(r.display) + '</b>' + (note ? ' · ' + esc(note.join(' · ')) : '');
+          // dato riempito dalla divisione (docs/2026-11-25-dati-ripetuti.md): ↻ dove la divisione ricomincia
+          html = (d ? (d.pos === 1 ? '↻ ' : '') + 'Divisione ' + d.n + ', ' + d.pos + '° dato: ' : 'In macchina: ') +
+            '<b>' + esc(r.display) + '</b>' + (note ? ' · ' + esc(note.join(' · ')) : '');
         }
+        var grigio = d && r.display ? r.display : '';   // il dato riempito, in grigio dentro la casella vuota
         // si tocca la pagina solo se l'anteprima è cambiata: con 500 righe, a ogni tasto cambia quasi solo una casella
-        var chiave = tipo + '|' + html;
+        var chiave = tipo + '|' + html + '|' + grigio;
         if (ant.dataset.k === chiave) continue;
         ant.dataset.k = chiave;
+        inp.placeholder = grigio;
         inp.classList.toggle('errore', tipo === 'errore');
         inp.classList.toggle('avviso', tipo === 'avviso');
         ant.className = tipo ? 'anteprima ' + tipo : 'anteprima';
@@ -333,8 +339,11 @@
         h += '<div class="messaggio avviso">Hai scritto dei valori con il separatore: se è voluto, scegli "Con separatore" in alto.</div>';
       }
     } else {
+      var dv = analisi.divisione;
       h += '<div class="messaggio ok">Valori corretti: ' + nUsate + (nUsate === 1 ? ' coppia' : ' coppie') + ' (' + nUsate * 2 + ' valori).' +
-        (nUsate < stato.righe.length ? ' Le righe vuote in fondo non vengono usate.' : '') + '</div>';
+        (nUsate < stato.righe.length ? ' Le righe vuote in fondo non vengono usate.' : '') +
+        (dv ? '<br><span id="riepilogo-divisioni">' + dv.divisioni + ' divisioni da ' + plurale(dv.lunghezza, 'dato', 'dati') +
+          ': scritta la prima, ' + plurale(dv.riempiti, 'dato riempito', 'dati riempiti') + '.</span>' : '') + '</div>';
     }
     var negativi = analisi.avvisi.filter(function (a) { return a.tipo === 'negativo'; });
     var sospetti = analisi.avvisi.filter(function (a) { return a.tipo !== 'negativo'; });
@@ -505,9 +514,12 @@
       var note = (segni[i + ',0'] || []).concat(segni[i + ',1'] || []).filter(function (x, k, a) { return a.indexOf(x) === k; });
       var si = !!spunte.fatte[i];
       if (si) fatte++;
+      var rip = !!analisi.celle[i][1].divisione;   // dato riempito dalla divisione: sul foglio non è scritto
       h.push('<li><button type="button" class="riga-verifica' + (note.length ? ' avviso' : '') + '" data-i="' + i + '" aria-pressed="' + si + '"' +
-        ' aria-label="Coppia ' + (i + 1) + ': grado ' + esc(analisi.celle[i][0].display) + ', dato ' + esc(analisi.celle[i][1].display) + (note.length ? ', da controllare' : '') + '">' +
-        '<span class="n">' + (i + 1) + '</span><span class="val">' + esc(analisi.celle[i][0].display) + '</span><span class="val">' + esc(analisi.celle[i][1].display) + '</span>' +
+        ' aria-label="Coppia ' + (i + 1) + ': grado ' + esc(analisi.celle[i][0].display) + ', dato ' + esc(analisi.celle[i][1].display) +
+        (rip ? ' ripetuto dalla divisione' : '') + (note.length ? ', da controllare' : '') + '">' +
+        '<span class="n">' + (i + 1) + '</span><span class="val">' + esc(analisi.celle[i][0].display) + '</span><span class="val">' + esc(analisi.celle[i][1].display) +
+        (rip ? ' <span class="rip" aria-hidden="true">↻</span>' : '') + '</span>' +
         '<span class="spunta" aria-hidden="true">' + (si ? '✓' : '') + '</span>' +
         (note.length ? '<span class="nota-avviso">⚠ ' + esc(note.join(' · ')) + '</span>' : '') + '</button></li>');
     }
@@ -973,10 +985,16 @@
     $('campo-separatore').hidden = stato.voceModo !== 'continuo';
   }
 
-  /* Casella dove va il prossimo valore: quella attiva, altrimenti la prima vuota. */
+  /* Casella dove va il prossimo valore: quella attiva, altrimenti la prima vuota.
+     Si salta il dato vuoto che riempie la divisione (c'è il grado e il primo dato). */
   function cellaDestinazione() {
     if (cellaAttiva) return cellaAttiva;
-    for (var i = 0; i < stato.righe.length; i++) for (var c = 0; c < 2; c++) if (!stato.righe[i][c].trim()) return { r: i, c: c };
+    var conDivisione = !!(stato.righe[0] && stato.righe[0][1].trim());
+    for (var i = 0; i < stato.righe.length; i++) for (var c = 0; c < 2; c++) {
+      if (stato.righe[i][c].trim()) continue;
+      if (c === 1 && i > 0 && conDivisione && stato.righe[i][0].trim()) continue;
+      return { r: i, c: c };
+    }
     return { r: stato.righe.length - 1, c: 1 };
   }
   function nomeCella(p) { return (p.c === 0 ? 'Grado ' : 'Dato ') + (p.r + 1); }

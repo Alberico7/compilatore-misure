@@ -89,6 +89,74 @@ test('analisi tabella: ordine, errori, avvisi', () => {
   assert.deepEqual(b.valori, []);
 });
 
+/* docs/2026-11-25-dati-ripetuti.md: dei dati si scrive solo la prima divisione, i vuoti la ripetono in ordine */
+test('dati ripetuti per divisioni', () => {
+  const IMP = { modo: 'separatore', decGra: 0, decDat: 1 };
+  const righe = (gradi, dati) => gradi.map((g, i) => [String(g), dati[i] === undefined ? '' : String(dati[i])]);
+  const datiMandati = (a) => a.valori.filter((v) => v.tipo === 'Dato').map((v) => v.display);
+
+  // divisioni di 3 dati, 9 coppie: A B C A B C A B C
+  const a = L.analizza(righe([0, 30, 60, 90, 120, 150, 180, 210, 240], ['12,5', '13', '14,2']), IMP);
+  assert.equal(a.valido, true);
+  assert.deepEqual(datiMandati(a), ['12.5', '13.0', '14.2', '12.5', '13.0', '14.2', '12.5', '13.0', '14.2']);
+  assert.deepEqual(a.divisione, { lunghezza: 3, divisioni: 3, riempiti: 6 });
+  assert.deepEqual(a.celle[3][1].divisione, { n: 2, pos: 1 });
+  assert.deepEqual(a.celle[8][1].divisione, { n: 3, pos: 3 });
+  assert.equal(a.celle[2][1].divisione, undefined, 'i dati scritti non sono riempiti');
+  assert.deepEqual(a.avvisi, []);
+
+  // divisione di 1 dato: lo stesso dato ripetuto
+  const b = L.analizza(righe([10, 20, 30, 40], ['7']), IMP);
+  assert.equal(b.valido, true);
+  assert.deepEqual(datiMandati(b), ['7.0', '7.0', '7.0', '7.0']);
+
+  // tutti i dati scritti: come prima, nessuna divisione, qualsiasi numero di coppie
+  const c = L.analizza(righe([1, 2, 3, 4, 5], [1, 2, 3, 4, 5]), IMP);
+  assert.equal(c.valido, true);
+  assert.equal(c.divisione, null);
+
+  // ultima divisione incompleta: errore, niente valori; il messaggio è generico
+  for (const n of [8, 10]) {
+    const gradi = Array.from({ length: n }, (_, i) => i * 10);
+    const e = L.analizza(righe(gradi, ['1', '2', '3']), IMP);
+    assert.equal(e.valido, false, n + ' coppie');
+    assert.deepEqual(e.valori, []);
+    const resto = n % 3;
+    assert.deepEqual(e.errori, [{ riga: n - 1, col: 1, testo: 'Ultima divisione incompleta: ' + resto + (resto === 1 ? ' dato' : ' dati') + ' su 3. Controlla i gradi e i dati' }]);
+    assert.equal(e.celle[n - 1][1].stato, 'errore');
+    assert.equal(e.celle[n - 1][1].display, resto === 1 ? '1.0' : '2.0', 'il valore resta da mostrare in grigio');
+  }
+
+  // un dato vuoto in mezzo a dati scritti è sempre un errore: niente divisioni, "Casella vuota" come prima
+  const d = L.analizza(righe([1, 2, 3, 4, 5, 6], ['1', '2', '3', '', '9', '']), IMP);
+  assert.equal(d.valido, false);
+  assert.equal(d.divisione, null);
+  assert.deepEqual(d.errori.map((x) => x.testo), ['Dato 4: Casella vuota', 'Dato 6: Casella vuota']);
+  assert.deepEqual(L.analizza(righe([1, 2, 3, 4], ['1', '', '3', '4']), IMP).errori.map((x) => x.testo), ['Dato 2: Casella vuota']);
+
+  // primo dato vuoto: errore con il messaggio nuovo
+  const f = L.analizza(righe([1, 2, 3], []), IMP);
+  assert.equal(f.valido, false);
+  assert.equal(f.errori[0].testo, 'Dato 1: Il primo dato va scritto: i dati vuoti ripetono la prima divisione');
+
+  // dato della prima divisione sbagliato: un errore solo, quello scritto
+  const g = L.analizza(righe([1, 2, 3, 4], ['1', 'x']), IMP);
+  assert.equal(g.valido, false);
+  assert.deepEqual(g.errori.map((x) => x.testo), ['Dato 2: Valore non numerico']);
+  assert.equal(g.celle[3][1].stato, 'errore');
+  assert.match(g.celle[3][1].messaggio, /Ripete il dato 2/);
+
+  // coppia tutta vuota in mezzo e grado vuoto con il dato scritto: errori come prima
+  const h = L.analizza([['1', '1'], ['2', '2'], ['', ''], ['4', '']], IMP);
+  assert.deepEqual(h.errori.map((x) => x.testo).slice(0, 2), ['Grado 3: Casella vuota', 'Dato 3: Casella vuota']);
+  assert.deepEqual(L.analizza([['1', '1'], ['', '2']], IMP).errori.map((x) => x.testo), ['Grado 2: Casella vuota']);
+
+  // avvisi: "uguale alla coppia sopra" guarda i dati riempiti; "molto diverso dai vicini" no; negativo una volta sola
+  assert.deepEqual(L.analizza(righe([5, 5], ['3']), IMP).avvisi.map((x) => x.tipo), ['uguale']);
+  assert.deepEqual(L.analizza(righe([1, 2, 3, 4, 5, 6], ['200', '2000', '205']), IMP).avvisi.map((x) => x.tipo + ' ' + (x.riga + 1)), ['dato 2']);
+  assert.deepEqual(L.analizza(righe([1, 2, 3], ['-4']), IMP).avvisi.map((x) => x.tipo + ' ' + (x.riga + 1)), ['negativo 1']);
+});
+
 /* docs/2026-11-18-offline-liste-avvisi.md: grado oltre 360, dato molto diverso dai vicini, coppia uguale */
 test('avvisi sui valori sospetti', () => {
   const IMP = { modo: 'separatore', decGra: 2, decDat: 2 };
