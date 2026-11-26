@@ -41,6 +41,11 @@ var Dettato = (function () {
     if (centinaia < 1 || (testa !== '' && centinaia === 1)) return null;
     var resto = w.slice(at + 4);
     if (resto === 'otto') return centinaia * 100 + 8; // centotto
+    /* da x80 a x89 Vosk toglie la "o" di cento: "centottanta", "duecentottantotto" (docs/2026-11-27-dettatura-centottanta.md) */
+    if (resto.indexOf('ott') === 0) {
+      var ottanta = fino99(resto);
+      if (ottanta !== null && ottanta >= 80 && ottanta <= 89) return centinaia * 100 + ottanta;
+    }
     if (resto.charAt(0) !== 'o') return null;
     resto = resto.slice(1);
     if (resto === '') return centinaia * 100;

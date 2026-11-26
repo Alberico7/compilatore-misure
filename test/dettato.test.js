@@ -19,7 +19,8 @@ function inLettere(n) {
     const c = Math.floor(x / 100), r = x % 100;
     const testa = c === 1 ? 'cento' : u[c] + 'cento';
     if (r === 0) return testa;
-    return (r === 8 ? testa.slice(0, -1) : testa) + f99(r);
+    // Vosk toglie la "o" di cento davanti a "otto" e a "ottanta…" ("centotto", "centottanta")
+    return (r === 8 || (r >= 80 && r <= 89) ? testa.slice(0, -1) : testa) + f99(r);
   };
   if (n < 1000) return f999(n);
   const m = Math.floor(n / 1000), r = n % 1000;
@@ -28,6 +29,16 @@ function inLettere(n) {
 
 test('ogni numero da 0 a 9999 detto come lo scrive Vosk', () => {
   for (let n = 0; n <= 9999; n++) assert.equal(D.numeroItaliano(inLettere(n)), n, inLettere(n));
+});
+
+/* docs/2026-11-27-dettatura-centottanta.md: parole controllate nell'elenco del modello small-it-0.22 */
+test('da x80 a x89: "centottanta" come lo scrive Vosk, e anche la forma intera', () => {
+  for (const [parola, n] of [['centottanta', 180], ['centoottanta', 180], ['centottantuno', 181], ['centottantotto', 188],
+    ['duecentottantotto', 288], ['novecentottantanove', 989], ['millecentottanta', 1180], ['centotto', 108]]) {
+    assert.equal(D.numeroItaliano(parola), n, parola);
+  }
+  assert.equal(inLettere(180), 'centottanta', 'il generatore scrive come Vosk');
+  assert.deepEqual(D.interpreta('centottanta virgola cinque'), [{ tipo: 'valore', testo: '180,5' }]);
 });
 
 test('valori con decimali, segno e separatore detto', () => {
