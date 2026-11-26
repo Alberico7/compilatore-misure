@@ -860,6 +860,35 @@ test('smartphone: "Leggi uno alla volta" mostra tutti i codici nell\'ordine gius
   await page.context().close();
 });
 
+/* Browser vecchi (docs/2026-11-26-finestre-browser-vecchi.md): Chromium prima dell'87 non conosce "inset",
+   e senza le finestre restano in fondo alla pagina. Si usa la forma lunga top/right/bottom/left. */
+test('browser vecchi: niente "inset" nel CSS', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'compilatore-misure.html'), 'utf8');
+  const css = (html.match(/<style[^>]*>[\s\S]*?<\/style>/g) || []).join('\n');
+  assert.ok(css.length > 1000, 'CSS della pagina trovato');
+  assert.deepEqual(css.match(/(^|[^-\w])inset\s*:[^;}]*/g) || [], []);
+});
+
+for (const telefono of [false, true]) {
+  test('finestra di conferma e lettura uno alla volta coprono tutto lo schermo' + (telefono ? ' (telefono)' : ''), async () => {
+    const page = await nuovaPagina(1200, { telefono });
+    const schermo = await page.evaluate(() => ({ w: window.innerWidth, h: window.innerHeight }));
+    const copre = async (sel) => {
+      const b = await page.locator(sel).boundingBox();
+      assert.deepEqual([b.x, b.y, b.width, b.height], [0, 0, schermo.w, schermo.h], sel + ' copre lo schermo');
+    };
+    await incollaExcel(page, generaCoppie(3, 5).coppie);
+    await page.click('#btn-svuota');
+    await copre('#conferma');
+    await page.click('#conferma-no');
+    await page.click('#btn-lettura');
+    await copre('#lettura');
+    await page.click('#lettura-chiudi');
+    assert.deepEqual(page.erroriJs, []);
+    await page.context().close();
+  });
+}
+
 test('smartphone: QR dentro lo schermo e decodifica esatta', async () => {
   const page = await nuovaPagina(390, { telefono: true });
   const { coppie, attese } = generaCoppie(25, 13);
