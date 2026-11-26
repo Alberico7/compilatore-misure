@@ -22,6 +22,7 @@
       chRitCar: 30, chRitInv: 30, chCoppie: 0, chMezzo: 'bluetooth',
       listaNome: '',     // lista salvata aperta nella tabella ('' = nessuna)
       programma: '',     // nome del programma scritto sopra la tabella (docs/2026-11-23-casella-nome-programma.md)
+      barraSegno: false,    // tasto ± nella barra del telefono (docs/2026-11-26-tasti-su-giu.md)
       aggiuntaTesta: '.t',  // aggiunta al nome per l'affilatura in testa, '' = niente secondo codice (docs/2026-11-24-aggiunta-affilatura-impostabile.md)
       impAperte: false,  // riquadro delle impostazioni chiuso, anche al primo uso (docs/2026-11-23-righe-automatiche.md)
       schedaChiavetta: true,  // segno: lo spostamento una tantum sulla Chiavetta è già fatto
@@ -229,6 +230,9 @@
     if (c === 1) vai(r, 0);
     else if (r > 0) vai(r - 1, 1);
   }
+  /* Frecce ↑ ↓ e tasti ▲ ▼ della barra: stessa colonna, ai bordi si resta (docs/2026-11-26-tasti-su-giu.md). */
+  function su(r, c) { vai(Math.max(r - 1, 0), c); }
+  function giu(r, c) { vai(Math.min(r + 1, stato.righe.length - 1), c); }
   function cambiaSegno(r, c) {
     var el = cella(r, c);
     if (!el) return;
@@ -1314,9 +1318,9 @@
       if (e.key === 'Enter') {
         e.preventDefault(); avanti(r, c);
       } else if (e.key === 'ArrowDown') {
-        e.preventDefault(); vai(Math.min(r + 1, stato.righe.length - 1), c);
+        e.preventDefault(); giu(r, c);
       } else if (e.key === 'ArrowUp') {
-        e.preventDefault(); vai(Math.max(r - 1, 0), c);
+        e.preventDefault(); su(r, c);
       }
     });
 
@@ -1367,12 +1371,13 @@
     });
 
     /* I pulsanti della barra non devono togliere il fuoco alla casella (la tastiera resta aperta). */
-    ['mob-indietro', 'mob-segno', 'mob-avanti'].forEach(function (id) {
+    ['mob-indietro', 'mob-su', 'mob-giu', 'mob-segno', 'mob-avanti'].forEach(function (id) {
       $(id).addEventListener('pointerdown', function (e) { e.preventDefault(); });
       $(id).addEventListener('mousedown', function (e) { e.preventDefault(); });
     });
-    $('mob-avanti').addEventListener('click', function () { if (cellaAttiva) { mantieniTastiera(); avanti(cellaAttiva.r, cellaAttiva.c); } });
-    $('mob-indietro').addEventListener('click', function () { if (cellaAttiva) { mantieniTastiera(); indietro(cellaAttiva.r, cellaAttiva.c); } });
+    [['mob-avanti', avanti], ['mob-indietro', indietro], ['mob-su', su], ['mob-giu', giu]].forEach(function (t) {
+      $(t[0]).addEventListener('click', function () { if (cellaAttiva) { mantieniTastiera(); t[1](cellaAttiva.r, cellaAttiva.c); } });
+    });
     $('mob-segno').addEventListener('click', function () { if (cellaAttiva) cambiaSegno(cellaAttiva.r, cellaAttiva.c); });
 
     $('riepilogo').addEventListener('click', function (e) {
@@ -1389,6 +1394,9 @@
     });
     $('dec-gra').addEventListener('change', function () { cambiaDecimali(0, this); });
     $('dec-dat').addEventListener('change', function () { cambiaDecimali(1, this); });
+    $('barra-segno').addEventListener('change', function () {
+      stato.barraSegno = this.checked; $('mob-segno').hidden = !this.checked; salva();
+    });
     $('btn-svuota').addEventListener('click', function () {
       chiedi('Cancellare tutti i valori della tabella?\nLe impostazioni restano.', 'Svuota').then(function (si) {
         if (!si) return;
@@ -1552,6 +1560,8 @@
     }
     sel.value = String(stato.coppieBlocco);
     $('invio-finale').checked = !!stato.invioFinale;
+    $('barra-segno').checked = !!stato.barraSegno;
+    $('mob-segno').hidden = !stato.barraSegno;
     $('imp-valori').open = !!stato.impAperte;
     $('programma').value = stato.programma;
     $('aggiunta-testa').value = stato.aggiuntaTesta;

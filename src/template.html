@@ -260,8 +260,8 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
   background: var(--carta); border-top: 1px solid var(--bordo); box-shadow: 0 -4px 16px var(--ombra);
   padding: 8px max(12px, env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
 }
-.barra-mobile button { flex: 1; min-height: 52px; font-size: 17px; padding: 6px 4px; white-space: nowrap; }
-.barra-mobile button.segno { flex: 0 0 64px; }
+.barra-mobile button { flex: 1 1 0; min-width: 0; min-height: 52px; font-size: 17px; padding: 6px 4px; white-space: nowrap; }
+.barra-mobile button.freccia, .barra-mobile button.segno { font-size: 22px; }
 
 /* modalità lettura uno alla volta */
 .lettura {
@@ -410,6 +410,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
         </fieldset>
         <label class="campo"><span>Decimali gradi</span><input type="number" class="piccolo" id="dec-gra" min="0" max="6" step="1" inputmode="numeric"></label>
         <label class="campo"><span>Decimali dati</span><input type="number" class="piccolo" id="dec-dat" min="0" max="6" step="1" inputmode="numeric"></label>
+        <label class="check"><input type="checkbox" id="barra-segno"> Tasto ± nella barra del telefono</label>
       </div>
       <div class="impostazioni voce-impostazioni" id="voce-impostazioni" hidden>
         <label class="campo"><span>Dettatura</span>
@@ -609,7 +610,7 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
       <summary>Da smartphone</summary>
       <ul>
         <li>Un tocco su una casella la sceglie, senza aprire la tastiera: così si può dettare con <svg class="icona icona-testo" viewBox="0 0 24 24" role="img" aria-label="microfono" focusable="false"><rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg>. Per scrivere a mano tocca la stessa casella <b>una seconda volta</b>: si apre la tastiera.</li>
-        <li>Per scrivere: scrivi il numero e premi <b>Avanti</b> nella barra in basso (fa come INVIO). <b>±</b> cambia il segno, <b>Indietro</b> torna alla casella prima. Avanti e Indietro lasciano la tastiera com'è: se è chiusa non la aprono. La barra resta sopra la tastiera.</li>
+        <li>Per scrivere: scrivi il numero e premi <b>▶</b> nella barra in basso (fa come INVIO). <b>◀</b> torna alla casella prima, <b>▲</b> e <b>▼</b> vanno alla casella sopra e sotto nella stessa colonna. Per scrivere valori negativi puoi aggiungere il tasto <b>±</b>: in «Valori», tocca «Cambia». I tasti lasciano la tastiera com'è: se è chiusa non la aprono. La barra resta sopra la tastiera.</li>
         <li>Per leggere i codici dal telefono in macchina: <b>Leggi uno alla volta</b>. Un codice per schermata, con <b>Successivo</b> o scorrendo col dito. Se lo schermo si spegne, riparti da dove eri.</li>
         <li>Luminosità dello schermo al massimo, telefono fermo e dritto davanti al lettore.</li>
         <li>Alcuni lettori 1D <b>laser</b> non leggono da uno schermo; quelli a fotocamera ("imager") sì. Provalo prima con il vostro lettore.</li>
@@ -674,10 +675,12 @@ footer { color: var(--tenue); font-size: 13px; margin-top: 24px; }
 </div>
 
 <div class="barra-mobile" id="barra-mobile" hidden>
-  <button type="button" id="mob-indietro">◀ Indietro</button>
-  <button type="button" class="segno" id="mob-segno" aria-label="Cambia segno">±</button>
+  <button type="button" class="segno" id="mob-segno" aria-label="Cambia segno" hidden>±</button>
+  <button type="button" class="freccia" id="mob-indietro" aria-label="Indietro">◀</button>
+  <button type="button" class="freccia" id="mob-su" aria-label="Su">▲</button>
   <button type="button" class="segno voce-mob" id="mob-voce" aria-label="Detta" hidden><svg class="icona" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="9" y="2.5" width="6" height="11.5" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0"/><path d="M12 17.5V21"/><path d="M8.5 21h7"/></svg></button>
-  <button type="button" class="primario" id="mob-avanti">Avanti ▶</button>
+  <button type="button" class="freccia" id="mob-giu" aria-label="Giù">▼</button>
+  <button type="button" class="primario freccia" id="mob-avanti" aria-label="Avanti">▶</button>
 </div>
 
 <div class="lettura" id="lettura" role="dialog" aria-modal="true" aria-label="Lettura uno alla volta" hidden>

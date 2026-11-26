@@ -777,6 +777,8 @@ test('smartphone: un tocco sceglie la casella, due aprono il tastierino; barra I
   assert.equal(await page.getAttribute('#cella-0-0', 'enterkeyhint'), 'next');
   assert.equal(await page.locator('#barra-mobile').isVisible(), false);
   const attivo = () => page.evaluate(() => document.activeElement.getAttribute('aria-label'));
+  // il ± nella barra si accende dalle impostazioni (docs/2026-11-26-tasti-su-giu.md; il riquadro Cambia nei test è aperto)
+  await page.tap('#barra-segno');
   // primo tocco: sceglie la casella, la tastiera resta chiusa
   await page.tap('#cella-0-0');
   assert.equal(await attivo(), 'Grado 1');
@@ -823,6 +825,87 @@ test('smartphone: un tocco sceglie la casella, due aprono il tastierino; barra I
   await page.tap('#cella-0-0');
   await page.tap('#cella-0-0');
   assert.equal(await modo('#cella-0-0'), 'numeric');
+  assert.deepEqual(page.erroriJs, []);
+  await page.context().close();
+});
+
+/* docs/2026-11-26-tasti-su-giu.md: ▲ ▼ nella barra come le frecce del PC; tutto in una riga, solo frecce. */
+test('smartphone: tasti ▲ Su e ▼ Giù nella barra, stessa colonna, tastiera com\'era', async () => {
+  const page = await nuovaPagina(390, { telefono: true, tastiera: true });
+  const attivo = () => page.evaluate(() => document.activeElement.getAttribute('aria-label'));
+  const modo = (sel) => page.getAttribute(sel, 'inputmode');
+  await incollaExcel(page, generaCoppie(3, 9).coppie);
+  const righe = await page.locator('#corpo-tabella tr').count();
+  assert.ok(righe >= 4, 'tre righe scritte più quella vuota in fondo');
+  // tastiera chiusa: i tasti non la aprono
+  await page.tap('#cella-1-0');
+  const nomi = () => page.locator('#barra-mobile button:not([hidden])').evaluateAll((bb) => bb.map((b) => b.getAttribute('aria-label')));
+  assert.deepEqual(await nomi(), ['Indietro', 'Su', 'Giù', 'Avanti'], 'di predefinito senza ±');
+  assert.equal(await attivo(), 'Grado 2');
+  await page.tap('#mob-su');
+  assert.equal(await attivo(), 'Grado 1');
+  assert.equal(await modo('#cella-0-0'), 'none', 'Su lascia la tastiera chiusa');
+  await page.tap('#mob-su');
+  assert.equal(await attivo(), 'Grado 1', 'sulla prima riga Su resta lì');
+  await page.tap('#mob-giu');
+  await page.tap('#mob-giu');
+  assert.equal(await attivo(), 'Grado 3');
+  assert.equal(await modo('#cella-2-0'), 'none', 'Giù lascia la tastiera chiusa');
+  // tastiera aperta: resta aperta; sui dati si resta sui dati
+  await page.tap('#cella-2-1');
+  await page.tap('#cella-2-1');
+  await page.evaluate(() => window.__tastiera(true));
+  assert.equal(await modo('#cella-2-1'), 'decimal');
+  await page.tap('#mob-su');
+  assert.equal(await attivo(), 'Dato 2');
+  assert.equal(await modo('#cella-1-1'), 'decimal', 'Su lascia la tastiera aperta');
+  // ultima riga: Giù resta lì e non aggiunge righe
+  await page.tap('#cella-' + (righe - 1) + '-1');
+  await page.tap('#mob-giu');
+  assert.equal(await attivo(), 'Dato ' + righe, "sull'ultima riga Giù resta lì");
+  assert.equal(await page.locator('#corpo-tabella tr').count(), righe, 'Giù non aggiunge righe');
+  // la barra sta nello schermo con e senza microfono e ±, tasti larghi almeno 44 punti; microfono fra ▲ e ▼
+  const ordine = { 'false,false': ['Indietro', 'Su', 'Giù', 'Avanti'], 'true,false': ['Indietro', 'Su', 'Detta', 'Giù', 'Avanti'],
+    'false,true': ['Cambia segno', 'Indietro', 'Su', 'Giù', 'Avanti'], 'true,true': ['Cambia segno', 'Indietro', 'Su', 'Detta', 'Giù', 'Avanti'] };
+  for (const segno of [false, true]) {
+    for (const microfono of [false, true]) {
+      await page.evaluate(([m, s]) => { document.getElementById('mob-voce').hidden = !m; document.getElementById('mob-segno').hidden = !s; }, [microfono, segno]);
+      assert.deepEqual(await nomi(), ordine[microfono + ',' + segno]);
+      const scatole = await page.locator('#barra-mobile button:not([hidden])').evaluateAll((bb) => bb.map((b) => b.getBoundingClientRect().toJSON()));
+      for (const s of scatole) {
+        assert.ok(s.width >= 44, 'tasto largo almeno 44 punti (' + s.width + ')');
+        assert.ok(s.left >= 0 && s.right <= 390, 'tasto dentro lo schermo');
+      }
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth), 390, 'nessuno scorrimento orizzontale');
+      if (microfono && !segno) {
+        const m = scatole[2];
+        assert.ok(Math.abs(m.left + m.width / 2 - 195) <= 1, 'microfono al centro della barra');
+      }
+    }
+  }
+  assert.deepEqual(page.erroriJs, []);
+  await page.context().close();
+});
+
+test('smartphone: tasto ± nella barra solo se acceso nelle impostazioni, e si ricorda', async () => {
+  const page = await nuovaPagina(390, { telefono: true });
+  const segnoVisibile = async () => { await page.tap('#cella-0-0'); return page.locator('#mob-segno').isVisible(); };
+  assert.equal(await page.isChecked('#barra-segno'), false);
+  assert.equal(await segnoVisibile(), false, 'di predefinito il ± non c\'è');
+  await page.tap('#barra-segno');   // il riquadro Cambia nei test è aperto (usaDecimali)
+  assert.equal(await segnoVisibile(), true, 'acceso: compare subito');
+  await page.reload();
+  assert.equal(await page.isChecked('#barra-segno'), true);
+  assert.equal(await segnoVisibile(), true, 'dopo un ricaricamento resta');
+  // impostazioni di una versione precedente, senza il campo: niente ±
+  await page.evaluate(() => {
+    const s = JSON.parse(localStorage.getItem('compilatore-misure-v1'));
+    delete s.barraSegno;
+    localStorage.setItem('compilatore-misure-v1', JSON.stringify(s));
+  });
+  await page.reload();
+  assert.equal(await page.isChecked('#barra-segno'), false);
+  assert.equal(await segnoVisibile(), false);
   assert.deepEqual(page.erroriJs, []);
   await page.context().close();
 });
